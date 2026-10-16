@@ -1,0 +1,199 @@
+<section class="flex flex-col gap-6">
+  <header class="flex flex-wrap items-end justify-between gap-4">
+    <div class="grid gap-1">
+      <h2 class="text-2xl font-semibold tracking-tight">{{ 'users.title' | transloco }}</h2>
+      <p class="text-muted-foreground text-sm">{{ 'users.subtitle' | transloco }}</p>
+    </div>
+    <button hlmBtn (click)="openCreate()">
+      <ng-icon name="lucidePlus" />
+      {{ 'users.newUser' | transloco }}
+    </button>
+  </header>
+
+  <div class="flex flex-wrap items-center gap-3">
+    <div class="relative min-w-64 flex-1">
+      <ng-icon
+        name="lucideSearch"
+        class="text-muted-foreground pointer-events-none absolute start-2.5 top-1/2 -translate-y-1/2"
+      />
+      <input
+        hlmInput
+        type="search"
+        class="ps-8"
+        data-testid="users-search"
+        [value]="query()"
+        (input)="onQueryInput($event)"
+        [placeholder]="'users.searchPlaceholder' | transloco"
+        [attr.aria-label]="'common.search' | transloco"
+      />
+    </div>
+
+    <span hlmBadge variant="secondary">
+      {{ 'users.count' | transloco: { count: filtered().length, total: users().length } }}
+    </span>
+
+    <button
+      hlmBtn
+      variant="outline"
+      size="icon"
+      (click)="load()"
+      [disabled]="loading()"
+      [attr.aria-label]="'common.refresh' | transloco"
+    >
+      <ng-icon name="lucideRefreshCw" />
+    </button>
+  </div>
+
+  @if (loadError(); as errorKey) {
+    <div class="border-destructive/30 bg-destructive/5 text-destructive flex items-center gap-3 rounded-lg border px-4 py-3 text-sm">
+      <ng-icon name="lucideTriangleAlert" class="shrink-0" />
+      <p class="flex-1">{{ errorKey | transloco }}</p>
+      <button hlmBtn variant="outline" size="sm" (click)="load()">{{ 'common.retry' | transloco }}</button>
+    </div>
+  }
+
+  <div hlmTableContainer class="bg-card rounded-lg border">
+    <table hlmTable>
+      <thead hlmTHead>
+        <tr hlmTr>
+          <th hlmTh class="w-56">{{ 'users.columns.name' | transloco }}</th>
+          <th hlmTh>{{ 'users.columns.email' | transloco }}</th>
+          <th hlmTh class="w-52">{{ 'users.columns.createdAt' | transloco }}</th>
+          <th hlmTh class="w-28 text-end">{{ 'users.columns.actions' | transloco }}</th>
+        </tr>
+      </thead>
+      <tbody hlmTBody>
+        @if (loading()) {
+          @for (row of skeletonRows; track row) {
+            <tr hlmTr>
+              <td hlmTd><div hlmSkeleton class="h-4 w-32"></div></td>
+              <td hlmTd><div hlmSkeleton class="h-4 w-52"></div></td>
+              <td hlmTd><div hlmSkeleton class="h-4 w-36"></div></td>
+              <td hlmTd><div hlmSkeleton class="ms-auto h-8 w-20"></div></td>
+            </tr>
+          }
+        } @else if (filtered().length === 0) {
+          <tr hlmTr>
+            <td hlmTd colspan="4" class="py-12">
+              <div class="text-muted-foreground flex flex-col items-center gap-2 text-center">
+                <ng-icon name="lucideSearchX" class="size-6" />
+                <p>{{ 'users.empty' | transloco }}</p>
+              </div>
+            </td>
+          </tr>
+        } @else {
+          @for (user of filtered(); track user.id) {
+            <tr hlmTr>
+              <td hlmTd class="font-medium">{{ user.name }}</td>
+              <td hlmTd class="text-muted-foreground">{{ user.email }}</td>
+              <td hlmTd class="text-muted-foreground">{{ formatDate(user.createdAt) }}</td>
+              <td hlmTd>
+                <div class="flex justify-end gap-1">
+                  <button
+                    hlmBtn
+                    variant="ghost"
+                    size="icon-sm"
+                    (click)="openEdit(user)"
+                    [attr.aria-label]="'common.edit' | transloco"
+                  >
+                    <ng-icon name="lucidePencil" />
+                  </button>
+                  <button
+                    hlmBtn
+                    variant="ghost"
+                    size="icon-sm"
+                    class="text-destructive"
+                    (click)="askDelete(user)"
+                    [attr.aria-label]="'common.delete' | transloco"
+                  >
+                    <ng-icon name="lucideTrash2" />
+                  </button>
+                </div>
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- Create / edit dialog (single instance driven by signals) -->
+<hlm-dialog [state]="formOpen() ? 'open' : 'closed'" (stateChanged)="onFormStateChanged($event)">
+  <hlm-dialog-content *hlmDialogPortal="let ctx">
+    <hlm-dialog-header>
+      <h3 hlmDialogTitle>
+        {{ (editing() ? 'users.form.editTitle' : 'users.form.createTitle') | transloco }}
+      </h3>
+      <p hlmDialogDescription>
+        {{ (editing() ? 'users.form.editDescription' : 'users.form.createDescription') | transloco }}
+      </p>
+    </hlm-dialog-header>
+
+    <form [formGroup]="form" (ngSubmit)="submitForm()" class="grid gap-4" novalidate>
+      <div class="grid gap-2">
+        <label hlmLabel for="user-name">{{ 'users.form.name' | transloco }}</label>
+        <input
+          hlmInput
+          id="user-name"
+          formControlName="name"
+          autocomplete="off"
+          [forceInvalid]="showError(form.controls.name)"
+          [placeholder]="'users.form.namePlaceholder' | transloco"
+        />
+        @if (nameError(); as errorKey) {
+          <p class="text-destructive text-xs">{{ errorKey | transloco }}</p>
+        }
+      </div>
+
+      <div class="grid gap-2">
+        <label hlmLabel for="user-email">{{ 'users.form.email' | transloco }}</label>
+        <input
+          hlmInput
+          id="user-email"
+          type="email"
+          formControlName="email"
+          autocomplete="off"
+          [forceInvalid]="showError(form.controls.email)"
+          [placeholder]="'users.form.emailPlaceholder' | transloco"
+        />
+        @if (emailError(); as errorKey) {
+          <p class="text-destructive text-xs">{{ errorKey | transloco }}</p>
+        }
+      </div>
+
+      <hlm-dialog-footer>
+        <button type="button" hlmBtn variant="outline" hlmDialogClose [disabled]="saving()">
+          {{ 'common.cancel' | transloco }}
+        </button>
+        <button type="submit" hlmBtn [disabled]="saving()">
+          @if (saving()) {
+            <hlm-spinner aria-label="saving" />
+          }
+          {{ (editing() ? 'users.form.submitEdit' : 'users.form.submitCreate') | transloco }}
+        </button>
+      </hlm-dialog-footer>
+    </form>
+  </hlm-dialog-content>
+</hlm-dialog>
+
+<!-- Delete confirmation (single instance driven by signals) -->
+<hlm-alert-dialog [state]="deleteOpen() ? 'open' : 'closed'" (stateChanged)="onDeleteStateChanged($event)">
+  <hlm-alert-dialog-content *hlmAlertDialogPortal="let ctx">
+    <hlm-alert-dialog-header>
+      <h2 hlmAlertDialogTitle>{{ 'users.delete.title' | transloco }}</h2>
+      <p hlmAlertDialogDescription>
+        {{ 'users.delete.description' | transloco: { name: deletingUser()?.name ?? '' } }}
+      </p>
+    </hlm-alert-dialog-header>
+    <hlm-alert-dialog-footer>
+      <button hlmAlertDialogCancel [disabled]="deleting()">{{ 'common.cancel' | transloco }}</button>
+      <button hlmAlertDialogAction variant="destructive" [disabled]="deleting()" (click)="confirmDelete()">
+        @if (deleting()) {
+          <hlm-spinner aria-label="deleting" />
+        }
+        {{ 'users.delete.action' | transloco }}
+      </button>
+    </hlm-alert-dialog-footer>
+  </hlm-alert-dialog-content>
+</hlm-alert-dialog>

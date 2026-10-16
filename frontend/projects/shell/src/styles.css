@@ -1,0 +1,9 @@
+/* Global styles of the shell.
+ *
+ * The spartan/ui theme (design tokens + tailwind layers) lives in the shared
+ * `ui` library so the shell and every remote render with exactly the same
+ * tokens. `@source` registers the shared library with Tailwind's class
+ * detection. */
+@import '../../ui/src/styles/theme.css';
+
+@source '../../ui/src';

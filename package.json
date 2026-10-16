@@ -12,6 +12,10 @@
   "scripts": {
     "build": "nest build",
     "deploy": "nest deploy",
+    "dev:all": "./scripts/dev-all.sh",
+    "frontend:start": "npm --prefix frontend run start:all",
+    "frontend:build": "npm --prefix frontend run build:all",
+    "frontend:test": "npm --prefix frontend run test:all",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
     "start:dev": "nest start --watch",

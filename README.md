@@ -5,7 +5,9 @@ A production-minded starter for NestJS 12 APIs built with **hexagonal architectu
 NestJS, HTTP and databases, and everything else is a swappable adapter around it.
 
 Includes a working **users CRUD** on **SQLite** (via Node's built-in `node:sqlite` —
-no ORM, no native module to compile) with unit, adapter-integration and REST e2e tests.
+no ORM, no native module to compile) with unit, adapter-integration and REST e2e tests,
+plus an **Angular 22 microfrontend frontend** (shell + `users` and `dashboard` remotes
+composed at runtime with Native Federation).
 
 ## Stack
 
@@ -108,6 +110,10 @@ npm run start:dev
 - API: <http://localhost:3000>
 - Swagger UI: <http://localhost:3000/docs>
 
+**CORS:** the API allows the microfrontend dev servers
+(`http://localhost:4200`, `:4201`, `:4202`) by default. Override the allow-list with
+a comma-separated env var: `CORS_ORIGIN=https://app.example.com,https://admin.example.com`.
+
 ### Endpoints
 
 | Method | Path         | Success | Failure                                                                |
@@ -167,6 +173,74 @@ npm run seed -- 25         # custom count
   ```bash
   sqlite3 data/hexa.sqlite 'SELECT id, email, name FROM users;'
   ```
+
+## Frontend — Angular 22 microfrontends
+
+The `frontend/` folder contains an Angular 22 workspace with a **shell** (host) and
+two **remotes** composed at runtime with **Native Federation** — each app is built
+and served independently:
+
+| App         | Port | Role   | Contents                                                    |
+| ----------- | ---- | ------ | ----------------------------------------------------------- |
+| `shell`     | 4200 | host   | Layout, navigation, language switcher, shared toaster        |
+| `users`     | 4201 | remote | Full users CRUD: list + search, create, edit, delete         |
+| `dashboard` | 4202 | remote | Live summary: total users + the 5 most recent                |
+
+Shared code lives in two libraries:
+
+- **`projects/ui`** — spartan/ui (the Angular shadcn/ui port) components generated
+  with the spartan CLI and imported through path aliases (`@ui/button`, `@ui/dialog`,
+  `@ui/table`, …), plus the Tailwind v4 theme and the i18n dictionaries.
+- **`projects/data-access`** — typed `UsersApi` (HttpClient) over the REST API and
+  `mapApiError`, which translates backend error names (`UserAlreadyExistsError`, …)
+  into i18n keys.
+
+**i18n:** Transloco with Spanish (default) and English, switchable from the shell
+header. Dictionaries are compiled into the bundles (no cross-origin fetches between
+ports) and Transloco is shared as a federation singleton, so switching the language
+in the shell re-renders the remotes too. The selection is persisted in
+`localStorage` (`hexa.lang`).
+
+### Running everything
+
+One command (backend + microfrontends):
+
+```bash
+./scripts/dev-all.sh           # builds the backend and starts :3000, :4200, :4201, :4202
+./scripts/dev-all.sh --skip-build
+```
+
+Or in separate terminals:
+
+```bash
+npm run start:dev              # backend on :3000
+cd frontend
+npm install                    # first time only
+npm run start:all              # shell + users + dashboard (concurrently)
+```
+
+Open <http://localhost:4200> — the shell lazily loads each remote from its own dev
+server through `loadRemoteModule` (see `projects/shell/src/app/app.routes.ts`). Each
+remote also runs standalone (`npm run start:users` → :4201) thanks to its own
+`app.config.ts` + `bootstrap.ts`.
+
+More scripts (inside `frontend/`):
+
+```bash
+npm run build:all              # production builds of shell + remotes
+npm run test:all               # vitest (libs + apps)
+```
+
+### Adding another remote
+
+```bash
+cd frontend
+npm i -D @angular-architects/native-federation   # already installed
+ng g @angular-architects/native-federation:init --project <name> --port <port>
+```
+
+Then: expose `./routes` in the new `federation.config.mjs`, register the remote URL
+in `projects/shell/src/main.ts` and add the lazy route in `app.routes.ts`.
 
 ## Swapping the persistence adapter
 
