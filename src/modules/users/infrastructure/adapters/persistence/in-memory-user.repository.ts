@@ -14,6 +14,15 @@ export class InMemoryUserRepository extends UserRepositoryPort {
 
   private readonly roleAssignments = new Map<string, Set<string>>();
 
+  private readonly directPermissions = new Map<string, Set<string>>();
+
+  /**
+   * Role id considered administratively privileged. There is no role catalog
+   * in this dev double, so tests that exercise the "last admin" rules set it
+   * explicitly; the SQLite adapter resolves it by name.
+   */
+  adminRoleId: string | null = null;
+
   async save(user: User): Promise<void> {
     this.users.set(user.id, user);
   }
@@ -32,6 +41,7 @@ export class InMemoryUserRepository extends UserRepositoryPort {
     }
 
     this.roleAssignments.delete(id);
+    this.directPermissions.delete(id);
   }
 
   async findById(id: string): Promise<User | null> {
@@ -79,5 +89,59 @@ export class InMemoryUserRepository extends UserRepositoryPort {
       roles.add(roleId);
       this.roleAssignments.set(userId, roles);
     }
+  }
+
+  async setRoles(userId: string, roleIds: readonly string[]): Promise<void> {
+    this.roleAssignments.set(userId, new Set(roleIds));
+  }
+
+  async setDirectPermissions(userId: string, permissionKeys: readonly string[]): Promise<void> {
+    this.directPermissions.set(userId, new Set(permissionKeys));
+  }
+
+  async findAdminRoleId(): Promise<string | null> {
+    return this.adminRoleId;
+  }
+
+  async isActiveAdmin(userId: string): Promise<boolean> {
+    const user = this.users.get(userId);
+
+    return (
+      user !== undefined &&
+      user.status === 'active' &&
+      user.hasPassword &&
+      this.adminRoleId !== null &&
+      (this.roleAssignments.get(userId)?.has(this.adminRoleId) ?? false)
+    );
+  }
+
+  async countActiveAdmins(): Promise<number> {
+    if (this.adminRoleId === null) {
+      return 0;
+    }
+
+    let total = 0;
+
+    for (const user of this.users.values()) {
+      if (
+        user.status === 'active' &&
+        user.hasPassword &&
+        (this.roleAssignments.get(user.id)?.has(this.adminRoleId) ?? false)
+      ) {
+        total += 1;
+      }
+    }
+
+    return total;
+  }
+
+  /** Test helper: role ids currently assigned to a user. */
+  roleIdsOf(userId: string): string[] {
+    return [...(this.roleAssignments.get(userId) ?? [])];
+  }
+
+  /** Test helper: direct permission keys of a user. */
+  directPermissionsOf(userId: string): string[] {
+    return [...(this.directPermissions.get(userId) ?? [])];
   }
 }

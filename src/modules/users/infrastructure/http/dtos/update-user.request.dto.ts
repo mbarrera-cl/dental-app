@@ -1,6 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
-import { IsEmail, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
+import { IsArray, IsEmail, IsIn, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
 
 /**
  * Inbound DTO for partial updates: every field is optional, but the use case
@@ -20,4 +20,18 @@ export class UpdateUserRequestDto {
   @IsEmail()
   @MaxLength(254)
   email?: string;
+
+  @ApiPropertyOptional({
+    type: [String],
+    description: 'Complete replacement of the assigned roles.',
+  })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  roles?: string[];
+
+  @ApiPropertyOptional({ enum: ['active', 'disabled'] })
+  @IsOptional()
+  @IsIn(['active', 'disabled'])
+  status?: 'active' | 'disabled';
 }

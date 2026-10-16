@@ -8,6 +8,20 @@ export interface PasswordPolicyViolation {
 }
 
 /**
+ * Effective policy as plain data: consumed by validators, by the random
+ * password generator (it must produce a candidate the validator accepts)
+ * and by anything else that needs to reason about the rules.
+ */
+export interface PasswordPolicyShape {
+  minLength: number;
+  maxLength: number;
+  requireUppercase: boolean;
+  requireLowercase: boolean;
+  requireDigit: boolean;
+  requireSymbol: boolean;
+}
+
+/**
  * Validates a password candidate against the *configurable* policy stored in
  * settings. Returns every violation at once (better UX than failing on the
  * first one); callers decide which error to raise.
@@ -16,40 +30,51 @@ export interface PasswordPolicyViolation {
 export class PasswordPolicyService {
   constructor(private readonly settings: SettingsService) {}
 
-  async validate(candidate: string): Promise<PasswordPolicyViolation[]> {
+  /** Current values of every policy rule, read from settings. */
+  async describe(): Promise<PasswordPolicyShape> {
     const values = new Map((await this.settings.overview()).map((setting) => [setting.key, setting.value]));
+
+    return {
+      minLength: values.get('passwordPolicy.minLength') as number,
+      maxLength: values.get('passwordPolicy.maxLength') as number,
+      requireUppercase: values.get('passwordPolicy.requireUppercase') === true,
+      requireLowercase: values.get('passwordPolicy.requireLowercase') === true,
+      requireDigit: values.get('passwordPolicy.requireDigit') === true,
+      requireSymbol: values.get('passwordPolicy.requireSymbol') === true,
+    };
+  }
+
+  async validate(candidate: string): Promise<PasswordPolicyViolation[]> {
+    const policy = await this.describe();
     const violations: PasswordPolicyViolation[] = [];
 
-    const minLength = values.get('passwordPolicy.minLength') as number;
-    const maxLength = values.get('passwordPolicy.maxLength') as number;
-
-    if (candidate.length < minLength) {
+    if (candidate.length < policy.minLength) {
       violations.push({
         rule: 'minLength',
-        message: `must be at least ${minLength} characters long`,
+        message: `must be at least ${policy.minLength} characters long`,
       });
     }
 
-    if (candidate.length > maxLength) {
+    if (candidate.length > policy.maxLength) {
       violations.push({
         rule: 'maxLength',
-        message: `must be at most ${maxLength} characters long`,
+        message: `must be at most ${policy.maxLength} characters long`,
       });
     }
 
-    if (values.get('passwordPolicy.requireUppercase') === true && !/[A-Z]/.test(candidate)) {
+    if (policy.requireUppercase && !/[A-Z]/.test(candidate)) {
       violations.push({ rule: 'uppercase', message: 'must contain an uppercase letter' });
     }
 
-    if (values.get('passwordPolicy.requireLowercase') === true && !/[a-z]/.test(candidate)) {
+    if (policy.requireLowercase && !/[a-z]/.test(candidate)) {
       violations.push({ rule: 'lowercase', message: 'must contain a lowercase letter' });
     }
 
-    if (values.get('passwordPolicy.requireDigit') === true && !/\d/.test(candidate)) {
+    if (policy.requireDigit && !/\d/.test(candidate)) {
       violations.push({ rule: 'digit', message: 'must contain a digit' });
     }
 
-    if (values.get('passwordPolicy.requireSymbol') === true && !/[^A-Za-z0-9]/.test(candidate)) {
+    if (policy.requireSymbol && !/[^A-Za-z0-9]/.test(candidate)) {
       violations.push({ rule: 'symbol', message: 'must contain a symbol' });
     }
 

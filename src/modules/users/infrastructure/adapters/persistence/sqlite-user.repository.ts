@@ -177,6 +177,91 @@ export class SqliteUserRepository extends UserRepositoryPort {
     }
   }
 
+  async setRoles(userId: string, roleIds: readonly string[]): Promise<void> {
+    this.replaceLinks(
+      'DELETE FROM user_roles WHERE user_id = ?',
+      'INSERT OR IGNORE INTO user_roles (user_id, role_id) VALUES (?, ?)',
+      userId,
+      roleIds,
+    );
+  }
+
+  async setDirectPermissions(userId: string, permissionKeys: readonly string[]): Promise<void> {
+    this.replaceLinks(
+      'DELETE FROM user_permissions WHERE user_id = ?',
+      'INSERT OR IGNORE INTO user_permissions (user_id, permission_key, granted_at) VALUES (?, ?, ?)',
+      userId,
+      permissionKeys,
+      () => new Date().toISOString(),
+    );
+  }
+
+  async findAdminRoleId(): Promise<string | null> {
+    const row = this.db.connection
+      .prepare('SELECT id FROM roles WHERE name = ?')
+      .get(ADMIN_ROLE_NAME) as unknown as { id: string } | undefined;
+
+    return row === undefined ? null : row.id;
+  }
+
+  async isActiveAdmin(userId: string): Promise<boolean> {
+    const row = this.db.connection
+      .prepare(
+        `SELECT 1 AS found
+         FROM users u
+         JOIN user_roles ur ON ur.user_id = u.id
+         JOIN roles r ON r.id = ur.role_id
+         WHERE u.id = ? AND r.name = ? AND u.status = 'active' AND u.password_hash IS NOT NULL
+         LIMIT 1`,
+      )
+      .get(userId, ADMIN_ROLE_NAME) as unknown as { found: number } | undefined;
+
+    return row !== undefined;
+  }
+
+  async countActiveAdmins(): Promise<number> {
+    const row = this.db.connection
+      .prepare(
+        `SELECT COUNT(DISTINCT u.id) AS total
+         FROM users u
+         JOIN user_roles ur ON ur.user_id = u.id
+         JOIN roles r ON r.id = ur.role_id
+         WHERE r.name = ? AND u.status = 'active' AND u.password_hash IS NOT NULL`,
+      )
+      .get(ADMIN_ROLE_NAME) as unknown as { total: number };
+
+    return Number(row.total);
+  }
+
+  /**
+   * Replaces every link of a user inside a join table atomically. The extra
+   * argument builder lets each caller add its own columns (e.g. `granted_at`).
+   */
+  private replaceLinks(
+    deleteSql: string,
+    insertSql: string,
+    userId: string,
+    values: readonly string[],
+    extraColumn: (() => string) | null = null,
+  ): void {
+    const insert = this.db.connection.prepare(insertSql);
+
+    this.db.connection.exec('BEGIN');
+
+    try {
+      this.db.connection.prepare(deleteSql).run(userId);
+
+      for (const value of values) {
+        insert.run(userId, value, ...(extraColumn === null ? [] : [extraColumn()]));
+      }
+
+      this.db.connection.exec('COMMIT');
+    } catch (error) {
+      this.db.connection.exec('ROLLBACK');
+      throw error;
+    }
+  }
+
   private toDomain(row: UserRow): User {
     return User.reconstitute(
       {

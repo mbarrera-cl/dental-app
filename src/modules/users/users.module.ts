@@ -1,13 +1,18 @@
 import { Module } from '@nestjs/common';
 import { DatabaseModule } from '../../shared/infrastructure/database/database.module.js';
 import { PermissionResolver } from '../../shared/security/permission-resolver.js';
+import { SecurityModule } from '../../shared/security/security.module.js';
 import { UserAccessReaderPort } from '../../shared/security/user-access.reader.port.js';
+import { RolesModule } from '../roles/roles.module.js';
+import { SettingsModule } from '../settings/settings.module.js';
 import { PasswordHistoryPort } from './application/ports/password-history.port.js';
 import { UserRepositoryPort } from './application/ports/user-repository.port.js';
 import { CreateUserUseCase } from './application/use-cases/create-user.use-case.js';
 import { DeleteUserUseCase } from './application/use-cases/delete-user.use-case.js';
 import { GetUserUseCase } from './application/use-cases/get-user.use-case.js';
 import { ListUsersUseCase } from './application/use-cases/list-users.use-case.js';
+import { SetUserPasswordUseCase } from './application/use-cases/set-user-password.use-case.js';
+import { UpdateUserPermissionsUseCase } from './application/use-cases/update-user-permissions.use-case.js';
 import { UpdateUserUseCase } from './application/use-cases/update-user.use-case.js';
 import { SqlitePasswordHistoryRepository } from './infrastructure/adapters/persistence/sqlite-password-history.repository.js';
 import { SqliteUserAccessReader } from './infrastructure/adapters/persistence/sqlite-user-access.reader.js';
@@ -21,7 +26,7 @@ import { UsersController } from './infrastructure/http/users.controller.js';
  * roles and direct permissions are part of the user aggregate's data.
  */
 @Module({
-  imports: [DatabaseModule],
+  imports: [DatabaseModule, SecurityModule, RolesModule, SettingsModule],
   controllers: [UsersController],
   providers: [
     CreateUserUseCase,
@@ -29,6 +34,8 @@ import { UsersController } from './infrastructure/http/users.controller.js';
     ListUsersUseCase,
     UpdateUserUseCase,
     DeleteUserUseCase,
+    SetUserPasswordUseCase,
+    UpdateUserPermissionsUseCase,
     PermissionResolver,
     // Swap these bindings for other database adapters (Postgres, MongoDB, ...).
     { provide: UserRepositoryPort, useClass: SqliteUserRepository },

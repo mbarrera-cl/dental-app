@@ -36,4 +36,19 @@ export abstract class UserRepositoryPort {
 
   /** Assigns a role to every given user (idempotent). */
   abstract assignRoleToUsers(roleId: string, userIds: readonly string[]): Promise<void>;
+
+  /** Replaces the complete set of roles assigned to a user. */
+  abstract setRoles(userId: string, roleIds: readonly string[]): Promise<void>;
+
+  /** Replaces the complete set of direct (non-role) permissions of a user. */
+  abstract setDirectPermissions(userId: string, permissionKeys: readonly string[]): Promise<void>;
+
+  /** Id of the built-in admin role, or `null` when no such role exists yet. */
+  abstract findAdminRoleId(): Promise<string | null>;
+
+  /** True when the user is active, has credentials and holds the admin role. */
+  abstract isActiveAdmin(userId: string): Promise<boolean>;
+
+  /** How many active users with credentials hold the built-in admin role. */
+  abstract countActiveAdmins(): Promise<number>;
 }
