@@ -4,10 +4,12 @@ A production-minded starter for NestJS 12 APIs built with **hexagonal architectu
 (ports & adapters): the business logic lives in the center, completely independent of
 NestJS, HTTP and databases, and everything else is a swappable adapter around it.
 
-Includes a working **users CRUD** on **SQLite** (via Node's built-in `node:sqlite` —
-no ORM, no native module to compile) with unit, adapter-integration and REST e2e tests,
-plus an **Angular 22 microfrontend frontend** (shell + `users` and `dashboard` remotes
-composed at runtime with Native Federation).
+Includes two working CRUD modules on **SQLite** (via Node's built-in `node:sqlite` —
+no ORM, no native module to compile): **users** and **patients** — the latter with the
+typical Chilean fields (validated RUT as the business key, region, FONASA/ISAPRE
+coverage, emergency contact), with unit, adapter-integration and REST e2e tests, plus
+an **Angular 22 microfrontend frontend** (shell + `patients`, `users` and `dashboard`
+remotes composed at runtime with Native Federation).
 
 ## Stack
 
@@ -71,7 +73,11 @@ src/
 │       ├── app-setup.ts             # configureApp: pipes, filters, Swagger
 │       ├── http/                    # DomainExceptionFilter
 │       └── database/                # SqliteDatabase + DatabaseModule
-└── modules/
+└── modules/                         # One folder per bounded context
+    ├── patients/                    # Dental patients (Chilean RUT + health data)
+    │   ├── domain/                  # Patient entity, Rut/Telefono/Previsión VOs …
+    │   ├── application/             # PatientRepositoryPort + use cases (+ specs)
+    │   └── infrastructure/          # Sqlite/InMemory repositories, controller, DTOs
     └── users/                       # One folder per bounded context
         ├── domain/                  # User entity, Email value object, domain errors
         ├── application/
@@ -98,6 +104,12 @@ src/
    `UserAlreadyExistsError`.
 6. The controller maps the `User` to `UserResponseDto` and returns `201`.
 
+`POST /patients` walks the same path: the `Rut` value object validates the módulo 11
+check digit and normalizes the RUT to `12345678-5`, the `Prevision` value object
+enforces the FONASA ⇄ ISAPRE invariants, `PatientAlreadyExistsError` becomes a
+`409 Conflict`, and the SQLite adapter translates the `UNIQUE` violation on `rut` the
+same way.
+
 ## Getting started
 
 Requires **Node.js 24+** (native ESM and the stable `node:sqlite` module).
@@ -111,10 +123,13 @@ npm run start:dev
 - Swagger UI: <http://localhost:3000/docs>
 
 **CORS:** the API allows the microfrontend dev servers
-(`http://localhost:4200`, `:4201`, `:4202`) by default. Override the allow-list with
-a comma-separated env var: `CORS_ORIGIN=https://app.example.com,https://admin.example.com`.
+(`http://localhost:4200`, `:4201`, `:4202`, `:4203`) by default. Override the
+allow-list with a comma-separated env var:
+`CORS_ORIGIN=https://app.example.com,https://admin.example.com`.
 
 ### Endpoints
+
+#### Users
 
 | Method | Path         | Success | Failure                                                                |
 | ------ | ------------ | ------- | ---------------------------------------------------------------------- |
@@ -143,6 +158,51 @@ curl -s -X PATCH http://localhost:3000/users/<id> \
 curl -s -X DELETE http://localhost:3000/users/<id>
 ```
 
+#### Patients
+
+The RUT is the **business key**: it is validated with the módulo 11 check digit,
+normalized to its canonical form (`12345678-5`, no dots, uppercase `K`) and unique in
+the database. The technical id stays a UUID.
+
+| Method | Path                  | Success | Failure                                                        |
+| ------ | --------------------- | ------- | -------------------------------------------------------------- |
+| POST   | `/patients`           | `201`   | `400` invalid payload · `409` RUT taken                        |
+| GET    | `/patients`           | `200`   |                                                                |
+| GET    | `/patients/:id`       | `200`   | `404` unknown patient                                          |
+| GET    | `/patients/rut/:rut`  | `200`   | `400` malformed RUT · `404` RUT not registered                 |
+| PATCH  | `/patients/:id`       | `200`   | `400` invalid/empty payload · `404` unknown · `409` RUT taken  |
+| DELETE | `/patients/:id`       | `204`   | `404` unknown patient                                          |
+
+```bash
+# Create (any spelling of the RUT is normalized: dots, no hyphen, lowercase k)
+curl -s -X POST http://localhost:3000/patients \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "rut": "12.345.678-5",
+    "nombres": "Camila",
+    "apellidoPaterno": "Rojas",
+    "apellidoMaterno": "Pérez",
+    "fechaNacimiento": "1990-05-17",
+    "sexo": "femenino",
+    "telefono": "+56 9 1234 5678",
+    "direccion": { "region": "RM", "comuna": "Providencia", "calle": "Av. Providencia", "numero": "1234" },
+    "prevision": { "tipo": "FONASA", "tramo": "B" },
+    "contactoEmergencia": { "nombre": "María Pérez", "telefono": "+56 9 8765 4321", "parentesco": "Madre" }
+  }'
+
+# Read (by UUID or by RUT)
+curl -s http://localhost:3000/patients
+curl -s http://localhost:3000/patients/rut/12.345.678-5
+
+# Update: omitted fields are untouched, `null` clears an optional group
+curl -s -X PATCH http://localhost:3000/patients/<id> \
+  -H 'Content-Type: application/json' \
+  -d '{"prevision": {"tipo": "ISAPRE", "plan": "Colmena"}}'
+
+# Delete
+curl -s -X DELETE http://localhost:3000/patients/<id>
+```
+
 A full curl walkthrough (happy paths + 400/404/409 cases + a direct SQLite check)
 lives in `scripts/crud-demo.sh` — run it against a live server:
 
@@ -150,11 +210,13 @@ lives in `scripts/crud-demo.sh` — run it against a live server:
 ./scripts/crud-demo.sh
 ```
 
-To seed demo data (default 100 users, idempotent — duplicates are skipped):
+To seed demo data (default 100 records, idempotent — existing emails/RUTs are skipped):
 
 ```bash
-npm run seed               # 100 users on http://localhost:3000
-npm run seed -- 25         # custom count
+npm run seed                  # 100 users on http://localhost:3000
+npm run seed -- 25            # custom count
+npm run seed:patients         # 100 Chilean patients (deterministic valid RUTs)
+npm run seed:patients -- 50   # custom count
 ```
 
 ## Database
@@ -164,36 +226,39 @@ npm run seed -- 25         # custom count
   provided to adapters by `DatabaseModule`.
 - **Location:** `DATABASE_PATH` env var, default `data/hexa.sqlite` (git-ignored).
   The directory is created on first boot; WAL mode is enabled.
-- **Schema:** `SqliteUserRepository` creates its table with
-  `CREATE TABLE IF NOT EXISTS` — replace with real migrations when the schema grows.
+- **Schema:** `SqliteDatabase.ensureSchema` creates the `users` and `patients` tables
+  with `CREATE TABLE IF NOT EXISTS` — replace with real migrations when the schema grows.
 - **Error translation:** SQLite's `UNIQUE constraint failed` (errcode `2067`) is
   translated to `UserAlreadyExistsError` *in the adapter*, so the use case and the
   domain only speak domain errors.
 - **Inspect it:**
   ```bash
   sqlite3 data/hexa.sqlite 'SELECT id, email, name FROM users;'
+  sqlite3 data/hexa.sqlite 'SELECT rut, nombres, apellido_paterno FROM patients;'
   ```
 
 ## Frontend — Angular 22 microfrontends
 
 The `frontend/` folder contains an Angular 22 workspace with a **shell** (host) and
-two **remotes** composed at runtime with **Native Federation** — each app is built
+three **remotes** composed at runtime with **Native Federation** — each app is built
 and served independently:
 
-| App         | Port | Role   | Contents                                                    |
-| ----------- | ---- | ------ | ----------------------------------------------------------- |
-| `shell`     | 4200 | host   | Layout, navigation, language switcher, shared toaster        |
-| `users`     | 4201 | remote | Full users CRUD: list + search, create, edit, delete         |
-| `dashboard` | 4202 | remote | Live summary: total users + the 5 most recent                |
+| App         | Port | Role   | Contents                                                         |
+| ----------- | ---- | ------ | ---------------------------------------------------------------- |
+| `shell`     | 4200 | host   | Layout, navigation, language switcher, shared toaster             |
+| `patients`  | 4203 | remote | Full patient CRUD: list + search, create, edit, delete + RUT form |
+| `users`     | 4201 | remote | Full users CRUD: list + search, create, edit, delete              |
+| `dashboard` | 4202 | remote | Live summary: total patients + the 5 most recent                  |
 
 Shared code lives in two libraries:
 
 - **`projects/ui`** — spartan/ui (the Angular shadcn/ui port) components generated
   with the spartan CLI and imported through path aliases (`@ui/button`, `@ui/dialog`,
   `@ui/table`, …), plus the Tailwind v4 theme and the i18n dictionaries.
-- **`projects/data-access`** — typed `UsersApi` (HttpClient) over the REST API and
-  `mapApiError`, which translates backend error names (`UserAlreadyExistsError`, …)
-  into i18n keys.
+- **`projects/data-access`** — typed `UsersApi` / `PatientsApi` (HttpClient) over the
+  REST API, the RUT/phone helpers that mirror the backend value objects (módulo 11
+  validation, canonical formatting) and `mapApiError`, which translates backend error
+  names (`PatientAlreadyExistsError`, …) into i18n keys.
 
 **i18n:** Transloco with Spanish (default) and English, switchable from the shell
 header. Dictionaries are compiled into the bundles (no cross-origin fetches between
@@ -206,7 +271,7 @@ in the shell re-renders the remotes too. The selection is persisted in
 One command (backend + microfrontends):
 
 ```bash
-./scripts/dev-all.sh           # builds the backend and starts :3000, :4200, :4201, :4202
+./scripts/dev-all.sh           # builds the backend and starts :3000, :4200, :4201, :4202, :4203
 ./scripts/dev-all.sh --skip-build
 ```
 
@@ -216,13 +281,13 @@ Or in separate terminals:
 npm run start:dev              # backend on :3000
 cd frontend
 npm install                    # first time only
-npm run start:all              # shell + users + dashboard (concurrently)
+npm run start:all              # shell + patients + users + dashboard (concurrently)
 ```
 
 Open <http://localhost:4200> — the shell lazily loads each remote from its own dev
 server through `loadRemoteModule` (see `projects/shell/src/app/app.routes.ts`). Each
-remote also runs standalone (`npm run start:users` → :4201) thanks to its own
-`app.config.ts` + `bootstrap.ts`.
+remote also runs standalone (`npm run start:patients` → :4203,
+`npm run start:users` → :4201) thanks to its own `app.config.ts` + `bootstrap.ts`.
 
 More scripts (inside `frontend/`):
 
@@ -291,8 +356,9 @@ Guidelines when writing adapters:
 - **Domain & use cases** (`src/**/*.spec.ts`) — plain classes, no Nest container, no
   HTTP, no database. Fast and deterministic; the in-memory adapter doubles as a test
   double.
-- **Adapter integration** (`sqlite-user.repository.spec.ts`) — runs the real SQLite
-  adapter against a `:memory:` database, including error translation.
+- **Adapter integration** (`sqlite-user.repository.spec.ts`,
+  `sqlite-patient.repository.spec.ts`) — runs the real SQLite adapters against a
+  `:memory:` database, including error translation.
 - **REST e2e** (`test/**/*.e2e-spec.ts`) — boots the real `AppModule` through
   `configureApp` and swaps the `SqliteDatabase` provider for a fresh `:memory:`
   instance per test (`overrideProvider`), so pipes, filters, routing and SQL are all

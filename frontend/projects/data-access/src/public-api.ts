@@ -16,3 +16,8 @@ export * from './lib/setting.model';
 export * from './lib/settings-api';
 export * from './lib/api-key.model';
 export * from './lib/api-keys-api';
+export * from './lib/patient.model';
+export * from './lib/patients-api';
+export * from './lib/region';
+export * from './lib/rut';
+export * from './lib/telefono';

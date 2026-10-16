@@ -49,6 +49,12 @@
       "path": "./projects/users/tsconfig.spec.json"
     },
     {
+      "path": "./projects/patients/tsconfig.app.json"
+    },
+    {
+      "path": "./projects/patients/tsconfig.spec.json"
+    },
+    {
       "path": "./projects/dashboard/tsconfig.app.json"
     },
     {

@@ -6,12 +6,13 @@
     "start": "ng serve",
     "start:shell": "ng serve shell",
     "start:users": "ng serve users",
+    "start:patients": "ng serve patients",
     "start:dashboard": "ng serve dashboard",
-    "start:all": "concurrently -k -n shell,users,dashboard -c blue,green,magenta \"npm:start:shell\" \"npm:start:users\" \"npm:start:dashboard\"",
+    "start:all": "concurrently -k -n shell,patients,users,dashboard -c blue,yellow,green,magenta \"npm:start:shell\" \"npm:start:patients\" \"npm:start:users\" \"npm:start:dashboard\"",
     "build": "ng build",
-    "build:all": "ng build shell && ng build users && ng build dashboard",
+    "build:all": "ng build shell && ng build patients && ng build users && ng build dashboard",
     "test": "ng test",
-    "test:all": "ng test ui && ng test data-access && ng test auth && ng test shell && ng test users && ng test dashboard"
+    "test:all": "ng test ui && ng test data-access && ng test auth && ng test shell && ng test patients && ng test users && ng test dashboard"
   },
   "private": true,
   "packageManager": "npm@11.16.0",

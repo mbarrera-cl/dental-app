@@ -1,7 +1,13 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { lucideHexagon, lucideLayoutDashboard, lucideSettings, lucideUsers } from '@ng-icons/lucide';
+import {
+  lucideHexagon,
+  lucideLayoutDashboard,
+  lucideSettings,
+  lucideStethoscope,
+  lucideUsers,
+} from '@ng-icons/lucide';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { HlmButton } from '@ui/button';
 import { HlmToaster } from '@ui/sonner';
@@ -24,7 +30,13 @@ import { UserMenu } from './user-menu';
     UserMenu,
   ],
   providers: [
-    provideIcons({ lucideHexagon, lucideUsers, lucideLayoutDashboard, lucideSettings }),
+    provideIcons({
+      lucideHexagon,
+      lucideUsers,
+      lucideLayoutDashboard,
+      lucideStethoscope,
+      lucideSettings,
+    }),
   ],
   templateUrl: './app.html',
   styleUrl: './app.css',

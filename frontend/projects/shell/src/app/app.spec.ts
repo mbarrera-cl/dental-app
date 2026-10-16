@@ -38,7 +38,7 @@ describe('App (shell)', () => {
     http = TestBed.inject(HttpTestingController);
   });
 
-  it('renders the shell chrome for anonymous visitors: hidden nav and sign-in link', async () => {
+  it('renders the shell chrome for anonymous visitors: public nav and sign-in link', async () => {
     const fixture = TestBed.createComponent(App);
     fixture.detectChanges();
     await fixture.whenStable();
@@ -48,6 +48,7 @@ describe('App (shell)', () => {
     expect(compiled.querySelector('header')).not.toBeNull();
     expect(compiled.querySelector('router-outlet')).not.toBeNull();
     expect(compiled.querySelector('hlm-toaster')).not.toBeNull();
+    expect(compiled.textContent).toContain('Pacientes');
     expect(compiled.textContent).toContain('Iniciar sesión');
     // Links of guarded sections stay hidden without permissions.
     expect(compiled.textContent).not.toContain('Usuarios');

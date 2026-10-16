@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { AuthModule } from './modules/auth/auth.module.js';
+import { PatientsModule } from './modules/patients/patients.module.js';
 import { RolesModule } from './modules/roles/roles.module.js';
 import { SettingsModule } from './modules/settings/settings.module.js';
 import { UsersModule } from './modules/users/users.module.js';
@@ -27,6 +28,7 @@ import { SecurityModule } from './shared/security/security.module.js';
     RolesModule,
     UsersModule,
     AuthModule,
+    PatientsModule,
   ],
   providers: [
     IdentityBootstrapService,

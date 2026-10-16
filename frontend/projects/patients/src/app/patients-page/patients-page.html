@@ -1,0 +1,516 @@
+<section class="flex flex-col gap-6">
+  <header class="flex flex-wrap items-end justify-between gap-4">
+    <div class="grid gap-1">
+      <h2 class="text-2xl font-semibold tracking-tight">{{ 'patients.title' | transloco }}</h2>
+      <p class="text-muted-foreground text-sm">{{ 'patients.subtitle' | transloco }}</p>
+    </div>
+    <button hlmBtn (click)="openCreate()">
+      <ng-icon name="lucidePlus" />
+      {{ 'patients.newPatient' | transloco }}
+    </button>
+  </header>
+
+  <div class="flex flex-wrap items-center gap-3">
+    <div class="relative min-w-64 flex-1">
+      <ng-icon
+        name="lucideSearch"
+        class="text-muted-foreground pointer-events-none absolute start-2.5 top-1/2 -translate-y-1/2"
+      />
+      <input
+        hlmInput
+        type="search"
+        class="ps-8"
+        data-testid="patients-search"
+        [value]="query()"
+        (input)="onQueryInput($event)"
+        [placeholder]="'patients.searchPlaceholder' | transloco"
+        [attr.aria-label]="'common.search' | transloco"
+      />
+    </div>
+
+    <span hlmBadge variant="secondary">
+      {{ 'patients.count' | transloco: { count: filtered().length, total: patients().length } }}
+    </span>
+
+    <button
+      hlmBtn
+      variant="outline"
+      size="icon"
+      (click)="load()"
+      [disabled]="loading()"
+      [attr.aria-label]="'common.refresh' | transloco"
+    >
+      <ng-icon name="lucideRefreshCw" />
+    </button>
+  </div>
+
+  @if (loadError(); as errorKey) {
+    <div class="border-destructive/30 bg-destructive/5 text-destructive flex items-center gap-3 rounded-lg border px-4 py-3 text-sm">
+      <ng-icon name="lucideTriangleAlert" class="shrink-0" />
+      <p class="flex-1">{{ errorKey | transloco }}</p>
+      <button hlmBtn variant="outline" size="sm" (click)="load()">{{ 'common.retry' | transloco }}</button>
+    </div>
+  }
+
+  <div hlmTableContainer class="bg-card rounded-lg border">
+    <table hlmTable>
+      <thead hlmTHead>
+        <tr hlmTr>
+          <th hlmTh class="w-36">{{ 'patients.columns.rut' | transloco }}</th>
+          <th hlmTh>{{ 'patients.columns.patient' | transloco }}</th>
+          <th hlmTh class="w-20 text-end">{{ 'patients.columns.age' | transloco }}</th>
+          <th hlmTh class="w-44">{{ 'patients.columns.prevision' | transloco }}</th>
+          <th hlmTh class="w-28 text-end">{{ 'patients.columns.actions' | transloco }}</th>
+        </tr>
+      </thead>
+      <tbody hlmTBody>
+        @if (loading()) {
+          @for (row of skeletonRows; track row) {
+            <tr hlmTr>
+              <td hlmTd><div hlmSkeleton class="h-4 w-24"></div></td>
+              <td hlmTd><div hlmSkeleton class="h-4 w-52"></div></td>
+              <td hlmTd><div hlmSkeleton class="ms-auto h-4 w-10"></div></td>
+              <td hlmTd><div hlmSkeleton class="h-5 w-28"></div></td>
+              <td hlmTd><div hlmSkeleton class="ms-auto h-8 w-20"></div></td>
+            </tr>
+          }
+        } @else if (filtered().length === 0) {
+          <tr hlmTr>
+            <td hlmTd colspan="5" class="py-12">
+              <div class="text-muted-foreground flex flex-col items-center gap-2 text-center">
+                <ng-icon name="lucideSearchX" class="size-6" />
+                <p>{{ 'patients.empty' | transloco }}</p>
+              </div>
+            </td>
+          </tr>
+        } @else {
+          @for (patient of filtered(); track patient.id) {
+            <tr hlmTr>
+              <td hlmTd class="font-mono text-sm">{{ formatRut(patient.rut) }}</td>
+              <td hlmTd>
+                <p class="font-medium">{{ nombreCompleto(patient) }}</p>
+                @if (patient.email) {
+                  <p class="text-muted-foreground text-xs">{{ patient.email }}</p>
+                }
+              </td>
+              <td hlmTd class="text-end tabular-nums">
+                {{ 'patients.ageYears' | transloco: { age: age(patient.fechaNacimiento) } }}
+              </td>
+              <td hlmTd>
+                <span hlmBadge variant="outline">{{ previsionLabel(patient) }}</span>
+              </td>
+              <td hlmTd>
+                <div class="flex justify-end gap-1">
+                  <button
+                    hlmBtn
+                    variant="ghost"
+                    size="icon-sm"
+                    (click)="openEdit(patient)"
+                    [attr.aria-label]="'common.edit' | transloco"
+                  >
+                    <ng-icon name="lucidePencil" />
+                  </button>
+                  <button
+                    hlmBtn
+                    variant="ghost"
+                    size="icon-sm"
+                    class="text-destructive"
+                    (click)="askDelete(patient)"
+                    [attr.aria-label]="'common.delete' | transloco"
+                  >
+                    <ng-icon name="lucideTrash2" />
+                  </button>
+                </div>
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- Create / edit dialog (single instance driven by signals) -->
+<hlm-dialog [state]="formOpen() ? 'open' : 'closed'" (stateChanged)="onFormStateChanged($event)">
+  <hlm-dialog-content *hlmDialogPortal="let ctx" class="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
+    <hlm-dialog-header>
+      <h3 hlmDialogTitle>
+        {{ (editing() ? 'patients.form.editTitle' : 'patients.form.createTitle') | transloco }}
+      </h3>
+      <p hlmDialogDescription>
+        {{ (editing() ? 'patients.form.editDescription' : 'patients.form.createDescription') | transloco }}
+      </p>
+    </hlm-dialog-header>
+
+    <form [formGroup]="form" (ngSubmit)="submitForm()" class="grid gap-6" novalidate>
+      <section class="grid gap-4">
+        <h4 class="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
+          {{ 'patients.form.sections.personal' | transloco }}
+        </h4>
+
+        <div class="grid gap-4 sm:grid-cols-2">
+          <div class="grid gap-2">
+            <label hlmLabel for="patient-rut">{{ 'patients.form.rut' | transloco }}</label>
+            <input
+              hlmInput
+              id="patient-rut"
+              formControlName="rut"
+              autocomplete="off"
+              [forceInvalid]="showError(form.controls.rut)"
+              [placeholder]="'patients.form.rutPlaceholder' | transloco"
+            />
+            @if (rutError(); as errorKey) {
+              <p class="text-destructive text-xs">{{ errorKey | transloco }}</p>
+            }
+          </div>
+
+          <div class="grid gap-2">
+            <label hlmLabel for="patient-fecha-nacimiento">
+              {{ 'patients.form.fechaNacimiento' | transloco }}
+            </label>
+            <input
+              hlmInput
+              id="patient-fecha-nacimiento"
+              type="date"
+              formControlName="fechaNacimiento"
+              [forceInvalid]="showError(form.controls.fechaNacimiento)"
+            />
+            @if (fechaNacimientoError(); as errorKey) {
+              <p class="text-destructive text-xs">{{ errorKey | transloco }}</p>
+            }
+          </div>
+
+          <div class="grid gap-2">
+            <label hlmLabel for="patient-nombres">{{ 'patients.form.nombres' | transloco }}</label>
+            <input
+              hlmInput
+              id="patient-nombres"
+              formControlName="nombres"
+              autocomplete="off"
+              [forceInvalid]="showError(form.controls.nombres)"
+              [placeholder]="'patients.form.nombresPlaceholder' | transloco"
+            />
+            @if (nombresError(); as errorKey) {
+              <p class="text-destructive text-xs">{{ errorKey | transloco }}</p>
+            }
+          </div>
+
+          <div class="grid gap-2">
+            <label hlmLabel for="patient-sexo">{{ 'patients.form.sexo' | transloco }}</label>
+            <select
+              id="patient-sexo"
+              formControlName="sexo"
+              class="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-9 w-full rounded-md border px-3 text-sm shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px]"
+              [class.border-destructive]="showError(form.controls.sexo)"
+              [attr.aria-invalid]="showError(form.controls.sexo)"
+            >
+              <option value="" disabled>{{ 'patients.form.sexoPlaceholder' | transloco }}</option>
+              <option value="femenino">{{ 'patients.form.sexoFemenino' | transloco }}</option>
+              <option value="masculino">{{ 'patients.form.sexoMasculino' | transloco }}</option>
+              <option value="otro">{{ 'patients.form.sexoOtro' | transloco }}</option>
+            </select>
+            @if (sexoError(); as errorKey) {
+              <p class="text-destructive text-xs">{{ errorKey | transloco }}</p>
+            }
+          </div>
+
+          <div class="grid gap-2">
+            <label hlmLabel for="patient-apellido-paterno">
+              {{ 'patients.form.apellidoPaterno' | transloco }}
+            </label>
+            <input
+              hlmInput
+              id="patient-apellido-paterno"
+              formControlName="apellidoPaterno"
+              autocomplete="off"
+              [forceInvalid]="showError(form.controls.apellidoPaterno)"
+              [placeholder]="'patients.form.apellidoPaternoPlaceholder' | transloco"
+            />
+            @if (apellidoPaternoError(); as errorKey) {
+              <p class="text-destructive text-xs">{{ errorKey | transloco }}</p>
+            }
+          </div>
+
+          <div class="grid gap-2">
+            <label hlmLabel for="patient-apellido-materno">
+              {{ 'patients.form.apellidoMaterno' | transloco }}
+            </label>
+            <input
+              hlmInput
+              id="patient-apellido-materno"
+              formControlName="apellidoMaterno"
+              autocomplete="off"
+              [forceInvalid]="showError(form.controls.apellidoMaterno)"
+              [placeholder]="'patients.form.apellidoMaternoPlaceholder' | transloco"
+            />
+            @if (apellidoMaternoError(); as errorKey) {
+              <p class="text-destructive text-xs">{{ errorKey | transloco }}</p>
+            }
+          </div>
+
+          <div class="grid gap-2">
+            <label hlmLabel for="patient-email">{{ 'patients.form.email' | transloco }}</label>
+            <input
+              hlmInput
+              id="patient-email"
+              type="email"
+              formControlName="email"
+              autocomplete="off"
+              [forceInvalid]="showError(form.controls.email)"
+              [placeholder]="'patients.form.emailPlaceholder' | transloco"
+            />
+            @if (emailError(); as errorKey) {
+              <p class="text-destructive text-xs">{{ errorKey | transloco }}</p>
+            }
+          </div>
+
+          <div class="grid gap-2">
+            <label hlmLabel for="patient-telefono">{{ 'patients.form.telefono' | transloco }}</label>
+            <input
+              hlmInput
+              id="patient-telefono"
+              type="tel"
+              formControlName="telefono"
+              autocomplete="off"
+              [forceInvalid]="showError(form.controls.telefono)"
+              [placeholder]="'patients.form.telefonoPlaceholder' | transloco"
+            />
+            @if (telefonoError(); as errorKey) {
+              <p class="text-destructive text-xs">{{ errorKey | transloco }}</p>
+            }
+          </div>
+        </div>
+      </section>
+
+      <section class="grid gap-4">
+        <h4 class="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
+          {{ 'patients.form.sections.address' | transloco }}
+        </h4>
+
+        <div class="grid gap-4 sm:grid-cols-2">
+          <div class="grid gap-2">
+            <label hlmLabel for="patient-region">{{ 'patients.form.region' | transloco }}</label>
+            <select
+              id="patient-region"
+              formControlName="region"
+              class="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-9 w-full rounded-md border px-3 text-sm shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px]"
+            >
+              <option value="">{{ 'patients.form.regionPlaceholder' | transloco }}</option>
+              @for (region of regions; track region.code) {
+                <option [value]="region.code">{{ region.code }} · {{ region.name }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="grid gap-2">
+            <label hlmLabel for="patient-comuna">{{ 'patients.form.comuna' | transloco }}</label>
+            <input
+              hlmInput
+              id="patient-comuna"
+              formControlName="comuna"
+              autocomplete="off"
+              [placeholder]="'patients.form.comunaPlaceholder' | transloco"
+            />
+          </div>
+
+          <div class="grid gap-2">
+            <label hlmLabel for="patient-calle">{{ 'patients.form.calle' | transloco }}</label>
+            <input
+              hlmInput
+              id="patient-calle"
+              formControlName="calle"
+              autocomplete="off"
+              [placeholder]="'patients.form.callePlaceholder' | transloco"
+            />
+          </div>
+
+          <div class="grid gap-2">
+            <label hlmLabel for="patient-numero">{{ 'patients.form.numero' | transloco }}</label>
+            <input
+              hlmInput
+              id="patient-numero"
+              formControlName="numero"
+              autocomplete="off"
+              [placeholder]="'patients.form.numeroPlaceholder' | transloco"
+            />
+          </div>
+
+          <div class="grid gap-2 sm:col-span-2">
+            <label hlmLabel for="patient-departamento">
+              {{ 'patients.form.departamento' | transloco }}
+            </label>
+            <input
+              hlmInput
+              id="patient-departamento"
+              formControlName="departamento"
+              autocomplete="off"
+              [placeholder]="'patients.form.departamentoPlaceholder' | transloco"
+            />
+          </div>
+        </div>
+
+        @if (addressError(); as errorKey) {
+          <p class="text-destructive text-xs">{{ errorKey | transloco }}</p>
+        }
+      </section>
+
+      <section class="grid gap-4">
+        <h4 class="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
+          {{ 'patients.form.sections.health' | transloco }}
+        </h4>
+
+        <div class="grid gap-4 sm:grid-cols-2">
+          <div class="grid gap-2">
+            <label hlmLabel for="patient-prevision">{{ 'patients.form.previsionTipo' | transloco }}</label>
+            <select
+              id="patient-prevision"
+              formControlName="previsionTipo"
+              class="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-9 w-full rounded-md border px-3 text-sm shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px]"
+            >
+              <option value="">{{ 'patients.form.previsionSin' | transloco }}</option>
+              <option value="FONASA">FONASA</option>
+              <option value="ISAPRE">ISAPRE</option>
+            </select>
+          </div>
+
+          @if (form.controls.previsionTipo.value === 'FONASA') {
+            <div class="grid gap-2">
+              <label hlmLabel for="patient-tramo">{{ 'patients.form.previsionTramo' | transloco }}</label>
+              <select
+                id="patient-tramo"
+                formControlName="previsionTramo"
+                class="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-9 w-full rounded-md border px-3 text-sm shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px]"
+              >
+                <option value="" disabled>{{ 'patients.form.previsionTramoPlaceholder' | transloco }}</option>
+                @for (tramo of tramos; track tramo) {
+                  <option [value]="tramo">{{ tramo }}</option>
+                }
+              </select>
+            </div>
+          } @else if (form.controls.previsionTipo.value === 'ISAPRE') {
+            <div class="grid gap-2">
+              <label hlmLabel for="patient-plan">{{ 'patients.form.previsionPlan' | transloco }}</label>
+              <input
+                hlmInput
+                id="patient-plan"
+                formControlName="previsionPlan"
+                autocomplete="off"
+                [placeholder]="'patients.form.previsionPlanPlaceholder' | transloco"
+              />
+            </div>
+          }
+        </div>
+
+        @if (previsionError(); as errorKey) {
+          <p class="text-destructive text-xs">{{ errorKey | transloco }}</p>
+        }
+      </section>
+
+      <section class="grid gap-4">
+        <h4 class="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
+          {{ 'patients.form.sections.emergency' | transloco }}
+        </h4>
+
+        <div class="grid gap-4 sm:grid-cols-2">
+          <div class="grid gap-2">
+            <label hlmLabel for="patient-contacto-nombre">
+              {{ 'patients.form.contactoNombre' | transloco }}
+            </label>
+            <input
+              hlmInput
+              id="patient-contacto-nombre"
+              formControlName="contactoNombre"
+              autocomplete="off"
+              [placeholder]="'patients.form.contactoNombrePlaceholder' | transloco"
+            />
+          </div>
+
+          <div class="grid gap-2">
+            <label hlmLabel for="patient-contacto-parentesco">
+              {{ 'patients.form.contactoParentesco' | transloco }}
+            </label>
+            <input
+              hlmInput
+              id="patient-contacto-parentesco"
+              formControlName="contactoParentesco"
+              autocomplete="off"
+              [placeholder]="'patients.form.contactoParentescoPlaceholder' | transloco"
+            />
+          </div>
+
+          <div class="grid gap-2 sm:col-span-2">
+            <label hlmLabel for="patient-contacto-telefono">
+              {{ 'patients.form.contactoTelefono' | transloco }}
+            </label>
+            <input
+              hlmInput
+              id="patient-contacto-telefono"
+              type="tel"
+              formControlName="contactoTelefono"
+              autocomplete="off"
+              [placeholder]="'patients.form.contactoTelefonoPlaceholder' | transloco"
+            />
+          </div>
+        </div>
+
+        @if (contactoError(); as errorKey) {
+          <p class="text-destructive text-xs">{{ errorKey | transloco }}</p>
+        }
+      </section>
+
+      <section class="grid gap-4">
+        <h4 class="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
+          {{ 'patients.form.sections.notes' | transloco }}
+        </h4>
+
+        <div class="grid gap-2">
+          <label hlmLabel for="patient-notas">{{ 'patients.form.notas' | transloco }}</label>
+          <textarea
+            id="patient-notas"
+            formControlName="notas"
+            rows="3"
+            class="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 min-h-20 w-full rounded-md border px-3 py-2 text-sm shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px]"
+            [class.border-destructive]="showError(form.controls.notas)"
+            [placeholder]="'patients.form.notasPlaceholder' | transloco"
+          ></textarea>
+          @if (notasError(); as errorKey) {
+            <p class="text-destructive text-xs">{{ errorKey | transloco }}</p>
+          }
+        </div>
+      </section>
+
+      <hlm-dialog-footer>
+        <button type="button" hlmBtn variant="outline" hlmDialogClose [disabled]="saving()">
+          {{ 'common.cancel' | transloco }}
+        </button>
+        <button type="submit" hlmBtn [disabled]="saving()">
+          @if (saving()) {
+            <hlm-spinner aria-label="saving" />
+          }
+          {{ (editing() ? 'patients.form.submitEdit' : 'patients.form.submitCreate') | transloco }}
+        </button>
+      </hlm-dialog-footer>
+    </form>
+  </hlm-dialog-content>
+</hlm-dialog>
+
+<!-- Delete confirmation (single instance driven by signals) -->
+<hlm-alert-dialog [state]="deleteOpen() ? 'open' : 'closed'" (stateChanged)="onDeleteStateChanged($event)">
+  <hlm-alert-dialog-content *hlmAlertDialogPortal="let ctx">
+    <hlm-alert-dialog-header>
+      <h2 hlmAlertDialogTitle>{{ 'patients.delete.title' | transloco }}</h2>
+      <p hlmAlertDialogDescription>
+        {{ 'patients.delete.description' | transloco: deletingLabel() }}
+      </p>
+    </hlm-alert-dialog-header>
+    <hlm-alert-dialog-footer>
+      <button hlmAlertDialogCancel [disabled]="deleting()">{{ 'common.cancel' | transloco }}</button>
+      <button hlmAlertDialogAction variant="destructive" [disabled]="deleting()" (click)="confirmDelete()">
+        @if (deleting()) {
+          <hlm-spinner aria-label="deleting" />
+        }
+        {{ 'patients.delete.action' | transloco }}
+      </button>
+    </hlm-alert-dialog-footer>
+  </hlm-alert-dialog-content>
+</hlm-alert-dialog>

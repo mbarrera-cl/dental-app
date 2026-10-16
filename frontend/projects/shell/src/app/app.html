@@ -13,6 +13,14 @@
 
       <nav class="flex items-center gap-1" [attr.aria-label]="'common.appName' | transloco">
         <a
+          routerLink="/patients"
+          routerLinkActive="bg-secondary text-secondary-foreground"
+          class="text-muted-foreground hover:text-foreground hover:bg-muted/60 flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors"
+        >
+          <ng-icon name="lucideStethoscope" class="text-base" />
+          <span>{{ 'shell.navPatients' | transloco }}</span>
+        </a>
+        <a
           *hasPermission="keys.users.read"
           routerLink="/users"
           routerLinkActive="bg-secondary text-secondary-foreground"

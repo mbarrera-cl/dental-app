@@ -29,6 +29,31 @@ describe('mapApiError', () => {
     );
   });
 
+  it('maps patients domain error names to translation keys', () => {
+    expect(
+      mapApiError(httpError(409, { statusCode: 409, error: 'PatientAlreadyExistsError', message: 'dup' })),
+    ).toBe('errors.patientAlreadyExists');
+    expect(
+      mapApiError(httpError(404, { statusCode: 404, error: 'PatientRutNotFoundError', message: 'missing' })),
+    ).toBe('errors.patientRutNotFound');
+    expect(mapApiError(httpError(400, { statusCode: 400, error: 'InvalidRutError', message: 'bad rut' }))).toBe(
+      'errors.invalidRut',
+    );
+    expect(
+      mapApiError(httpError(400, { statusCode: 400, error: 'InvalidPrevisionError', message: 'bad' })),
+    ).toBe('errors.invalidPrevision');
+    expect(
+      mapApiError(httpError(400, { statusCode: 400, error: 'EmptyPatientUpdateError', message: 'empty' })),
+    ).toBe('errors.emptyUpdate');
+  });
+
+  it('falls back to generic keys for unnamed 404 and 409 responses', () => {
+    expect(
+      mapApiError(httpError(404, { statusCode: 404, message: 'Cannot GET /nope', error: 'Not Found' })),
+    ).toBe('errors.notFound');
+    expect(mapApiError(httpError(409, { statusCode: 409, message: 'conflict' }))).toBe('errors.conflict');
+  });
+
   it('maps ValidationPipe responses by status code', () => {
     const validationPipeBody = {
       statusCode: 400,

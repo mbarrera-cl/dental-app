@@ -97,6 +97,33 @@ export function ensureSchema(db: SqliteDatabase): void {
   `);
 
   connection.exec(`
+    CREATE TABLE IF NOT EXISTS patients (
+      id                     TEXT PRIMARY KEY,
+      rut                    TEXT NOT NULL UNIQUE,
+      nombres                TEXT NOT NULL,
+      apellido_paterno       TEXT NOT NULL,
+      apellido_materno       TEXT NOT NULL,
+      fecha_nacimiento       TEXT NOT NULL,
+      sexo                   TEXT NOT NULL,
+      email                  TEXT,
+      telefono               TEXT,
+      direccion_region       TEXT,
+      direccion_comuna       TEXT,
+      direccion_calle        TEXT,
+      direccion_numero       TEXT,
+      direccion_departamento TEXT,
+      prevision_tipo         TEXT,
+      prevision_tramo        TEXT,
+      prevision_plan         TEXT,
+      contacto_nombre        TEXT,
+      contacto_telefono      TEXT,
+      contacto_parentesco    TEXT,
+      notas                  TEXT,
+      created_at             TEXT NOT NULL
+    );
+  `);
+
+  connection.exec(`
     CREATE TABLE IF NOT EXISTS settings (
       key        TEXT PRIMARY KEY,
       value      TEXT NOT NULL,

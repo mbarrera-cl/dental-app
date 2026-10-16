@@ -22,6 +22,7 @@
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
     "seed": "node scripts/seed-users.mjs",
+    "seed:patients": "node scripts/seed-patients.mjs",
     "lint": "oxlint --type-aware src/ test/",
     "test": "vitest run",
     "test:watch": "vitest",

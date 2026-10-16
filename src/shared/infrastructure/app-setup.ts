@@ -8,6 +8,7 @@ const DEFAULT_CORS_ORIGINS = [
   'http://localhost:4200', // shell
   'http://localhost:4201', // users remote
   'http://localhost:4202', // dashboard remote
+  'http://localhost:4203', // patients remote
   'http://localhost:4204', // admin remote
 ];
 

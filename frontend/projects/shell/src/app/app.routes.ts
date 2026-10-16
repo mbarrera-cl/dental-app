@@ -4,15 +4,16 @@ import { authGuard, permissionGuard, PERMISSION_KEYS } from 'auth';
 
 /**
  * Routes of the shell. Each microfrontend exposes a `./routes` entry
- * (`USERS_ROUTES` / `DASHBOARD_ROUTES`) which is loaded lazily from its own
- * dev server (:4201 / :4202) through Native Federation.
+ * (`PATIENTS_ROUTES` / `USERS_ROUTES` / `DASHBOARD_ROUTES` / `ADMIN_ROUTES`)
+ * which is loaded lazily from its own dev server (:4203 / :4201 / :4202 /
+ * :4204) through Native Federation.
  *
  * `login` and `forbidden` are public; everything else runs through
  * `authGuard` (silent bootstrap + returnUrl) and, where it makes sense,
  * `permissionGuard` (missing permissions land on `/forbidden`).
  */
 export const routes: Routes = [
-  { path: '', pathMatch: 'full', redirectTo: 'users' },
+  { path: '', pathMatch: 'full', redirectTo: 'patients' },
   {
     path: 'login',
     loadComponent: () => import('./login/login-page').then((m) => m.LoginPage),
@@ -25,6 +26,14 @@ export const routes: Routes = [
     path: 'account/api-keys',
     canMatch: [authGuard, permissionGuard({ allOf: [PERMISSION_KEYS.apiKeys.self] })],
     loadComponent: () => import('./account/api-keys/api-keys-page').then((m) => m.ApiKeysPage),
+  },
+  {
+    path: 'patients',
+    canMatch: [authGuard],
+    loadChildren: () =>
+      loadRemoteModule<{ PATIENTS_ROUTES: Routes }>('patients', './routes').then(
+        (m) => m.PATIENTS_ROUTES,
+      ),
   },
   {
     path: 'users',
@@ -45,15 +54,11 @@ export const routes: Routes = [
     canMatch: [
       authGuard,
       permissionGuard({
-        anyOf: [
-          PERMISSION_KEYS.roles.read,
-          PERMISSION_KEYS.settings.read,
-          PERMISSION_KEYS.apiKeys.read,
-        ],
+        anyOf: [PERMISSION_KEYS.roles.read, PERMISSION_KEYS.settings.read, PERMISSION_KEYS.apiKeys.read],
       }),
     ],
     loadChildren: () =>
       loadRemoteModule<{ ADMIN_ROUTES: Routes }>('admin', './routes').then((m) => m.ADMIN_ROUTES),
   },
-  { path: '**', redirectTo: 'users' },
+  { path: '**', redirectTo: 'patients' },
 ];

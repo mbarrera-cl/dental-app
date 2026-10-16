@@ -2,6 +2,7 @@ import { initFederation } from '@angular-architects/native-federation';
 
 initFederation(
   {
+    patients: 'http://localhost:4203/remoteEntry.json',
     users: 'http://localhost:4201/remoteEntry.json',
     dashboard: 'http://localhost:4202/remoteEntry.json',
   },

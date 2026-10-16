@@ -1,16 +1,32 @@
 import { HttpErrorResponse } from '@angular/common/http';
 
 /**
- * Backend error names (`user.errors.ts` / Nest `DomainExceptionFilter`)
- * mapped to Transloco keys. Using keys instead of messages keeps the UI
- * translatable regardless of the language the API responds in.
+ * Backend error names (`user.errors.ts` / `patient.errors.ts` / Nest
+ * `DomainExceptionFilter`) mapped to Transloco keys. Using keys instead of
+ * messages keeps the UI translatable regardless of the language the API
+ * responds in.
  */
 const ERROR_NAME_TO_KEY: Readonly<Record<string, string>> = {
+  // users context
   UserAlreadyExistsError: 'errors.userAlreadyExists',
   UserNotFoundError: 'errors.userNotFound',
   EmptyUserUpdateError: 'errors.emptyUpdate',
   InvalidEmailError: 'errors.invalidEmail',
   InvalidNameError: 'errors.invalidName',
+  // patients context
+  PatientAlreadyExistsError: 'errors.patientAlreadyExists',
+  PatientNotFoundError: 'errors.patientNotFound',
+  PatientRutNotFoundError: 'errors.patientRutNotFound',
+  EmptyPatientUpdateError: 'errors.emptyUpdate',
+  InvalidRutError: 'errors.invalidRut',
+  InvalidPatientNameError: 'errors.invalidName',
+  InvalidFechaNacimientoError: 'errors.invalidFechaNacimiento',
+  InvalidSexoError: 'errors.invalidSexo',
+  InvalidTelefonoError: 'errors.invalidTelefono',
+  InvalidRegionError: 'errors.invalidRegion',
+  InvalidDireccionError: 'errors.invalidDireccion',
+  InvalidPrevisionError: 'errors.invalidPrevision',
+  InvalidContactoEmergenciaError: 'errors.invalidContactoEmergencia',
 };
 
 /**
@@ -38,9 +54,9 @@ export function mapApiError(error: unknown): string {
     case 422:
       return 'errors.validation';
     case 404:
-      return 'errors.userNotFound';
+      return 'errors.notFound';
     case 409:
-      return 'errors.userAlreadyExists';
+      return 'errors.conflict';
     default:
       return 'errors.unknown';
   }

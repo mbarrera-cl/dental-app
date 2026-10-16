@@ -1,4 +1,5 @@
 import { apiKeysCategory } from '../../modules/apikeys/permissions.js';
+import { patientsCategory } from '../../modules/patients/permissions.js';
 import { rolesCategory } from '../../modules/roles/permissions.js';
 import { settingsCategory } from '../../modules/settings/permissions.js';
 import { usersCategory } from '../../modules/users/permissions.js';
@@ -15,6 +16,7 @@ export const dashboardCategory = defineCategory('dashboard', 'Dashboard', {
 /** Every category in the system, in presentation order. */
 export const PERMISSION_CATEGORIES: readonly PermissionCategory[] = [
   usersCategory,
+  patientsCategory,
   rolesCategory,
   settingsCategory,
   apiKeysCategory,

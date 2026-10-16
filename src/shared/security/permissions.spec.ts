@@ -7,6 +7,7 @@ import {
   isPermissionKey,
 } from './permissions.js';
 import { apiKeysCategory } from '../../modules/apikeys/permissions.js';
+import { patientsCategory } from '../../modules/patients/permissions.js';
 import { rolesCategory } from '../../modules/roles/permissions.js';
 import { settingsCategory } from '../../modules/settings/permissions.js';
 import { usersCategory } from '../../modules/users/permissions.js';
@@ -60,6 +61,7 @@ describe('permission catalog', () => {
   it('registers every module-owned category plus the UI-only dashboard category', () => {
     expect(PERMISSION_CATEGORIES).toEqual([
       usersCategory,
+      patientsCategory,
       rolesCategory,
       settingsCategory,
       apiKeysCategory,
