@@ -144,6 +144,13 @@ lives in `scripts/crud-demo.sh` — run it against a live server:
 ./scripts/crud-demo.sh
 ```
 
+To seed demo data (default 100 users, idempotent — duplicates are skipped):
+
+```bash
+npm run seed               # 100 users on http://localhost:3000
+npm run seed -- 25         # custom count
+```
+
 ## Database
 
 - **Driver:** `node:sqlite` (built into Node — nothing to install). The single
