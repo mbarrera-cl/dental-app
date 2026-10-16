@@ -3,6 +3,7 @@ import {
   AuthApi,
   type AuthProfile,
   type AuthSession,
+  type ChangeExpiredPasswordPayload,
   type ChangePasswordPayload,
   type LoginPayload,
 } from 'data-access';
@@ -111,6 +112,14 @@ export class SessionStore {
   /** Changes the password and adopts the freshly issued session. */
   changePassword(payload: ChangePasswordPayload): Observable<AuthSession> {
     return this.api.changePassword(payload).pipe(tap((session) => this.apply(session)));
+  }
+
+  /**
+   * Completes the forced change of an expired/reset password (no session yet)
+   * and signs the user in with the returned session.
+   */
+  changeExpiredPassword(payload: ChangeExpiredPasswordPayload): Observable<AuthSession> {
+    return this.api.changeExpiredPassword(payload).pipe(tap((session) => this.apply(session)));
   }
 
   /** Best-effort logout: whatever the server says, the local session drops. */

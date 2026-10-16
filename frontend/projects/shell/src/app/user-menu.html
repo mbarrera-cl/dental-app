@@ -1,0 +1,70 @@
+<div class="relative">
+  <button
+    hlmBtn
+    variant="outline"
+    size="sm"
+    type="button"
+    data-testid="user-menu-trigger"
+    [attr.aria-expanded]="open()"
+    (click)="toggle()"
+  >
+    <span
+      class="bg-primary text-primary-foreground flex size-5 items-center justify-center rounded-full text-[10px] font-semibold uppercase"
+    >
+      {{ (store.user()?.name ?? '?').charAt(0) }}
+    </span>
+    <span class="max-w-32 truncate">{{ store.user()?.name }}</span>
+    <ng-icon name="lucideChevronDown" class="text-muted-foreground text-sm" />
+  </button>
+
+  @if (open()) {
+    <div
+      data-testid="user-menu-panel"
+      class="bg-popover text-popover-foreground absolute end-0 z-50 mt-2 flex w-64 flex-col rounded-lg border p-1 shadow-md"
+    >
+      <div class="border-b px-3 py-2">
+        <p class="truncate text-sm font-medium">{{ store.user()?.name }}</p>
+        <p class="text-muted-foreground truncate text-xs">{{ store.user()?.email }}</p>
+        @if (store.roles().length > 0) {
+          <div class="mt-2 flex flex-wrap gap-1">
+            @for (role of store.roles(); track role.id) {
+              <span hlmBadge variant="secondary">{{ role.name }}</span>
+            }
+          </div>
+        }
+      </div>
+
+      <a
+        *hasPermission="keys.apiKeys.self"
+        routerLink="/account/api-keys"
+        class="hover:bg-accent flex items-center gap-2 rounded-md px-3 py-2 text-sm"
+        (click)="close()"
+      >
+        <ng-icon name="lucideKeyRound" class="text-muted-foreground" />
+        {{ 'shell.userMenu.apiKeys' | transloco }}
+      </a>
+
+      <button
+        type="button"
+        data-testid="user-menu-change-password"
+        class="hover:bg-accent flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm"
+        (click)="askChangePassword()"
+      >
+        <ng-icon name="lucideLockKeyhole" class="text-muted-foreground" />
+        {{ 'shell.userMenu.changePassword' | transloco }}
+      </button>
+
+      <button
+        type="button"
+        data-testid="user-menu-signout"
+        class="text-destructive hover:bg-accent flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm"
+        (click)="signOut()"
+      >
+        <ng-icon name="lucideLogOut" />
+        {{ 'shell.userMenu.signOut' | transloco }}
+      </button>
+    </div>
+  }
+</div>
+
+<app-change-password-dialog [open]="changePasswordOpen()" (closed)="changePasswordOpen.set(false)" />

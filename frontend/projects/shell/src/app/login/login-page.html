@@ -1,0 +1,125 @@
+<section class="mx-auto flex w-full max-w-sm flex-col gap-6 py-10">
+  <header class="flex flex-col items-center gap-2 text-center">
+    <span class="bg-primary text-primary-foreground flex size-10 items-center justify-center rounded-lg">
+      <ng-icon name="lucideHexagon" class="text-xl" />
+    </span>
+    <h2 class="text-2xl font-semibold tracking-tight">{{ 'login.title' | transloco }}</h2>
+    <p class="text-muted-foreground text-sm">{{ 'login.subtitle' | transloco }}</p>
+  </header>
+
+  @if (errorKey(); as key) {
+    <p
+      role="alert"
+      data-testid="login-error"
+      class="border-destructive/40 bg-destructive/10 text-destructive flex items-start gap-2 rounded-md border px-3 py-2 text-sm"
+    >
+      <ng-icon name="lucideTriangleAlert" class="mt-0.5 shrink-0" />
+      <span>{{ key | transloco: errorParams() }}</span>
+    </p>
+  }
+
+  @if (mode() === 'credentials') {
+    <form [formGroup]="form" (ngSubmit)="submitCredentials()" class="flex flex-col gap-4" novalidate>
+      <div class="grid gap-2">
+        <label hlmLabel for="login-email">{{ 'login.email' | transloco }}</label>
+        <input
+          hlmInput
+          id="login-email"
+          type="email"
+          formControlName="email"
+          autocomplete="username"
+          data-testid="login-email"
+          [placeholder]="'login.emailPlaceholder' | transloco"
+        />
+        @if (showError(form.controls.email)) {
+          <p class="text-destructive text-xs">{{ emailErrorKey() | transloco }}</p>
+        }
+      </div>
+
+      <div class="grid gap-2">
+        <label hlmLabel for="login-password">{{ 'login.password' | transloco }}</label>
+        <input
+          hlmInput
+          id="login-password"
+          type="password"
+          formControlName="password"
+          autocomplete="current-password"
+          data-testid="login-password"
+          [placeholder]="'login.passwordPlaceholder' | transloco"
+        />
+        @if (showError(form.controls.password)) {
+          <p class="text-destructive text-xs">{{ 'login.validation.passwordRequired' | transloco }}</p>
+        }
+      </div>
+
+      <button hlmBtn type="submit" data-testid="login-submit" [disabled]="submitting()">
+        @if (submitting()) {
+          <hlm-spinner class="me-1" />
+        }
+        {{ (submitting() ? 'login.submitting' : 'login.submit') | transloco }}
+      </button>
+    </form>
+  } @else {
+    <form
+      [formGroup]="expiredForm"
+      (ngSubmit)="submitExpired()"
+      class="flex flex-col gap-4"
+      data-testid="login-expired"
+      novalidate
+    >
+      <p class="text-muted-foreground text-sm">{{ 'login.expired.description' | transloco }}</p>
+
+      <div class="grid gap-1 rounded-md border px-3 py-2 text-sm">
+        <span class="font-medium">{{ form.controls.email.value }}</span>
+        <span class="text-muted-foreground text-xs">
+          {{ (reason() === 'reset' ? 'login.expired.reasonReset' : 'login.expired.reasonExpired') | transloco }}
+        </span>
+      </div>
+
+      @if (violations().length > 0) {
+        <ul
+          data-testid="login-violations"
+          class="border-destructive/40 bg-destructive/10 text-destructive list-inside list-disc rounded-md border px-3 py-2 text-xs"
+        >
+          @for (violation of violations(); track violation.rule) {
+            <li>{{ violationLabel(violation) }}</li>
+          }
+        </ul>
+      }
+
+      <div class="grid gap-2">
+        <label hlmLabel for="login-new-password">{{ 'login.expired.newPassword' | transloco }}</label>
+        <input
+          hlmInput
+          id="login-new-password"
+          type="password"
+          formControlName="newPassword"
+          autocomplete="new-password"
+          data-testid="login-new-password"
+        />
+        @if (showError(expiredForm.controls.newPassword)) {
+          <p class="text-destructive text-xs">{{ 'login.validation.newPasswordRequired' | transloco }}</p>
+        }
+      </div>
+
+      <div class="grid gap-2">
+        <label hlmLabel for="login-confirm">{{ 'login.expired.confirm' | transloco }}</label>
+        <input
+          hlmInput
+          id="login-confirm"
+          type="password"
+          formControlName="confirm"
+          autocomplete="new-password"
+          data-testid="login-confirm"
+        />
+        @if (showError(expiredForm.controls.confirm)) {
+          <p class="text-destructive text-xs">{{ confirmErrorKey() | transloco }}</p>
+        }
+      </div>
+
+      <button hlmBtn type="submit" data-testid="login-expired-submit" [disabled]="submitting()">
+        {{ (submitting() ? 'login.submitting' : 'login.expired.submit') | transloco }}
+      </button>
+    </form>
+  }
+</section>

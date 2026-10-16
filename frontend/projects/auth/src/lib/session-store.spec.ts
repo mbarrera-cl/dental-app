@@ -24,6 +24,7 @@ describe('SessionStore', () => {
     refresh: ReturnType<typeof vi.fn>;
     logout: ReturnType<typeof vi.fn>;
     changePassword: ReturnType<typeof vi.fn>;
+    changeExpiredPassword: ReturnType<typeof vi.fn>;
   };
   let store: SessionStore;
 
@@ -33,6 +34,7 @@ describe('SessionStore', () => {
       refresh: vi.fn(() => of(SESSION)),
       logout: vi.fn(() => of(undefined)),
       changePassword: vi.fn(() => of(SESSION)),
+      changeExpiredPassword: vi.fn(() => of(SESSION)),
     };
 
     TestBed.configureTestingModule({ providers: [{ provide: AuthApi, useValue: api }] });
@@ -118,6 +120,27 @@ describe('SessionStore', () => {
 
     expect(store.accessToken()).toBe('token-2');
     expect(store.isAuthenticated()).toBe(true);
+  });
+
+  it('signs the user in after the forced change of an expired password', async () => {
+    const renewed = { ...SESSION, accessToken: 'token-3' };
+    api.changeExpiredPassword.mockReturnValue(of(renewed));
+
+    await firstValueFrom(
+      store.changeExpiredPassword({
+        email: 'ada@example.com',
+        currentPassword: 'old',
+        newPassword: 'new',
+      }),
+    );
+
+    expect(api.changeExpiredPassword).toHaveBeenCalledWith({
+      email: 'ada@example.com',
+      currentPassword: 'old',
+      newPassword: 'new',
+    });
+    expect(store.isAuthenticated()).toBe(true);
+    expect(store.accessToken()).toBe('token-3');
   });
 
   it('drops the local session on logout even when the API fails', async () => {

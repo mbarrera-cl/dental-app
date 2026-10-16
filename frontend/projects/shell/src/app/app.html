@@ -1,7 +1,7 @@
 <div class="bg-background text-foreground flex min-h-dvh flex-col">
   <header class="bg-background/80 sticky top-0 z-40 border-b backdrop-blur">
     <div class="mx-auto flex h-14 w-full max-w-5xl items-center gap-3 px-4 sm:gap-6">
-      <a routerLink="/users" class="flex items-center gap-2">
+      <a routerLink="/" class="flex items-center gap-2">
         <span class="bg-primary text-primary-foreground flex size-7 shrink-0 items-center justify-center rounded-md">
           <ng-icon name="lucideHexagon" class="text-sm" />
         </span>
@@ -13,6 +13,7 @@
 
       <nav class="flex items-center gap-1" [attr.aria-label]="'common.appName' | transloco">
         <a
+          *hasPermission="keys.users.read"
           routerLink="/users"
           routerLinkActive="bg-secondary text-secondary-foreground"
           class="text-muted-foreground hover:text-foreground hover:bg-muted/60 flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors"
@@ -21,6 +22,7 @@
           <span>{{ 'shell.navUsers' | transloco }}</span>
         </a>
         <a
+          *hasPermission="keys.dashboard.read"
           routerLink="/dashboard"
           routerLinkActive="bg-secondary text-secondary-foreground"
           class="text-muted-foreground hover:text-foreground hover:bg-muted/60 flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors"
@@ -28,10 +30,24 @@
           <ng-icon name="lucideLayoutDashboard" class="text-base" />
           <span>{{ 'shell.navDashboard' | transloco }}</span>
         </a>
+        <a
+          *hasPermission="[keys.roles.read, keys.settings.read, keys.apiKeys.read]; mode: 'any'"
+          routerLink="/admin"
+          routerLinkActive="bg-secondary text-secondary-foreground"
+          class="text-muted-foreground hover:text-foreground hover:bg-muted/60 flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors"
+        >
+          <ng-icon name="lucideSettings" class="text-base" />
+          <span>{{ 'shell.navAdmin' | transloco }}</span>
+        </a>
       </nav>
 
-      <div class="ms-auto">
+      <div class="ms-auto flex items-center gap-2">
         <app-language-switcher />
+        @if (store.isAuthenticated()) {
+          <app-user-menu />
+        } @else {
+          <a hlmBtn variant="outline" size="sm" routerLink="/login">{{ 'shell.signIn' | transloco }}</a>
+        }
       </div>
     </div>
   </header>
