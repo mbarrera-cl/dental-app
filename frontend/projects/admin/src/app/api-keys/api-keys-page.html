@@ -1,0 +1,376 @@
+<section class="flex flex-col gap-6">
+  <header class="flex flex-wrap items-end justify-between gap-4">
+    <div class="grid gap-1">
+      <h3 class="text-xl font-semibold tracking-tight">{{ 'admin.tabs.apiKeys' | transloco }}</h3>
+      <p class="text-muted-foreground text-sm">{{ 'admin.apiKeys.subtitle' | transloco }}</p>
+    </div>
+    <button
+      *hasPermission="permissionKeys.apiKeys.manage"
+      hlmBtn
+      data-testid="admin-keys-create"
+      (click)="openCreate()"
+    >
+      <ng-icon name="lucidePlus" />
+      {{ 'admin.apiKeys.newKey' | transloco }}
+    </button>
+  </header>
+
+  <div class="flex flex-wrap items-center gap-3">
+    <div class="relative min-w-64 flex-1">
+      <ng-icon
+        name="lucideSearch"
+        class="text-muted-foreground pointer-events-none absolute start-2.5 top-1/2 -translate-y-1/2"
+      />
+      <input
+        hlmInput
+        type="search"
+        class="ps-8"
+        data-testid="admin-keys-search"
+        [value]="query()"
+        (input)="onQueryInput($event)"
+        [placeholder]="'admin.apiKeys.filterPlaceholder' | transloco"
+        [attr.aria-label]="'common.search' | transloco"
+      />
+    </div>
+
+    <span hlmBadge variant="secondary">
+      {{ 'admin.apiKeys.count' | transloco: { count: filtered().length, total: keys().length } }}
+    </span>
+
+    <button
+      hlmBtn
+      variant="outline"
+      size="icon"
+      (click)="load()"
+      [disabled]="loading()"
+      [attr.aria-label]="'common.refresh' | transloco"
+    >
+      <ng-icon name="lucideRefreshCw" />
+    </button>
+  </div>
+
+  @if (loadError(); as errorKey) {
+    <div
+      class="border-destructive/30 bg-destructive/5 text-destructive flex items-center gap-3 rounded-lg border px-4 py-3 text-sm"
+    >
+      <ng-icon name="lucideTriangleAlert" class="shrink-0" />
+      <p class="flex-1">{{ errorKey | transloco }}</p>
+      <button hlmBtn variant="outline" size="sm" (click)="load()">
+        {{ 'common.retry' | transloco }}
+      </button>
+    </div>
+  }
+
+  <div hlmTableContainer class="bg-card rounded-lg border">
+    <table hlmTable>
+      <thead hlmTHead>
+        <tr hlmTr>
+          <th hlmTh>{{ 'apiKeys.columns.name' | transloco }}</th>
+          <th hlmTh class="hidden md:table-cell">{{ 'apiKeys.columns.owner' | transloco }}</th>
+          <th hlmTh class="hidden lg:table-cell">{{ 'apiKeys.columns.scopes' | transloco }}</th>
+          <th hlmTh class="hidden md:table-cell">{{ 'apiKeys.columns.expiresAt' | transloco }}</th>
+          <th hlmTh class="hidden lg:table-cell">{{ 'apiKeys.columns.lastUsedAt' | transloco }}</th>
+          <th hlmTh>{{ 'apiKeys.columns.status' | transloco }}</th>
+          <th hlmTh class="text-end">{{ 'apiKeys.columns.actions' | transloco }}</th>
+        </tr>
+      </thead>
+      <tbody hlmTBody>
+        @if (loading()) {
+          @for (row of skeletonRows; track row) {
+            <tr hlmTr>
+              <td hlmTd><div hlmSkeleton class="h-4 w-32"></div></td>
+              <td hlmTd class="hidden md:table-cell"><div hlmSkeleton class="h-4 w-40"></div></td>
+              <td hlmTd class="hidden lg:table-cell"><div hlmSkeleton class="h-4 w-24"></div></td>
+              <td hlmTd class="hidden md:table-cell"><div hlmSkeleton class="h-4 w-24"></div></td>
+              <td hlmTd class="hidden lg:table-cell"><div hlmSkeleton class="h-4 w-32"></div></td>
+              <td hlmTd><div hlmSkeleton class="h-5 w-16"></div></td>
+              <td hlmTd><div hlmSkeleton class="ms-auto h-8 w-20"></div></td>
+            </tr>
+          }
+        } @else if (filtered().length === 0) {
+          <tr hlmTr>
+            <td hlmTd colspan="7" class="py-12">
+              <div class="text-muted-foreground flex flex-col items-center gap-2 text-center">
+                <ng-icon name="lucideSearchX" class="size-6" />
+                <p>{{ (keys().length === 0 ? 'admin.apiKeys.empty' : 'admin.apiKeys.noMatches') | transloco }}</p>
+              </div>
+            </td>
+          </tr>
+        } @else {
+          @for (key of filtered(); track key.id) {
+            <tr hlmTr data-testid="admin-key-row">
+              <td hlmTd>
+                <div class="grid gap-0.5">
+                  <span class="font-medium">{{ key.name }}</span>
+                  <span class="text-muted-foreground font-mono text-xs">{{ key.prefix }}</span>
+                </div>
+              </td>
+              <td hlmTd class="hidden md:table-cell">{{ ownerLabel(key) }}</td>
+              <td hlmTd class="hidden lg:table-cell">
+                <span hlmBadge variant="outline">{{ scopesLabel(key) }}</span>
+              </td>
+              <td hlmTd class="text-muted-foreground hidden md:table-cell">
+                @if (key.expiresAt !== null) {
+                  {{ formatDate(key.expiresAt) }}
+                } @else {
+                  {{ 'apiKeys.neverExpires' | transloco }}
+                }
+              </td>
+              <td hlmTd class="text-muted-foreground hidden lg:table-cell">
+                @if (key.lastUsedAt !== null) {
+                  {{ formatDate(key.lastUsedAt) }}
+                } @else {
+                  {{ 'apiKeys.lastUsedNever' | transloco }}
+                }
+              </td>
+              <td hlmTd>
+                <span hlmBadge [variant]="statusVariant(key)">
+                  {{ 'apiKeys.status.' + statusOf(key) | transloco }}
+                </span>
+              </td>
+              <td hlmTd>
+                <div class="flex justify-end gap-1">
+                  <button
+                    *hasPermission="permissionKeys.apiKeys.manage"
+                    hlmBtn
+                    variant="ghost"
+                    size="icon-sm"
+                    type="button"
+                    [disabled]="statusOf(key) === 'revoked'"
+                    [attr.aria-label]="'apiKeys.rotate.action' | transloco"
+                    [attr.data-testid]="'admin-key-rotate-' + key.id"
+                    (click)="askRotate(key)"
+                  >
+                    <ng-icon name="lucideRefreshCw" />
+                  </button>
+                  <button
+                    *hasPermission="permissionKeys.apiKeys.manage"
+                    hlmBtn
+                    variant="ghost"
+                    size="icon-sm"
+                    type="button"
+                    class="text-destructive"
+                    [disabled]="statusOf(key) === 'revoked'"
+                    [attr.aria-label]="'apiKeys.revoke.action' | transloco"
+                    [attr.data-testid]="'admin-key-revoke-' + key.id"
+                    (click)="askRevoke(key)"
+                  >
+                    <ng-icon name="lucideTrash2" />
+                  </button>
+                </div>
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- Create dialog -->
+<hlm-dialog [state]="createOpen() ? 'open' : 'closed'" (stateChanged)="onCreateStateChanged($event)">
+  <hlm-dialog-content *hlmDialogPortal="let ctx" data-testid="admin-key-create-dialog" class="sm:max-w-3xl">
+    <hlm-dialog-header>
+      <h3 hlmDialogTitle>{{ 'admin.apiKeys.create.title' | transloco }}</h3>
+      <p hlmDialogDescription>{{ 'admin.apiKeys.create.description' | transloco }}</p>
+    </hlm-dialog-header>
+
+    <form [formGroup]="createForm" (ngSubmit)="submitCreate()" class="grid gap-4" novalidate>
+      <div class="grid gap-2">
+        <label hlmLabel for="admin-key-user">{{ 'admin.apiKeys.create.user' | transloco }}</label>
+        <select
+          hlmInput
+          id="admin-key-user"
+          formControlName="userId"
+          data-testid="admin-key-user"
+          (change)="onUserChange($event)"
+        >
+          @for (user of users(); track user.id) {
+            <option [value]="user.id">{{ user.email }}</option>
+          }
+        </select>
+        <p class="text-muted-foreground text-xs">{{ 'admin.apiKeys.create.userHint' | transloco }}</p>
+      </div>
+
+      <div class="grid gap-4 sm:grid-cols-2">
+        <div class="grid gap-2">
+          <label hlmLabel for="admin-key-name">{{ 'apiKeys.create.name' | transloco }}</label>
+          <input
+            hlmInput
+            id="admin-key-name"
+            formControlName="name"
+            [forceInvalid]="createForm.controls.name.touched && createForm.controls.name.invalid"
+            [placeholder]="'apiKeys.create.namePlaceholder' | transloco"
+          />
+        </div>
+        <div class="grid gap-2">
+          <label hlmLabel for="admin-key-expires">{{ 'apiKeys.create.expiresIn' | transloco }}</label>
+          <input
+            hlmInput
+            id="admin-key-expires"
+            type="number"
+            min="0"
+            max="3650"
+            formControlName="expiresInDays"
+            [forceInvalid]="
+              createForm.controls.expiresInDays.touched && createForm.controls.expiresInDays.invalid
+            "
+          />
+          <p class="text-muted-foreground text-xs">{{ 'admin.apiKeys.create.expiresHint' | transloco }}</p>
+        </div>
+      </div>
+
+      <fieldset class="grid gap-2">
+        <legend class="mb-1 text-sm font-medium">{{ 'apiKeys.create.scopesMode' | transloco }}</legend>
+        <div class="flex flex-wrap items-center gap-4">
+          <label class="flex items-center gap-2 text-sm">
+            <input
+              type="radio"
+              name="admin-key-scopes-mode"
+              class="accent-primary size-4"
+              [checked]="scopesMode() === 'inherit'"
+              (change)="setScopesMode('inherit')"
+              data-testid="admin-key-scopes-inherit"
+            />
+            {{ 'admin.apiKeys.create.inherit' | transloco }}
+          </label>
+          <label class="flex items-center gap-2 text-sm">
+            <input
+              type="radio"
+              name="admin-key-scopes-mode"
+              class="accent-primary size-4"
+              [checked]="scopesMode() === 'subset'"
+              (change)="setScopesMode('subset')"
+              data-testid="admin-key-scopes-subset"
+            />
+            {{ 'apiKeys.create.subset' | transloco }}
+          </label>
+        </div>
+
+        @if (scopesMode() === 'subset') {
+          @if (rolesLoading() || catalogLoading()) {
+            <p class="text-muted-foreground flex items-center gap-2 text-sm">
+              <hlm-spinner />
+              {{ 'common.loading' | transloco }}
+            </p>
+          } @else if (catalogError()) {
+            <p class="text-destructive text-sm">{{ 'errors.unknown' | transloco }}</p>
+          } @else if (targetCatalog(); as permissions) {
+            @if (permissions.categories.length === 0) {
+              <p class="text-muted-foreground text-sm" data-testid="admin-key-no-permissions">
+                {{ 'admin.apiKeys.create.noPermissions' | transloco }}
+              </p>
+            } @else {
+              <div class="max-h-80 overflow-y-auto pe-1">
+                <hexa-permission-matrix
+                  [catalog]="permissions"
+                  [selected]="selectedScopes()"
+                  (selectedChange)="selectedScopes.set($event)"
+                />
+              </div>
+            }
+          }
+        } @else {
+          <p class="text-muted-foreground text-sm">
+            {{ 'admin.apiKeys.create.inheritHint' | transloco }}
+          </p>
+        }
+      </fieldset>
+
+      <hlm-dialog-footer>
+        <button type="button" hlmBtn variant="outline" hlmDialogClose [disabled]="creating()">
+          {{ 'common.cancel' | transloco }}
+        </button>
+        <button
+          type="submit"
+          hlmBtn
+          [disabled]="creating() || users().length === 0"
+          data-testid="admin-key-create-submit"
+        >
+          @if (creating()) {
+            <hlm-spinner aria-label="saving" />
+          }
+          {{ 'apiKeys.create.submit' | transloco }}
+        </button>
+      </hlm-dialog-footer>
+    </form>
+  </hlm-dialog-content>
+</hlm-dialog>
+
+<!-- Secret shown exactly once (create or rotate) -->
+<hlm-dialog [state]="secret() !== null ? 'open' : 'closed'" (stateChanged)="onSecretStateChanged($event)">
+  <hlm-dialog-content *hlmDialogPortal="let ctx" data-testid="admin-key-secret-dialog">
+    <hlm-dialog-header>
+      <h3 hlmDialogTitle>{{ 'apiKeys.secret.title' | transloco }}</h3>
+      <p hlmDialogDescription>{{ 'apiKeys.secret.description' | transloco }}</p>
+    </hlm-dialog-header>
+
+    <div class="flex items-center gap-2">
+      <code
+        class="bg-muted min-w-0 flex-1 rounded-md border px-3 py-2 font-mono text-xs break-all"
+        data-testid="admin-key-secret-value"
+        >{{ secret() }}</code
+      >
+      <button
+        hlmBtn
+        variant="outline"
+        size="icon"
+        type="button"
+        [attr.aria-label]="'apiKeys.secret.copy' | transloco"
+        data-testid="admin-key-secret-copy"
+        (click)="copySecret()"
+      >
+        <ng-icon [name]="copied() ? 'lucideCheck' : 'lucideCopy'" />
+      </button>
+    </div>
+
+    <hlm-dialog-footer>
+      <button hlmBtn hlmDialogClose>{{ 'apiKeys.secret.done' | transloco }}</button>
+    </hlm-dialog-footer>
+  </hlm-dialog-content>
+</hlm-dialog>
+
+<!-- Rotate confirmation -->
+<hlm-alert-dialog [state]="rotateOpen() ? 'open' : 'closed'" (stateChanged)="onRotateStateChanged($event)">
+  <hlm-alert-dialog-content *hlmAlertDialogPortal="let ctx">
+    <hlm-alert-dialog-header>
+      <h2 hlmAlertDialogTitle>{{ 'apiKeys.rotate.title' | transloco }}</h2>
+      <p hlmAlertDialogDescription>{{ 'apiKeys.rotate.description' | transloco }}</p>
+    </hlm-alert-dialog-header>
+    <hlm-alert-dialog-footer>
+      <button hlmAlertDialogCancel>{{ 'common.cancel' | transloco }}</button>
+      <button
+        hlmAlertDialogAction
+        [disabled]="rotating()"
+        data-testid="admin-key-rotate-confirm"
+        (click)="confirmRotate()"
+      >
+        {{ 'apiKeys.rotate.action' | transloco }}
+      </button>
+    </hlm-alert-dialog-footer>
+  </hlm-alert-dialog-content>
+</hlm-alert-dialog>
+
+<!-- Revoke confirmation -->
+<hlm-alert-dialog [state]="revokeOpen() ? 'open' : 'closed'" (stateChanged)="onRevokeStateChanged($event)">
+  <hlm-alert-dialog-content *hlmAlertDialogPortal="let ctx">
+    <hlm-alert-dialog-header>
+      <h2 hlmAlertDialogTitle>{{ 'apiKeys.revoke.title' | transloco }}</h2>
+      <p hlmAlertDialogDescription>
+        {{ 'apiKeys.revoke.description' | transloco: { name: revokingKey()?.name ?? '' } }}
+      </p>
+    </hlm-alert-dialog-header>
+    <hlm-alert-dialog-footer>
+      <button hlmAlertDialogCancel [disabled]="revoking()">{{ 'common.cancel' | transloco }}</button>
+      <button
+        hlmAlertDialogAction
+        variant="destructive"
+        [disabled]="revoking()"
+        data-testid="admin-key-revoke-confirm"
+        (click)="confirmRevoke()"
+      >
+        {{ 'apiKeys.revoke.action' | transloco }}
+      </button>
+    </hlm-alert-dialog-footer>
+  </hlm-alert-dialog-content>
+</hlm-alert-dialog>

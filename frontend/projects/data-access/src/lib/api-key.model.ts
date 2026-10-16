@@ -13,7 +13,8 @@ export interface ApiKey {
   prefix: string;
   /** `null` inherits every effective permission of the owner. */
   scopes: string[] | null;
-  expiresAt: string;
+  /** `null` = the key never expires (setting `apiKeys.defaultExpirationDays` = 0). */
+  expiresAt: string | null;
   lastUsedAt: string | null;
   revokedAt: string | null;
   createdAt: string;

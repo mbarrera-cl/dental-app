@@ -1,0 +1,6 @@
+/* Global styles of the `admin` remote. The spartan theme lives in the shared
+   `ui` library; `@source` registers that library with Tailwind's class
+   detection. */
+@import '../../ui/src/styles/theme.css';
+
+@source '../../ui/src';

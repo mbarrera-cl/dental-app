@@ -5,6 +5,7 @@ initFederation(
     patients: 'http://localhost:4203/remoteEntry.json',
     users: 'http://localhost:4201/remoteEntry.json',
     dashboard: 'http://localhost:4202/remoteEntry.json',
+    admin: 'http://localhost:4204/remoteEntry.json',
   },
   {
     hostRemoteEntry: { url: './remoteEntry.json' },

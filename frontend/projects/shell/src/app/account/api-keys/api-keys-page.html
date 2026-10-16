@@ -60,7 +60,11 @@
                 <span hlmBadge variant="secondary">{{ scopesLabel(key) }}</span>
               </td>
               <td hlmTd class="text-muted-foreground hidden md:table-cell">
-                {{ formatDate(key.expiresAt) }}
+                @if (key.expiresAt !== null) {
+                  {{ formatDate(key.expiresAt) }}
+                } @else {
+                  {{ 'apiKeys.neverExpires' | transloco }}
+                }
               </td>
               <td hlmTd class="text-muted-foreground hidden md:table-cell">
                 {{ key.lastUsedAt === null ? ('apiKeys.lastUsedNever' | transloco) : formatDate(key.lastUsedAt) }}

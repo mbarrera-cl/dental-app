@@ -1,0 +1,295 @@
+<section class="flex flex-col gap-6">
+  <header class="flex flex-wrap items-end justify-between gap-4">
+    <div class="grid gap-1">
+      <h3 class="text-xl font-semibold tracking-tight">{{ 'roles.title' | transloco }}</h3>
+      <p class="text-muted-foreground text-sm">{{ 'roles.subtitle' | transloco }}</p>
+    </div>
+    <button
+      *hasPermission="permissionKeys.roles.create"
+      hlmBtn
+      data-testid="roles-create"
+      (click)="openCreate()"
+    >
+      <ng-icon name="lucidePlus" />
+      {{ 'roles.newRole' | transloco }}
+    </button>
+  </header>
+
+  <div class="flex flex-wrap items-center gap-3">
+    <div class="relative min-w-64 flex-1">
+      <ng-icon
+        name="lucideSearch"
+        class="text-muted-foreground pointer-events-none absolute start-2.5 top-1/2 -translate-y-1/2"
+      />
+      <input
+        hlmInput
+        type="search"
+        class="ps-8"
+        data-testid="roles-search"
+        [value]="query()"
+        (input)="onQueryInput($event)"
+        [placeholder]="'roles.searchPlaceholder' | transloco"
+        [attr.aria-label]="'common.search' | transloco"
+      />
+    </div>
+
+    <span hlmBadge variant="secondary">
+      {{ 'roles.count' | transloco: { count: filtered().length, total: roles().length } }}
+    </span>
+
+    <button
+      hlmBtn
+      variant="outline"
+      size="icon"
+      (click)="load()"
+      [disabled]="loading()"
+      [attr.aria-label]="'common.refresh' | transloco"
+    >
+      <ng-icon name="lucideRefreshCw" />
+    </button>
+  </div>
+
+  @if (loadError(); as errorKey) {
+    <div
+      class="border-destructive/30 bg-destructive/5 text-destructive flex items-center gap-3 rounded-lg border px-4 py-3 text-sm"
+    >
+      <ng-icon name="lucideTriangleAlert" class="shrink-0" />
+      <p class="flex-1">{{ errorKey | transloco }}</p>
+      <button hlmBtn variant="outline" size="sm" (click)="load()">
+        {{ 'common.retry' | transloco }}
+      </button>
+    </div>
+  }
+
+  <div hlmTableContainer class="bg-card rounded-lg border">
+    <table hlmTable>
+      <thead hlmTHead>
+        <tr hlmTr>
+          <th hlmTh class="w-48">{{ 'roles.columns.name' | transloco }}</th>
+          <th hlmTh>{{ 'roles.columns.description' | transloco }}</th>
+          <th hlmTh class="w-32">{{ 'roles.columns.permissions' | transloco }}</th>
+          <th hlmTh class="w-28">{{ 'roles.columns.users' | transloco }}</th>
+          <th hlmTh class="w-40">{{ 'roles.columns.updated' | transloco }}</th>
+          <th hlmTh class="w-36 text-end">{{ 'roles.columns.actions' | transloco }}</th>
+        </tr>
+      </thead>
+      <tbody hlmTBody>
+        @if (loading()) {
+          @for (row of skeletonRows; track row) {
+            <tr hlmTr>
+              <td hlmTd><div hlmSkeleton class="h-4 w-28"></div></td>
+              <td hlmTd><div hlmSkeleton class="h-4 w-52"></div></td>
+              <td hlmTd><div hlmSkeleton class="h-4 w-12"></div></td>
+              <td hlmTd><div hlmSkeleton class="h-4 w-8"></div></td>
+              <td hlmTd><div hlmSkeleton class="h-4 w-36"></div></td>
+              <td hlmTd><div hlmSkeleton class="ms-auto h-8 w-28"></div></td>
+            </tr>
+          }
+        } @else if (filtered().length === 0) {
+          <tr hlmTr>
+            <td hlmTd colspan="6" class="py-12">
+              <div class="text-muted-foreground flex flex-col items-center gap-2 text-center">
+                <ng-icon name="lucideSearchX" class="size-6" />
+                <p>{{ 'roles.empty' | transloco }}</p>
+              </div>
+            </td>
+          </tr>
+        } @else {
+          @for (role of filtered(); track role.id) {
+            <tr hlmTr data-testid="role-row">
+              <td hlmTd>
+                <div class="flex items-center gap-2 font-medium">
+                  {{ role.name }}
+                  @if (role.builtIn) {
+                    <span
+                      hlmBadge
+                      variant="outline"
+                      class="gap-1"
+                      [attr.title]="'roles.builtInHint' | transloco"
+                      data-testid="role-built-in"
+                    >
+                      <ng-icon name="lucideLock" />
+                      {{ 'roles.builtIn' | transloco }}
+                    </span>
+                  }
+                </div>
+              </td>
+              <td hlmTd class="text-muted-foreground max-w-80 truncate">{{ role.description }}</td>
+              <td hlmTd>
+                <span
+                  hlmBadge
+                  variant="outline"
+                  [attr.title]="permissionTitle(role)"
+                  data-testid="role-permissions"
+                  >{{ role.permissions.length }}</span
+                >
+              </td>
+              <td hlmTd>
+                <span class="text-muted-foreground flex items-center gap-1.5 text-sm">
+                  <ng-icon name="lucideUsers" />
+                  {{ role.userCount }}
+                </span>
+              </td>
+              <td hlmTd class="text-muted-foreground">{{ formatDate(role.updatedAt) }}</td>
+              <td hlmTd>
+                <div class="flex justify-end gap-1">
+                  <button
+                    *hasPermission="permissionKeys.roles.update"
+                    hlmBtn
+                    variant="ghost"
+                    size="icon-sm"
+                    (click)="openEdit(role)"
+                    [attr.aria-label]="'common.edit' | transloco"
+                    [attr.data-testid]="'role-edit-' + role.id"
+                  >
+                    <ng-icon name="lucidePencil" />
+                  </button>
+                  <button
+                    *hasPermission="permissionKeys.roles.create"
+                    hlmBtn
+                    variant="ghost"
+                    size="icon-sm"
+                    (click)="openDuplicate(role)"
+                    [attr.aria-label]="'roles.duplicate.action' | transloco"
+                    [attr.data-testid]="'role-duplicate-' + role.id"
+                  >
+                    <ng-icon name="lucideCopy" />
+                  </button>
+                  @if (!role.builtIn) {
+                    <button
+                      *hasPermission="permissionKeys.roles.delete"
+                      hlmBtn
+                      variant="ghost"
+                      size="icon-sm"
+                      class="text-destructive"
+                      (click)="askDelete(role)"
+                      [attr.aria-label]="'common.delete' | transloco"
+                      [attr.data-testid]="'role-delete-' + role.id"
+                    >
+                      <ng-icon name="lucideTrash2" />
+                    </button>
+                  }
+                </div>
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- Create / edit dialog (single instance driven by signals) -->
+<hlm-dialog [state]="formOpen() ? 'open' : 'closed'" (stateChanged)="onFormStateChanged($event)">
+  <hlm-dialog-content *hlmDialogPortal="let ctx" data-testid="role-form-dialog" class="sm:max-w-3xl">
+    <hlm-dialog-header>
+      <h3 hlmDialogTitle>
+        {{ (editing() ? 'roles.form.editTitle' : 'roles.form.createTitle') | transloco }}
+      </h3>
+      <p hlmDialogDescription>
+        {{ (editing() ? 'roles.form.editDescription' : 'roles.form.createDescription') | transloco }}
+      </p>
+    </hlm-dialog-header>
+
+    <form [formGroup]="form" (ngSubmit)="submitForm()" class="grid gap-4" novalidate>
+      <div class="grid gap-2 sm:grid-cols-2">
+        <div class="grid gap-2">
+          <label hlmLabel for="role-name">{{ 'roles.form.name' | transloco }}</label>
+          <input
+            hlmInput
+            id="role-name"
+            formControlName="name"
+            [forceInvalid]="showError(form.controls.name)"
+            [placeholder]="'roles.form.namePlaceholder' | transloco"
+          />
+          @if (nameError(); as errorKey) {
+            <p class="text-destructive text-xs">{{ errorKey | transloco }}</p>
+          } @else if (editing()?.builtIn === true) {
+            <p class="text-muted-foreground text-xs">{{ 'roles.form.nameFrozen' | transloco }}</p>
+          }
+        </div>
+        <div class="grid gap-2">
+          <label hlmLabel for="role-description">{{ 'roles.form.description' | transloco }}</label>
+          <input
+            hlmInput
+            id="role-description"
+            formControlName="description"
+            [forceInvalid]="showError(form.controls.description)"
+            [placeholder]="'roles.form.descriptionPlaceholder' | transloco"
+          />
+          @if (descriptionError(); as errorKey) {
+            <p class="text-destructive text-xs">{{ errorKey | transloco }}</p>
+          }
+        </div>
+      </div>
+
+      <div class="grid gap-2">
+        <div class="flex flex-wrap items-baseline justify-between gap-2">
+          <span class="text-sm font-medium">{{ 'roles.form.permissions' | transloco }}</span>
+          <span class="text-muted-foreground text-xs">
+            {{ 'roles.form.permissionsCount' | transloco: { count: selectedPermissions().length } }}
+          </span>
+        </div>
+        <p class="text-muted-foreground text-xs">{{ 'roles.form.permissionsHint' | transloco }}</p>
+
+        @if (catalogLoading()) {
+          <p class="text-muted-foreground flex items-center gap-2 text-sm">
+            <hlm-spinner />
+            {{ 'common.loading' | transloco }}
+          </p>
+        } @else if (catalogError()) {
+          <p class="text-destructive text-sm">{{ 'errors.unknown' | transloco }}</p>
+        } @else if (catalog(); as permissions) {
+          <div class="max-h-96 overflow-y-auto pe-1">
+            <hexa-permission-matrix
+              [catalog]="permissions"
+              [selected]="selectedPermissions()"
+              (selectedChange)="selectedPermissions.set($event)"
+            />
+          </div>
+        }
+      </div>
+
+      <hlm-dialog-footer>
+        <button type="button" hlmBtn variant="outline" hlmDialogClose [disabled]="saving()">
+          {{ 'common.cancel' | transloco }}
+        </button>
+        <button type="submit" hlmBtn [disabled]="saving()" data-testid="role-form-submit">
+          @if (saving()) {
+            <hlm-spinner aria-label="saving" />
+          }
+          {{ (editing() ? 'roles.form.submitEdit' : 'roles.form.submitCreate') | transloco }}
+        </button>
+      </hlm-dialog-footer>
+    </form>
+  </hlm-dialog-content>
+</hlm-dialog>
+
+<!-- Delete confirmation (single instance driven by signals) -->
+<hlm-alert-dialog
+  [state]="deleteOpen() ? 'open' : 'closed'"
+  (stateChanged)="onDeleteStateChanged($event)"
+>
+  <hlm-alert-dialog-content *hlmAlertDialogPortal="let ctx">
+    <hlm-alert-dialog-header>
+      <h2 hlmAlertDialogTitle>{{ 'roles.delete.title' | transloco }}</h2>
+      <p hlmAlertDialogDescription>
+        {{ 'roles.delete.description' | transloco: { name: deletingRole()?.name ?? '' } }}
+      </p>
+    </hlm-alert-dialog-header>
+    <hlm-alert-dialog-footer>
+      <button hlmAlertDialogCancel [disabled]="deleting()">{{ 'common.cancel' | transloco }}</button>
+      <button
+        hlmAlertDialogAction
+        variant="destructive"
+        [disabled]="deleting()"
+        (click)="confirmDelete()"
+      >
+        @if (deleting()) {
+          <hlm-spinner aria-label="deleting" />
+        }
+        {{ 'roles.delete.action' | transloco }}
+      </button>
+    </hlm-alert-dialog-footer>
+  </hlm-alert-dialog-content>
+</hlm-alert-dialog>

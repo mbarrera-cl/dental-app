@@ -5,8 +5,9 @@ import { API_BASE_URL } from './api-base-url';
 import type { ApiKey, CreateApiKeyPayload, CreatedApiKey } from './api-key.model';
 
 /**
- * Typed HTTP client for `/apikeys`. Listing without `userId` returns the
- * caller's own keys; passing `userId` needs `apikeys:manage`.
+ * Typed HTTP client for `/apikeys`. Listing without parameters returns the
+ * caller's own keys; `list(userId)` targets one user and `listAll()` every
+ * key — both cross-user modes need `apikeys:read`.
  */
 @Injectable({ providedIn: 'root' })
 export class ApiKeysApi {
@@ -19,6 +20,11 @@ export class ApiKeysApi {
     return this.http.get<ApiKey[]>(
       userId === undefined ? url : `${url}?userId=${encodeURIComponent(userId)}`,
     );
+  }
+
+  /** Every key of every user; used by the admin panel (`apikeys:read`). */
+  listAll(): Observable<ApiKey[]> {
+    return this.http.get<ApiKey[]>(`${this.baseUrl}/apikeys?all=true`);
   }
 
   /** The plain secret is returned exactly once, in the response body. */

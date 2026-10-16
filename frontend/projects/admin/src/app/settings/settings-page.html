@@ -1,0 +1,154 @@
+<section class="flex flex-col gap-6">
+  <header class="flex flex-wrap items-end justify-between gap-4">
+    <div class="grid gap-1">
+      <h3 class="text-xl font-semibold tracking-tight">{{ 'settings.title' | transloco }}</h3>
+      <p class="text-muted-foreground text-sm">{{ 'settings.subtitle' | transloco }}</p>
+    </div>
+    <button
+      hlmBtn
+      variant="outline"
+      size="icon"
+      (click)="load()"
+      [disabled]="loading()"
+      [attr.aria-label]="'common.refresh' | transloco"
+    >
+      <ng-icon name="lucideRefreshCw" />
+    </button>
+  </header>
+
+  @if (loadError(); as errorKey) {
+    <div
+      class="border-destructive/30 bg-destructive/5 text-destructive flex items-center gap-3 rounded-lg border px-4 py-3 text-sm"
+    >
+      <ng-icon name="lucideTriangleAlert" class="shrink-0" />
+      <p class="flex-1">{{ errorKey | transloco }}</p>
+      <button hlmBtn variant="outline" size="sm" (click)="load()">
+        {{ 'common.retry' | transloco }}
+      </button>
+    </div>
+  }
+
+  @if (loading()) {
+    <div class="grid gap-4">
+      @for (row of skeletonRows; track row) {
+        <div class="bg-card grid gap-3 rounded-lg border p-4">
+          <div hlmSkeleton class="h-4 w-40"></div>
+          <div hlmSkeleton class="h-9 w-full"></div>
+        </div>
+      }
+    </div>
+  } @else {
+    @for (section of groups(); track section.group) {
+      <div class="bg-card rounded-lg border" data-testid="settings-group">
+        <div class="border-b px-4 py-3">
+          <h4 class="text-sm font-semibold">{{ groupLabel(section.group) }}</h4>
+        </div>
+        <div class="divide-y">
+          @for (setting of section.items; track setting.key) {
+            <div
+              class="grid items-center gap-3 px-4 py-3 md:grid-cols-[1fr_18rem]"
+              [class.bg-muted/40]="isDirty(setting)"
+              [attr.data-testid]="'setting-' + setting.key"
+            >
+              <div class="grid gap-1">
+                <div class="flex flex-wrap items-center gap-2">
+                  <label class="text-sm font-medium" [attr.for]="'setting-input-' + setting.key">
+                    {{ itemLabel(setting) }}
+                  </label>
+                  @if (isDirty(setting)) {
+                    <span hlmBadge variant="outline">{{ 'settings.pending' | transloco }}</span>
+                  }
+                </div>
+                <p class="text-muted-foreground font-mono text-xs">{{ setting.key }}</p>
+              </div>
+
+              <div class="flex items-center justify-end gap-2">
+                @if (setting.type === 'boolean') {
+                  <label class="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      class="accent-primary size-4"
+                      [checked]="$any(valueOf(setting))"
+                      [attr.data-testid]="'setting-input-' + setting.key"
+                      (change)="onToggle(setting, $any($event.target).checked)"
+                    />
+                    {{ ($any(valueOf(setting)) ? 'settings.on' : 'settings.off') | transloco }}
+                  </label>
+                } @else {
+                  <input
+                    hlmInput
+                    type="number"
+                    class="w-28 text-end"
+                    [value]="valueOf(setting)"
+                    [min]="setting.min ?? 0"
+                    [max]="setting.max ?? 100000"
+                    step="1"
+                    [attr.id]="'setting-input-' + setting.key"
+                    [attr.data-testid]="'setting-input-' + setting.key"
+                    (input)="onNumberInput(setting, $event)"
+                  />
+                }
+
+                <button
+                  hlmBtn
+                  variant="ghost"
+                  size="icon-sm"
+                  type="button"
+                  [attr.aria-label]="'settings.useDefault' | transloco"
+                  [attr.title]="'settings.useDefault' | transloco"
+                  [attr.data-testid]="'setting-default-' + setting.key"
+                  (click)="useDefault(setting)"
+                >
+                  <ng-icon name="lucideRotateCcw" />
+                </button>
+                <button
+                  hlmBtn
+                  variant="ghost"
+                  size="icon-sm"
+                  type="button"
+                  [disabled]="!isDirty(setting)"
+                  [attr.aria-label]="'settings.discardOne' | transloco"
+                  [attr.title]="'settings.discardOne' | transloco"
+                  [attr.data-testid]="'setting-reset-' + setting.key"
+                  (click)="reset(setting)"
+                >
+                  <ng-icon name="lucideUndo2" />
+                </button>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+    }
+  }
+
+  <!-- Sticky action bar: only meaningful while there are pending changes. -->
+  @if (dirtyCount() > 0) {
+    <div
+      class="bg-card sticky bottom-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border px-4 py-3 shadow-lg"
+      data-testid="settings-save-bar"
+    >
+      <span class="text-sm">
+        {{ 'settings.dirty' | transloco: { count: dirtyCount() } }}
+      </span>
+      <div class="flex gap-2">
+        <button hlmBtn variant="outline" type="button" [disabled]="saving()" (click)="discard()">
+          {{ 'settings.discard' | transloco }}
+        </button>
+        <button
+          *hasPermission="permissionKeys.settings.update"
+          hlmBtn
+          type="button"
+          [disabled]="saving()"
+          data-testid="settings-save"
+          (click)="save()"
+        >
+          @if (saving()) {
+            <hlm-spinner aria-label="saving" />
+          }
+          {{ 'settings.save' | transloco }}
+        </button>
+      </div>
+    </div>
+  }
+</section>

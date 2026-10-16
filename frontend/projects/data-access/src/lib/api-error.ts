@@ -34,6 +34,28 @@ const ERROR_NAME_TO_KEY: Readonly<Record<string, string>> = {
   PasswordPolicyViolationError: 'errors.passwordPolicy',
   PasswordReusedError: 'errors.passwordReused',
   EmptyPasswordResetError: 'errors.emptyPasswordReset',
+  // roles context
+  RoleNameTakenError: 'errors.roleNameTaken',
+  RoleNameReservedError: 'errors.roleNameReserved',
+  RoleProtectedError: 'errors.roleProtected',
+  RoleAssignedError: 'errors.roleAssigned',
+  RoleNotFoundError: 'errors.roleNotFound',
+  InvalidRoleNameError: 'errors.invalidName',
+  InvalidRoleDescriptionError: 'errors.validation',
+  EmptyRoleUpdateError: 'errors.emptyUpdate',
+  // api keys context
+  ApiKeyNotFoundError: 'errors.apiKeyNotFound',
+  ApiKeyAlreadyRevokedError: 'errors.apiKeyRevoked',
+  InvalidApiKeyNameError: 'errors.invalidName',
+  InvalidApiKeyExpirationError: 'errors.apiKeyExpiration',
+  InvalidApiKeyScopesError: 'errors.apiKeyScopes',
+  ApiKeyScopesExceedPermissionsError: 'errors.apiKeyScopesExceed',
+  ApiKeyLimitReachedError: 'errors.apiKeyLimit',
+  ApiKeyOwnerNotFoundError: 'errors.userNotFound',
+  // settings context
+  SettingsUnknownKeyError: 'errors.settingUnknown',
+  SettingsValueInvalidError: 'errors.settingInvalid',
+  EmptySettingsUpdateError: 'errors.settingsEmpty',
 };
 
 /**

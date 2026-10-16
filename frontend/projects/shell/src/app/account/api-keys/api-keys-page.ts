@@ -184,7 +184,11 @@ export class ApiKeysPage {
       return 'revoked';
     }
 
-    return new Date(key.expiresAt).getTime() <= Date.now() ? 'expired' : 'active';
+    if (key.expiresAt !== null && new Date(key.expiresAt).getTime() <= Date.now()) {
+      return 'expired';
+    }
+
+    return 'active';
   }
 
   protected statusVariant(key: ApiKey): BadgeVariant {

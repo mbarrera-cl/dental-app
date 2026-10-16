@@ -38,6 +38,13 @@ const EXPIRED_KEY: ApiKey = {
   expiresAt: '2020-01-01T00:00:00.000Z',
 };
 
+const FOREVER_KEY: ApiKey = {
+  ...ACTIVE_KEY,
+  id: 'key-4',
+  name: 'Forever key',
+  expiresAt: null,
+};
+
 const CATALOG: PermissionCatalog = {
   categories: [
     {
@@ -111,16 +118,18 @@ describe('ApiKeysPage', () => {
   }
 
   it('lists the keys with their status', () => {
-    const fixture = render([ACTIVE_KEY, REVOKED_KEY, EXPIRED_KEY]);
+    const fixture = render([ACTIVE_KEY, REVOKED_KEY, EXPIRED_KEY, FOREVER_KEY]);
 
     const rows = native(fixture).querySelectorAll('[data-testid="api-key-row"]');
-    expect(rows.length).toBe(3);
+    expect(rows.length).toBe(4);
     expect(native(fixture).textContent).toContain('CI pipeline');
     expect(native(fixture).textContent).toContain('Activa');
     expect(native(fixture).textContent).toContain('Revocada');
     expect(native(fixture).textContent).toContain('Caducada');
+    // A null expiration means the key never expires.
+    expect(native(fixture).textContent).toContain('Sin caducidad');
     // Revoked keys cannot be rotated/revoked again.
-    expect(native(fixture).querySelectorAll('[data-testid="api-key-revoke"]').length).toBe(2);
+    expect(native(fixture).querySelectorAll('[data-testid="api-key-revoke"]').length).toBe(3);
   });
 
   it('creates a key that inherits every permission and shows the secret exactly once', async () => {
