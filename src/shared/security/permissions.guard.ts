@@ -3,12 +3,15 @@ import { Reflector } from '@nestjs/core';
 import { AuthenticationRequiredError } from './authentication.errors.js';
 import type { AuthenticatedRequest } from './authenticated-request.js';
 import { PermissionDeniedError } from './permission.errors.js';
+import { ANY_PERMISSIONS_METADATA } from './require-any-permissions.decorator.js';
 import { REQUIRED_PERMISSIONS_METADATA } from './require-permissions.decorator.js';
 
 /**
  * Global authorization guard (`APP_GUARD`, runs after `JwtAuthGuard`).
  * Routes annotated with `@RequirePermissions(...)` demand **all** listed
- * keys; everything else is open to any authenticated principal.
+ * keys and `@RequireAnyPermissions(...)` demands **at least one**; a route
+ * can combine both. Routes without metadata are open to any authenticated
+ * principal.
  */
 @Injectable()
 export class PermissionsGuard implements CanActivate {
@@ -19,8 +22,12 @@ export class PermissionsGuard implements CanActivate {
       REQUIRED_PERMISSIONS_METADATA,
       [context.getHandler(), context.getClass()],
     );
+    const anyOf = this.reflector.getAllAndOverride<readonly string[]>(ANY_PERMISSIONS_METADATA, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
 
-    if (required === undefined || required.length === 0) {
+    if ((required === undefined || required.length === 0) && (anyOf === undefined || anyOf.length === 0)) {
       return true;
     }
 
@@ -32,10 +39,14 @@ export class PermissionsGuard implements CanActivate {
       throw new AuthenticationRequiredError();
     }
 
-    const missing = required.filter((key) => !principal.permissions.has(key));
+    const missing = (required ?? []).filter((key) => !principal.permissions.has(key));
 
     if (missing.length > 0) {
       throw new PermissionDeniedError(missing);
+    }
+
+    if (anyOf !== undefined && anyOf.length > 0 && !anyOf.some((key) => principal.permissions.has(key))) {
+      throw new PermissionDeniedError(anyOf);
     }
 
     return true;
