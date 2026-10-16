@@ -24,6 +24,8 @@ import { DeleteUserUseCase } from '../../application/use-cases/delete-user.use-c
 import { GetUserUseCase } from '../../application/use-cases/get-user.use-case.js';
 import { ListUsersUseCase } from '../../application/use-cases/list-users.use-case.js';
 import { UpdateUserUseCase } from '../../application/use-cases/update-user.use-case.js';
+import { RequirePermissions } from '../../../../shared/security/require-permissions.decorator.js';
+import { usersPermissions } from '../../permissions.js';
 import { CreateUserRequestDto } from './dtos/create-user.request.dto.js';
 import { UpdateUserRequestDto } from './dtos/update-user.request.dto.js';
 import { UserResponseDto } from './dtos/user-response.dto.js';
@@ -44,6 +46,7 @@ export class UsersController {
   ) {}
 
   @Post()
+  @RequirePermissions(usersPermissions.create)
   @ApiOperation({ summary: 'Create a user' })
   @ApiCreatedResponse({ type: UserResponseDto, description: 'The user was created.' })
   @ApiBadRequestResponse({ description: 'The payload failed validation.' })
@@ -58,6 +61,7 @@ export class UsersController {
   }
 
   @Get()
+  @RequirePermissions(usersPermissions.read)
   @ApiOperation({ summary: 'List users' })
   @ApiOkResponse({ type: [UserResponseDto] })
   async findAll(): Promise<UserResponseDto[]> {
@@ -67,6 +71,7 @@ export class UsersController {
   }
 
   @Get(':id')
+  @RequirePermissions(usersPermissions.read)
   @ApiOperation({ summary: 'Get a user by id' })
   @ApiOkResponse({ type: UserResponseDto })
   @ApiNotFoundResponse({ description: 'No user with this id exists.' })
@@ -77,6 +82,7 @@ export class UsersController {
   }
 
   @Patch(':id')
+  @RequirePermissions(usersPermissions.update)
   @ApiOperation({ summary: 'Update a user (partial)' })
   @ApiOkResponse({ type: UserResponseDto, description: 'The updated user.' })
   @ApiBadRequestResponse({ description: 'The payload failed validation or is empty.' })
@@ -96,6 +102,7 @@ export class UsersController {
   }
 
   @Delete(':id')
+  @RequirePermissions(usersPermissions.delete)
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete a user' })
   @ApiNoContentResponse({ description: 'The user was deleted.' })

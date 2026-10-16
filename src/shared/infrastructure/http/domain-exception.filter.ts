@@ -11,8 +11,11 @@ import { DomainError, type DomainErrorKind } from '../../domain/domain-error.js'
 /** Maps domain error kinds to HTTP status codes. */
 const STATUS_BY_KIND: Record<DomainErrorKind, HttpStatus> = {
   validation: HttpStatus.BAD_REQUEST,
+  unauthorized: HttpStatus.UNAUTHORIZED,
+  forbidden: HttpStatus.FORBIDDEN,
   not_found: HttpStatus.NOT_FOUND,
   conflict: HttpStatus.CONFLICT,
+  locked: HttpStatus.LOCKED,
   unexpected: HttpStatus.INTERNAL_SERVER_ERROR,
 };
 

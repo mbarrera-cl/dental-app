@@ -3,7 +3,14 @@
  * translate it to the appropriate transport status. The domain layer stays
  * completely unaware of transports: it only describes *what* went wrong.
  */
-export type DomainErrorKind = 'validation' | 'not_found' | 'conflict' | 'unexpected';
+export type DomainErrorKind =
+  | 'validation'
+  | 'unauthorized'
+  | 'forbidden'
+  | 'not_found'
+  | 'conflict'
+  | 'locked'
+  | 'unexpected';
 
 export interface DomainErrorOptions extends ErrorOptions {
   /**

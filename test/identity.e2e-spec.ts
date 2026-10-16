@@ -6,16 +6,21 @@ import { AppModule } from './../src/app.module.js';
 import { configureApp } from './../src/shared/infrastructure/app-setup.js';
 import { SqliteDatabase } from './../src/shared/infrastructure/database/sqlite-database.js';
 import { PERMISSION_CATEGORIES, allPermissionKeys } from './../src/shared/security/permissions.js';
+import {
+  E2E_ADMIN_EMAIL,
+  clearE2eAdminCredentials,
+  loginAsAdmin,
+  useE2eAdminCredentials,
+} from './helpers/auth.js';
 
 describe('Identity bootstrap, roles and settings API (e2e)', () => {
   let app: INestApplication<App>;
   let database: SqliteDatabase;
-
-  const adminEmail = 'admin@e2e.local';
+  /** `Bearer <access token>` of the bootstrap administrator. */
+  let authorization: string;
 
   beforeEach(async () => {
-    process.env.ADMIN_EMAIL = adminEmail;
-    process.env.ADMIN_PASSWORD = 'E2e-Admin-123!';
+    useE2eAdminCredentials();
 
     database = new SqliteDatabase(':memory:');
 
@@ -29,26 +34,52 @@ describe('Identity bootstrap, roles and settings API (e2e)', () => {
     app = moduleFixture.createNestApplication();
     configureApp(app, { swagger: false });
     await app.init();
+
+    authorization = await loginAsAdmin(app);
   });
 
   afterEach(async () => {
     await app.close();
     database.onModuleDestroy();
-    delete process.env.ADMIN_EMAIL;
-    delete process.env.ADMIN_PASSWORD;
+    clearE2eAdminCredentials();
+  });
+
+  describe('authentication', () => {
+    it('requires a valid token on protected routes', async () => {
+      const response = await request(app.getHttpServer()).get('/users').expect(401);
+
+      expect(response.body).toMatchObject({ error: 'AuthenticationRequiredError' });
+    });
+
+    it('rejects a wrong password with the generic error', async () => {
+      const response = await request(app.getHttpServer())
+        .post('/auth/login')
+        .send({ email: E2E_ADMIN_EMAIL, password: 'wrong-password' })
+        .expect(401);
+
+      expect(response.body).toMatchObject({ error: 'InvalidCredentialsError' });
+    });
   });
 
   describe('bootstrap', () => {
     it('creates the administrator account with credentials', async () => {
-      const response = await request(app.getHttpServer()).get('/users').expect(200);
+      const response = await request(app.getHttpServer())
+        .get('/users')
+        .set('Authorization', authorization)
+        .expect(200);
 
       expect(response.body).toEqual(
-        expect.arrayContaining([expect.objectContaining({ email: adminEmail, name: 'Administrator' })]),
+        expect.arrayContaining([
+          expect.objectContaining({ email: E2E_ADMIN_EMAIL, name: 'Administrator' }),
+        ]),
       );
     });
 
     it('seeds the protected admin role synced with the whole catalog', async () => {
-      const response = await request(app.getHttpServer()).get('/roles').expect(200);
+      const response = await request(app.getHttpServer())
+        .get('/roles')
+        .set('Authorization', authorization)
+        .expect(200);
 
       const admin = response.body.find((role: { name: string }) => role.name === 'admin');
 
@@ -59,7 +90,10 @@ describe('Identity bootstrap, roles and settings API (e2e)', () => {
     });
 
     it('seeds the editor and viewer roles', async () => {
-      const response = await request(app.getHttpServer()).get('/roles').expect(200);
+      const response = await request(app.getHttpServer())
+        .get('/roles')
+        .set('Authorization', authorization)
+        .expect(200);
 
       const names = response.body.map((role: { name: string }) => role.name);
       expect(names).toEqual(expect.arrayContaining(['admin', 'editor', 'viewer']));
@@ -68,7 +102,10 @@ describe('Identity bootstrap, roles and settings API (e2e)', () => {
 
   describe('GET /permissions', () => {
     it('returns the catalog grouped by category', async () => {
-      const response = await request(app.getHttpServer()).get('/permissions').expect(200);
+      const response = await request(app.getHttpServer())
+        .get('/permissions')
+        .set('Authorization', authorization)
+        .expect(200);
 
       expect(response.body.categories).toHaveLength(PERMISSION_CATEGORIES.length);
       expect(response.body.categories[0]).toMatchObject({ id: 'users' });
@@ -91,7 +128,11 @@ describe('Identity bootstrap, roles and settings API (e2e)', () => {
     };
 
     it('creates, updates and deletes a role', async () => {
-      const created = await request(app.getHttpServer()).post('/roles').send(validRole).expect(201);
+      const created = await request(app.getHttpServer())
+        .post('/roles')
+        .set('Authorization', authorization)
+        .send(validRole)
+        .expect(201);
 
       expect(created.body).toMatchObject({
         name: 'support',
@@ -102,18 +143,27 @@ describe('Identity bootstrap, roles and settings API (e2e)', () => {
 
       const updated = await request(app.getHttpServer())
         .patch(`/roles/${created.body.id}`)
+        .set('Authorization', authorization)
         .send({ permissions: ['users:read', 'users:update'] })
         .expect(200);
 
       expect(updated.body.permissions).toEqual(['users:read', 'users:update']);
 
-      await request(app.getHttpServer()).delete(`/roles/${created.body.id}`).expect(204);
-      await request(app.getHttpServer()).get(`/roles/${created.body.id}`).expect(404);
+      await request(app.getHttpServer())
+        .delete(`/roles/${created.body.id}`)
+        .set('Authorization', authorization)
+        .expect(204);
+
+      await request(app.getHttpServer())
+        .get(`/roles/${created.body.id}`)
+        .set('Authorization', authorization)
+        .expect(404);
     });
 
     it('rejects unknown permission keys with details', async () => {
       const response = await request(app.getHttpServer())
         .post('/roles')
+        .set('Authorization', authorization)
         .send({ ...validRole, permissions: ['users:read', 'nope:do'] })
         .expect(400);
 
@@ -124,27 +174,44 @@ describe('Identity bootstrap, roles and settings API (e2e)', () => {
     });
 
     it('rejects duplicate names case-insensitively', async () => {
-      await request(app.getHttpServer()).post('/roles').send(validRole).expect(201);
       await request(app.getHttpServer())
         .post('/roles')
+        .set('Authorization', authorization)
+        .send(validRole)
+        .expect(201);
+
+      await request(app.getHttpServer())
+        .post('/roles')
+        .set('Authorization', authorization)
         .send({ ...validRole, name: 'Support' })
         .expect(409);
     });
 
     it('protects the built-in admin role from rename and delete', async () => {
-      const roles = await request(app.getHttpServer()).get('/roles').expect(200);
+      const roles = await request(app.getHttpServer())
+        .get('/roles')
+        .set('Authorization', authorization)
+        .expect(200);
+
       const admin = roles.body.find((role: { name: string }) => role.name === 'admin');
 
       await request(app.getHttpServer())
         .patch(`/roles/${admin.id}`)
+        .set('Authorization', authorization)
         .send({ name: 'superadmin' })
         .expect(400);
 
-      await request(app.getHttpServer()).delete(`/roles/${admin.id}`).expect(400);
+      await request(app.getHttpServer())
+        .delete(`/roles/${admin.id}`)
+        .set('Authorization', authorization)
+        .expect(400);
     });
 
     it('reports the number of users each role is assigned to', async () => {
-      const response = await request(app.getHttpServer()).get('/roles').expect(200);
+      const response = await request(app.getHttpServer())
+        .get('/roles')
+        .set('Authorization', authorization)
+        .expect(200);
 
       const admin = response.body.find((role: { name: string }) => role.name === 'admin');
       const viewer = response.body.find((role: { name: string }) => role.name === 'viewer');
@@ -156,7 +223,10 @@ describe('Identity bootstrap, roles and settings API (e2e)', () => {
 
   describe('settings', () => {
     it('returns every setting with its default value and metadata', async () => {
-      const response = await request(app.getHttpServer()).get('/settings').expect(200);
+      const response = await request(app.getHttpServer())
+        .get('/settings')
+        .set('Authorization', authorization)
+        .expect(200);
 
       const minLength = response.body.find(
         (setting: { key: string }) => setting.key === 'passwordPolicy.minLength',
@@ -168,6 +238,7 @@ describe('Identity bootstrap, roles and settings API (e2e)', () => {
     it('updates settings and returns the fresh overview', async () => {
       const response = await request(app.getHttpServer())
         .patch('/settings')
+        .set('Authorization', authorization)
         .send({ values: { 'passwordPolicy.minLength': 12 } })
         .expect(200);
 
@@ -181,6 +252,7 @@ describe('Identity bootstrap, roles and settings API (e2e)', () => {
     it('rejects unknown keys and invalid values with details', async () => {
       const unknown = await request(app.getHttpServer())
         .patch('/settings')
+        .set('Authorization', authorization)
         .send({ values: { 'nope.thing': 1 } })
         .expect(400);
 
@@ -191,6 +263,7 @@ describe('Identity bootstrap, roles and settings API (e2e)', () => {
 
       const invalid = await request(app.getHttpServer())
         .patch('/settings')
+        .set('Authorization', authorization)
         .send({ values: { 'passwordPolicy.minLength': 2 } })
         .expect(400);
 

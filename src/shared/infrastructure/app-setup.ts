@@ -8,6 +8,7 @@ const DEFAULT_CORS_ORIGINS = [
   'http://localhost:4200', // shell
   'http://localhost:4201', // users remote
   'http://localhost:4202', // dashboard remote
+  'http://localhost:4204', // admin remote
 ];
 
 function resolveCorsOrigins(): string[] {
@@ -33,8 +34,9 @@ export interface AppSetupOptions {
  * tests exercise exactly the same edge configuration as production.
  */
 export function configureApp(app: INestApplication, options: AppSetupOptions = {}): void {
-  // The microfrontends run on their own dev-server origins (:4200-:4202).
-  app.enableCors({ origin: resolveCorsOrigins() });
+  // The microfrontends run on their own dev-server origins (:4200-:4204).
+  // `credentials: true` lets the browser send the httpOnly refresh cookie.
+  app.enableCors({ origin: resolveCorsOrigins(), credentials: true });
 
   app.useGlobalPipes(
     new ValidationPipe({
@@ -53,6 +55,8 @@ export function configureApp(app: INestApplication, options: AppSetupOptions = {
         'Boilerplate API built with NestJS and hexagonal architecture (ports & adapters).',
       )
       .setVersion('1.0')
+      .addBearerAuth({ type: 'http', scheme: 'bearer', bearerFormat: 'JWT' }, 'bearer')
+      .addApiKey({ type: 'apiKey', in: 'header', name: 'X-Api-Key' }, 'api-key')
       .build();
 
     SwaggerModule.setup('docs', app, SwaggerModule.createDocument(app, config));

@@ -5,18 +5,19 @@ import type { App } from 'supertest/types.js';
 import { AppModule } from './../src/app.module.js';
 import { configureApp } from './../src/shared/infrastructure/app-setup.js';
 import { SqliteDatabase } from './../src/shared/infrastructure/database/sqlite-database.js';
+import { clearE2eAdminCredentials, loginAsAdmin, useE2eAdminCredentials } from './helpers/auth.js';
 
 describe('Users API (e2e)', () => {
   let app: INestApplication<App>;
   let database: SqliteDatabase;
+  /** `Bearer <access token>` of the bootstrap administrator. */
+  let authorization: string;
 
   const validUser = { email: 'ada@example.com', name: 'Ada Lovelace' };
-  const adminEmail = 'admin@e2e.local';
 
   beforeEach(async () => {
-    // Predictable bootstrap: these tests only care about regular users.
-    process.env.ADMIN_EMAIL = adminEmail;
-    process.env.ADMIN_PASSWORD = 'E2e-Admin-123!';
+    // Predictable bootstrap: this suite only cares about regular users.
+    useE2eAdminCredentials();
 
     // Swap the file-backed database for a fresh in-memory SQLite per test.
     database = new SqliteDatabase(':memory:');
@@ -31,17 +32,21 @@ describe('Users API (e2e)', () => {
     app = moduleFixture.createNestApplication();
     configureApp(app, { swagger: false });
     await app.init();
+
+    authorization = await loginAsAdmin(app);
   });
 
   afterEach(async () => {
     await app.close();
     database.onModuleDestroy();
-    delete process.env.ADMIN_EMAIL;
-    delete process.env.ADMIN_PASSWORD;
+    clearE2eAdminCredentials();
   });
 
   const createUser = (payload: object = validUser) =>
-    request(app.getHttpServer()).post('/users').send(payload);
+    request(app.getHttpServer())
+      .post('/users')
+      .set('Authorization', authorization)
+      .send(payload);
 
   describe('POST /users', () => {
     it('creates a user and returns 201', async () => {
@@ -70,7 +75,10 @@ describe('Users API (e2e)', () => {
       await createUser().expect(201);
       await createUser({ email: 'grace@example.com', name: 'Grace Hopper' }).expect(201);
 
-      const response = await request(app.getHttpServer()).get('/users').expect(200);
+      const response = await request(app.getHttpServer())
+        .get('/users')
+        .set('Authorization', authorization)
+        .expect(200);
 
       // The bootstrap administrator is present too; check the regular ones.
       expect(response.body).toEqual(
@@ -88,6 +96,7 @@ describe('Users API (e2e)', () => {
 
       const response = await request(app.getHttpServer())
         .get(`/users/${created.body.id}`)
+        .set('Authorization', authorization)
         .expect(200);
 
       expect(response.body).toMatchObject(validUser);
@@ -96,6 +105,7 @@ describe('Users API (e2e)', () => {
     it('returns 404 for an unknown id', async () => {
       await request(app.getHttpServer())
         .get('/users/00000000-0000-0000-0000-000000000000')
+        .set('Authorization', authorization)
         .expect(404);
     });
   });
@@ -106,6 +116,7 @@ describe('Users API (e2e)', () => {
 
       const response = await request(app.getHttpServer())
         .patch(`/users/${created.body.id}`)
+        .set('Authorization', authorization)
         .send({ name: 'Ada King', email: 'ada.king@example.com' })
         .expect(200);
 
@@ -119,7 +130,11 @@ describe('Users API (e2e)', () => {
     it('returns 400 when the body contains no updatable fields', async () => {
       const created = await createUser().expect(201);
 
-      await request(app.getHttpServer()).patch(`/users/${created.body.id}`).send({}).expect(400);
+      await request(app.getHttpServer())
+        .patch(`/users/${created.body.id}`)
+        .set('Authorization', authorization)
+        .send({})
+        .expect(400);
     });
 
     it('returns 400 for an invalid email', async () => {
@@ -127,6 +142,7 @@ describe('Users API (e2e)', () => {
 
       await request(app.getHttpServer())
         .patch(`/users/${created.body.id}`)
+        .set('Authorization', authorization)
         .send({ email: 'not-an-email' })
         .expect(400);
     });
@@ -140,6 +156,7 @@ describe('Users API (e2e)', () => {
 
       await request(app.getHttpServer())
         .patch(`/users/${grace.body.id}`)
+        .set('Authorization', authorization)
         .send({ email: 'ada@example.com' })
         .expect(409);
     });
@@ -147,6 +164,7 @@ describe('Users API (e2e)', () => {
     it('returns 404 for an unknown user', async () => {
       await request(app.getHttpServer())
         .patch('/users/does-not-exist')
+        .set('Authorization', authorization)
         .send({ name: 'Ghost' })
         .expect(404);
     });
@@ -156,13 +174,22 @@ describe('Users API (e2e)', () => {
     it('deletes the user and returns 204', async () => {
       const created = await createUser().expect(201);
 
-      await request(app.getHttpServer()).delete(`/users/${created.body.id}`).expect(204);
+      await request(app.getHttpServer())
+        .delete(`/users/${created.body.id}`)
+        .set('Authorization', authorization)
+        .expect(204);
 
-      await request(app.getHttpServer()).get(`/users/${created.body.id}`).expect(404);
+      await request(app.getHttpServer())
+        .get(`/users/${created.body.id}`)
+        .set('Authorization', authorization)
+        .expect(404);
     });
 
     it('returns 404 for an unknown user', async () => {
-      await request(app.getHttpServer()).delete('/users/does-not-exist').expect(404);
+      await request(app.getHttpServer())
+        .delete('/users/does-not-exist')
+        .set('Authorization', authorization)
+        .expect(404);
     });
   });
 });
