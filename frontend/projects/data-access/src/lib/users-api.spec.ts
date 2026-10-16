@@ -83,14 +83,14 @@ describe('UsersApi', () => {
   it('resets a password, optionally asking the backend to generate it', () => {
     let generated: string | undefined;
     api.setPassword('user-1', { generate: true }).subscribe((result) => {
-      generated = result.generatedPassword;
+      generated = result.password;
     });
 
     const request = http.expectOne('http://api.test/v1/users/user-1/password');
     expect(request.request.method).toBe('POST');
     expect(request.request.body).toEqual({ generate: true });
 
-    request.flush({ generatedPassword: 'Fancy-123!' });
+    request.flush({ password: 'Fancy-123!' });
     expect(generated).toBe('Fancy-123!');
   });
 

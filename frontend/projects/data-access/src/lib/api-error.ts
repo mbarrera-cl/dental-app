@@ -27,6 +27,13 @@ const ERROR_NAME_TO_KEY: Readonly<Record<string, string>> = {
   InvalidDireccionError: 'errors.invalidDireccion',
   InvalidPrevisionError: 'errors.invalidPrevision',
   InvalidContactoEmergenciaError: 'errors.invalidContactoEmergencia',
+  // accounts / rbac context
+  LastAdminError: 'errors.lastAdmin',
+  UnknownRoleError: 'errors.unknownRole',
+  PermissionUnknownError: 'errors.unknownPermission',
+  PasswordPolicyViolationError: 'errors.passwordPolicy',
+  PasswordReusedError: 'errors.passwordReused',
+  EmptyPasswordResetError: 'errors.emptyPasswordReset',
 };
 
 /**

@@ -4,7 +4,12 @@
       <h2 class="text-2xl font-semibold tracking-tight">{{ 'users.title' | transloco }}</h2>
       <p class="text-muted-foreground text-sm">{{ 'users.subtitle' | transloco }}</p>
     </div>
-    <button hlmBtn (click)="openCreate()">
+    <button
+      *hasPermission="permissionKeys.users.create"
+      hlmBtn
+      data-testid="users-create"
+      (click)="openCreate()"
+    >
       <ng-icon name="lucidePlus" />
       {{ 'users.newUser' | transloco }}
     </button>
@@ -56,10 +61,13 @@
     <table hlmTable>
       <thead hlmTHead>
         <tr hlmTr>
-          <th hlmTh class="w-56">{{ 'users.columns.name' | transloco }}</th>
+          <th hlmTh class="w-48">{{ 'users.columns.name' | transloco }}</th>
           <th hlmTh>{{ 'users.columns.email' | transloco }}</th>
-          <th hlmTh class="w-52">{{ 'users.columns.createdAt' | transloco }}</th>
-          <th hlmTh class="w-28 text-end">{{ 'users.columns.actions' | transloco }}</th>
+          <th hlmTh class="w-44">{{ 'users.columns.roles' | transloco }}</th>
+          <th hlmTh class="w-36">{{ 'users.columns.status' | transloco }}</th>
+          <th hlmTh class="w-24">{{ 'users.directPermissions' | transloco }}</th>
+          <th hlmTh class="w-40">{{ 'users.columns.lastLogin' | transloco }}</th>
+          <th hlmTh class="w-40 text-end">{{ 'users.columns.actions' | transloco }}</th>
         </tr>
       </thead>
       <tbody hlmTBody>
@@ -68,13 +76,16 @@
             <tr hlmTr>
               <td hlmTd><div hlmSkeleton class="h-4 w-32"></div></td>
               <td hlmTd><div hlmSkeleton class="h-4 w-52"></div></td>
+              <td hlmTd><div hlmSkeleton class="h-4 w-28"></div></td>
+              <td hlmTd><div hlmSkeleton class="h-4 w-20"></div></td>
+              <td hlmTd><div hlmSkeleton class="h-4 w-8"></div></td>
               <td hlmTd><div hlmSkeleton class="h-4 w-36"></div></td>
-              <td hlmTd><div hlmSkeleton class="ms-auto h-8 w-20"></div></td>
+              <td hlmTd><div hlmSkeleton class="ms-auto h-8 w-32"></div></td>
             </tr>
           }
         } @else if (filtered().length === 0) {
           <tr hlmTr>
-            <td hlmTd colspan="4" class="py-12">
+            <td hlmTd colspan="7" class="py-12">
               <div class="text-muted-foreground flex flex-col items-center gap-2 text-center">
                 <ng-icon name="lucideSearchX" class="size-6" />
                 <p>{{ 'users.empty' | transloco }}</p>
@@ -83,28 +94,101 @@
           </tr>
         } @else {
           @for (user of filtered(); track user.id) {
-            <tr hlmTr>
+            <tr hlmTr data-testid="user-row">
               <td hlmTd class="font-medium">{{ user.name }}</td>
               <td hlmTd class="text-muted-foreground">{{ user.email }}</td>
-              <td hlmTd class="text-muted-foreground">{{ formatDate(user.createdAt) }}</td>
+              <td hlmTd>
+                <div class="flex flex-wrap gap-1">
+                  @for (role of user.roles ?? []; track role.id) {
+                    <span hlmBadge variant="secondary">{{ role.name }}</span>
+                  } @empty {
+                    <span class="text-muted-foreground text-xs">{{ 'users.noRoles' | transloco }}</span>
+                  }
+                </div>
+              </td>
+              <td hlmTd>
+                <div class="flex flex-wrap items-center gap-1.5">
+                  <span hlmBadge [variant]="statusVariant(user)">
+                    {{ ('users.status.' + (user.status ?? 'active')) | transloco }}
+                  </span>
+                  @if (user.mustChangePassword) {
+                    <span
+                      hlmBadge
+                      variant="outline"
+                      class="text-amber-600"
+                      [attr.title]="'users.mustChange' | transloco"
+                      data-testid="user-must-change"
+                    >
+                      <ng-icon name="lucideTriangleAlert" />
+                      {{ 'users.mustChangeShort' | transloco }}
+                    </span>
+                  }
+                </div>
+              </td>
+              <td hlmTd>
+                @if ((user.directPermissions?.length ?? 0) > 0) {
+                  <span
+                    hlmBadge
+                    variant="outline"
+                    data-testid="user-direct-permissions"
+                    [attr.title]="directPermissionsTitle(user)"
+                    >+{{ user.directPermissions?.length }}</span
+                  >
+                } @else {
+                  <span class="text-muted-foreground">—</span>
+                }
+              </td>
+              <td hlmTd class="text-muted-foreground">
+                @if (formatLastLogin(user); as lastLogin) {
+                  {{ lastLogin }}
+                } @else {
+                  {{ 'users.neverLoggedIn' | transloco }}
+                }
+              </td>
               <td hlmTd>
                 <div class="flex justify-end gap-1">
                   <button
+                    *hasPermission="permissionKeys.users.update"
                     hlmBtn
                     variant="ghost"
                     size="icon-sm"
                     (click)="openEdit(user)"
                     [attr.aria-label]="'common.edit' | transloco"
+                    [attr.data-testid]="'user-edit-' + user.id"
                   >
                     <ng-icon name="lucidePencil" />
                   </button>
                   <button
+                    *hasPermission="permissionKeys.users.resetPassword"
+                    hlmBtn
+                    variant="ghost"
+                    size="icon-sm"
+                    (click)="openReset(user)"
+                    [attr.aria-label]="'users.reset.action' | transloco"
+                    [attr.data-testid]="'user-reset-' + user.id"
+                  >
+                    <ng-icon name="lucideKeyRound" />
+                  </button>
+                  <button
+                    *hasPermission="permissionKeys.users.permissions"
+                    hlmBtn
+                    variant="ghost"
+                    size="icon-sm"
+                    (click)="openPermissions(user)"
+                    [attr.aria-label]="'users.permissions.action' | transloco"
+                    [attr.data-testid]="'user-permissions-' + user.id"
+                  >
+                    <ng-icon name="lucideShieldCheck" />
+                  </button>
+                  <button
+                    *hasPermission="permissionKeys.users.delete"
                     hlmBtn
                     variant="ghost"
                     size="icon-sm"
                     class="text-destructive"
                     (click)="askDelete(user)"
                     [attr.aria-label]="'common.delete' | transloco"
+                    [attr.data-testid]="'user-delete-' + user.id"
                   >
                     <ng-icon name="lucideTrash2" />
                   </button>
@@ -120,7 +204,7 @@
 
 <!-- Create / edit dialog (single instance driven by signals) -->
 <hlm-dialog [state]="formOpen() ? 'open' : 'closed'" (stateChanged)="onFormStateChanged($event)">
-  <hlm-dialog-content *hlmDialogPortal="let ctx">
+  <hlm-dialog-content *hlmDialogPortal="let ctx" data-testid="user-form-dialog">
     <hlm-dialog-header>
       <h3 hlmDialogTitle>
         {{ (editing() ? 'users.form.editTitle' : 'users.form.createTitle') | transloco }}
@@ -137,7 +221,6 @@
           hlmInput
           id="user-name"
           formControlName="name"
-          autocomplete="off"
           [forceInvalid]="showError(form.controls.name)"
           [placeholder]="'users.form.namePlaceholder' | transloco"
         />
@@ -162,11 +245,100 @@
         }
       </div>
 
+      @if (editing() === null) {
+        <div class="grid gap-2">
+          <label hlmLabel for="user-password">{{ 'users.form.password' | transloco }}</label>
+          <div class="relative">
+            <input
+              hlmInput
+              id="user-password"
+              class="pe-10"
+              formControlName="password"
+              autocomplete="new-password"
+              [type]="passwordVisible() ? 'text' : 'password'"
+              [placeholder]="'users.form.passwordPlaceholder' | transloco"
+            />
+            <button
+              type="button"
+              hlmBtn
+              variant="ghost"
+              size="icon-sm"
+              class="absolute end-1.5 top-1/2 -translate-y-1/2"
+              (click)="passwordVisible.set(!passwordVisible())"
+              [attr.aria-label]="(passwordVisible() ? 'users.form.hidePassword' : 'users.form.showPassword') | transloco"
+            >
+              <ng-icon [name]="passwordVisible() ? 'lucideEyeOff' : 'lucideEye'" />
+            </button>
+          </div>
+          <p class="text-muted-foreground text-xs">{{ 'users.form.passwordHint' | transloco }}</p>
+        </div>
+      }
+
+      <fieldset class="grid gap-2" data-testid="user-form-roles">
+        <legend class="mb-1 text-sm font-medium">{{ 'users.form.roles' | transloco }}</legend>
+        <p class="text-muted-foreground -mt-1 text-xs">{{ 'users.form.rolesHint' | transloco }}</p>
+        @if (rolesStatus() === 'loading') {
+          <p class="text-muted-foreground flex items-center gap-2 text-sm">
+            <hlm-spinner />
+            {{ 'common.loading' | transloco }}
+          </p>
+        } @else if (rolesStatus() === 'ready') {
+          <div class="grid gap-1.5 sm:grid-cols-2">
+            @for (role of roles(); track role.id) {
+              <label class="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  class="accent-primary size-4"
+                  [checked]="isFormRoleSelected(role.id)"
+                  (change)="toggleFormRole(role.id)"
+                  [attr.data-testid]="'form-role-' + role.id"
+                />
+                <span class="truncate">{{ role.name }}</span>
+              </label>
+            } @empty {
+              <p class="text-muted-foreground text-sm">{{ 'users.noRoles' | transloco }}</p>
+            }
+          </div>
+        } @else if (rolesStatus() === 'unavailable') {
+          <p class="text-muted-foreground text-xs" data-testid="roles-unavailable">
+            {{ 'users.form.rolesUnavailable' | transloco }}
+          </p>
+        }
+      </fieldset>
+
+      <fieldset class="grid gap-2" data-testid="user-form-status">
+        <legend class="mb-1 text-sm font-medium">{{ 'users.form.status' | transloco }}</legend>
+        <div class="flex items-center gap-4">
+          <label class="flex items-center gap-2 text-sm">
+            <input
+              type="radio"
+              name="user-status"
+              class="accent-primary size-4"
+              [checked]="formStatus() === 'active'"
+              (change)="formStatus.set('active')"
+              data-testid="form-status-active"
+            />
+            {{ 'users.status.active' | transloco }}
+          </label>
+          <label class="flex items-center gap-2 text-sm">
+            <input
+              type="radio"
+              name="user-status"
+              class="accent-primary size-4"
+              [checked]="formStatus() === 'disabled'"
+              (change)="formStatus.set('disabled')"
+              data-testid="form-status-disabled"
+            />
+            {{ 'users.status.disabled' | transloco }}
+          </label>
+        </div>
+      </fieldset>
+
       <hlm-dialog-footer>
         <button type="button" hlmBtn variant="outline" hlmDialogClose [disabled]="saving()">
           {{ 'common.cancel' | transloco }}
         </button>
-        <button type="submit" hlmBtn [disabled]="saving()">
+        <button type="submit" hlmBtn [disabled]="saving()" data-testid="user-form-submit">
           @if (saving()) {
             <hlm-spinner aria-label="saving" />
           }
@@ -197,3 +369,176 @@
     </hlm-alert-dialog-footer>
   </hlm-alert-dialog-content>
 </hlm-alert-dialog>
+
+<!-- Password reset (typed or server-generated) -->
+<hlm-dialog [state]="resetOpen() ? 'open' : 'closed'" (stateChanged)="onResetStateChanged($event)">
+  <hlm-dialog-content *hlmDialogPortal="let ctx" data-testid="user-reset-dialog">
+    <hlm-dialog-header>
+      <h3 hlmDialogTitle>{{ 'users.reset.title' | transloco }}</h3>
+      <p hlmDialogDescription>
+        {{ 'users.reset.description' | transloco: { name: resetTarget()?.name ?? '' } }}
+      </p>
+    </hlm-dialog-header>
+
+    <div class="grid gap-4">
+      <fieldset class="grid gap-2">
+        <legend class="mb-1 text-sm font-medium">{{ 'users.reset.password' | transloco }}</legend>
+        <label class="flex items-center gap-2 text-sm">
+          <input
+            type="radio"
+            name="reset-mode"
+            class="accent-primary size-4"
+            [checked]="resetMode() === 'typed'"
+            (change)="resetMode.set('typed')"
+            data-testid="reset-mode-typed"
+          />
+          {{ 'users.reset.modeTyped' | transloco }}
+        </label>
+        <label class="flex items-center gap-2 text-sm">
+          <input
+            type="radio"
+            name="reset-mode"
+            class="accent-primary size-4"
+            [checked]="resetMode() === 'generate'"
+            (change)="resetMode.set('generate')"
+            data-testid="reset-mode-generate"
+          />
+          {{ 'users.reset.modeGenerate' | transloco }}
+        </label>
+      </fieldset>
+
+      @if (resetMode() === 'typed') {
+        <div class="grid gap-2">
+          <div class="relative">
+            <input
+              hlmInput
+              class="pe-10"
+              data-testid="reset-password"
+              autocomplete="new-password"
+              [type]="resetPasswordVisible() ? 'text' : 'password'"
+              [value]="resetValue()"
+              (input)="onResetInput($event)"
+              [placeholder]="'users.reset.passwordPlaceholder' | transloco"
+            />
+            <button
+              type="button"
+              hlmBtn
+              variant="ghost"
+              size="icon-sm"
+              class="absolute end-1.5 top-1/2 -translate-y-1/2"
+              (click)="resetPasswordVisible.set(!resetPasswordVisible())"
+              [attr.aria-label]="(resetPasswordVisible() ? 'users.form.hidePassword' : 'users.form.showPassword') | transloco"
+            >
+              <ng-icon [name]="resetPasswordVisible() ? 'lucideEyeOff' : 'lucideEye'" />
+            </button>
+          </div>
+          @if (resetError(); as errorKey) {
+            <p class="text-destructive text-xs" data-testid="reset-error">{{ errorKey | transloco }}</p>
+          }
+        </div>
+      } @else {
+        <p class="text-muted-foreground text-sm">{{ 'users.reset.generateHint' | transloco }}</p>
+      }
+    </div>
+
+    <hlm-dialog-footer>
+      <button type="button" hlmBtn variant="outline" hlmDialogClose [disabled]="resetting()">
+        {{ 'common.cancel' | transloco }}
+      </button>
+      <button type="button" hlmBtn [disabled]="resetting()" (click)="submitReset()" data-testid="reset-submit">
+        @if (resetting()) {
+          <hlm-spinner aria-label="resetting" />
+        }
+        {{ 'users.reset.submit' | transloco }}
+      </button>
+    </hlm-dialog-footer>
+  </hlm-dialog-content>
+</hlm-dialog>
+
+<!-- Generated password, shown exactly once -->
+<hlm-dialog [state]="generatedPassword() !== null ? 'open' : 'closed'" (stateChanged)="onGeneratedStateChanged($event)">
+  <hlm-dialog-content *hlmDialogPortal="let ctx" data-testid="user-generated-dialog" class="sm:max-w-lg">
+    <hlm-dialog-header>
+      <h3 hlmDialogTitle>{{ 'users.reset.generatedTitle' | transloco }}</h3>
+      <p hlmDialogDescription>{{ 'users.reset.generatedDescription' | transloco }}</p>
+    </hlm-dialog-header>
+
+    <div class="flex items-center gap-2 py-2">
+      <code
+        data-testid="generated-password"
+        class="bg-muted flex-1 overflow-x-auto rounded-md px-3 py-2 font-mono text-xs"
+        >{{ generatedPassword() }}</code
+      >
+      <button
+        hlmBtn
+        variant="outline"
+        size="icon"
+        type="button"
+        data-testid="generated-copy"
+        [attr.aria-label]="'users.reset.copy' | transloco"
+        (click)="copyGenerated()"
+      >
+        <ng-icon [name]="copied() ? 'lucideCheck' : 'lucideCopy'" />
+      </button>
+    </div>
+
+    <hlm-dialog-footer>
+      <button hlmBtn type="button" hlmDialogClose data-testid="generated-done">
+        {{ 'common.close' | transloco }}
+      </button>
+    </hlm-dialog-footer>
+  </hlm-dialog-content>
+</hlm-dialog>
+
+<!-- Direct (non-role) permissions -->
+<hlm-dialog [state]="permissionsOpen() ? 'open' : 'closed'" (stateChanged)="onPermissionsStateChanged($event)">
+  <hlm-dialog-content *hlmDialogPortal="let ctx" data-testid="user-permissions-dialog" class="sm:max-w-2xl">
+    <hlm-dialog-header>
+      <h3 hlmDialogTitle>{{ 'users.permissions.title' | transloco }}</h3>
+      <p hlmDialogDescription>
+        {{ 'users.permissions.description' | transloco: { name: permissionsTarget()?.name ?? '' } }}
+      </p>
+    </hlm-dialog-header>
+
+    @if (catalogLoading()) {
+      <p class="text-muted-foreground flex items-center gap-2 text-sm">
+        <hlm-spinner />
+        {{ 'common.loading' | transloco }}
+      </p>
+    } @else if (catalogError()) {
+      <p class="text-destructive text-sm">{{ 'errors.unknown' | transloco }}</p>
+    } @else if (catalog(); as permissions) {
+      @if (rolesStatus() === 'unavailable') {
+        <p class="text-muted-foreground mb-2 text-xs">
+          {{ 'users.permissions.rolesUnavailable' | transloco }}
+        </p>
+      }
+      <div class="max-h-80 overflow-y-auto pe-1">
+        <hexa-permission-matrix
+          [catalog]="permissions"
+          [selected]="selectedPermissions()"
+          [inherited]="inheritedPermissions()"
+          (selectedChange)="selectedPermissions.set($event)"
+        />
+      </div>
+    }
+
+    <hlm-dialog-footer>
+      <button type="button" hlmBtn variant="outline" hlmDialogClose [disabled]="savingPermissions()">
+        {{ 'common.cancel' | transloco }}
+      </button>
+      <button
+        type="button"
+        hlmBtn
+        [disabled]="savingPermissions() || catalog() === null"
+        (click)="savePermissions()"
+        data-testid="permissions-submit"
+      >
+        @if (savingPermissions()) {
+          <hlm-spinner aria-label="saving" />
+        }
+        {{ 'users.permissions.submit' | transloco }}
+      </button>
+    </hlm-dialog-footer>
+  </hlm-dialog-content>
+</hlm-dialog>
