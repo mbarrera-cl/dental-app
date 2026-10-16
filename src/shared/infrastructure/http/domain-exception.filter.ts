@@ -40,6 +40,7 @@ export class DomainExceptionFilter implements ExceptionFilter<DomainError> {
         statusCode: status,
         error: exception.name,
         message: exception.message,
+        ...(exception.details === undefined ? {} : { details: exception.details }),
       });
   }
 }

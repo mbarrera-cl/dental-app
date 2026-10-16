@@ -11,8 +11,13 @@ describe('Users API (e2e)', () => {
   let database: SqliteDatabase;
 
   const validUser = { email: 'ada@example.com', name: 'Ada Lovelace' };
+  const adminEmail = 'admin@e2e.local';
 
   beforeEach(async () => {
+    // Predictable bootstrap: these tests only care about regular users.
+    process.env.ADMIN_EMAIL = adminEmail;
+    process.env.ADMIN_PASSWORD = 'E2e-Admin-123!';
+
     // Swap the file-backed database for a fresh in-memory SQLite per test.
     database = new SqliteDatabase(':memory:');
 
@@ -31,6 +36,8 @@ describe('Users API (e2e)', () => {
   afterEach(async () => {
     await app.close();
     database.onModuleDestroy();
+    delete process.env.ADMIN_EMAIL;
+    delete process.env.ADMIN_PASSWORD;
   });
 
   const createUser = (payload: object = validUser) =>
@@ -65,7 +72,7 @@ describe('Users API (e2e)', () => {
 
       const response = await request(app.getHttpServer()).get('/users').expect(200);
 
-      expect(response.body).toHaveLength(2);
+      // The bootstrap administrator is present too; check the regular ones.
       expect(response.body).toEqual(
         expect.arrayContaining([
           expect.objectContaining({ email: 'ada@example.com' }),

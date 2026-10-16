@@ -5,6 +5,15 @@
  */
 export type DomainErrorKind = 'validation' | 'not_found' | 'conflict' | 'unexpected';
 
+export interface DomainErrorOptions extends ErrorOptions {
+  /**
+   * Machine-readable context (violated rules, limits, offending keys, ...).
+   * Edge adapters forward it to clients as-is, so keep it stable and
+   * primitive-serializable.
+   */
+  details?: Readonly<Record<string, unknown>>;
+}
+
 /**
  * Base class for all errors that express a broken business rule.
  * Throw `DomainError` subclasses from entities, value objects and use cases;
@@ -13,8 +22,11 @@ export type DomainErrorKind = 'validation' | 'not_found' | 'conflict' | 'unexpec
 export abstract class DomainError extends Error {
   abstract readonly kind: DomainErrorKind;
 
-  protected constructor(message: string, options?: ErrorOptions) {
+  readonly details?: Readonly<Record<string, unknown>>;
+
+  protected constructor(message: string, options?: DomainErrorOptions) {
     super(message, options);
     this.name = new.target.name;
+    this.details = options?.details;
   }
 }

@@ -1,0 +1,35 @@
+/**
+ * A *setting* is a typed, named value the administrator can edit from the
+ * panel. Definitions live in code (the registry); values live in the
+ * database. The admin panel renders its form from the definitions, so adding
+ * a configurable knob is a one-line change.
+ */
+export type SettingType = 'number' | 'boolean' | 'string';
+
+export type SettingValue = number | boolean | string;
+
+export type SettingGroupId = 'passwordPolicy' | 'login' | 'session' | 'apiKeys';
+
+export interface SettingGroup {
+  readonly id: SettingGroupId;
+  /** Developer-facing description (UI wording lives in the i18n dictionaries). */
+  readonly description: string;
+}
+
+export interface SettingDefinition {
+  /** Stable key: `group.name`, e.g. `passwordPolicy.minLength`. */
+  readonly key: string;
+  readonly group: SettingGroupId;
+  readonly type: SettingType;
+  readonly default: SettingValue;
+  /** Inclusive bounds for `number` settings. */
+  readonly min?: number;
+  readonly max?: number;
+  /** Developer-facing description (UI wording lives in the i18n dictionaries). */
+  readonly description: string;
+}
+
+/** A definition merged with its effective value. */
+export interface SettingOverview extends SettingDefinition {
+  readonly value: SettingValue;
+}

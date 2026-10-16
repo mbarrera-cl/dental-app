@@ -1,0 +1,134 @@
+import { SqliteDatabase } from '../database/sqlite-database.js';
+import { SqliteRoleRepository } from '../../../modules/roles/infrastructure/adapters/persistence/sqlite-role.repository.js';
+import { SqliteUserRepository } from '../../../modules/users/infrastructure/adapters/persistence/sqlite-user.repository.js';
+import { User } from '../../../modules/users/domain/user.entity.js';
+import { allPermissionKeys } from '../../security/permissions.js';
+import { PasswordHasher } from '../../security/password-hasher.js';
+import {
+  ADMIN_EMAIL_ENV,
+  ADMIN_PASSWORD_ENV,
+  IdentityBootstrapService,
+} from './identity-bootstrap.service.js';
+
+describe('IdentityBootstrapService', () => {
+  let database: SqliteDatabase;
+  let users: SqliteUserRepository;
+  let roles: SqliteRoleRepository;
+  let service: IdentityBootstrapService;
+
+  const previousAdminEmail = process.env[ADMIN_EMAIL_ENV];
+  const previousAdminPassword = process.env[ADMIN_PASSWORD_ENV];
+
+  beforeEach(() => {
+    database = new SqliteDatabase(':memory:');
+    users = new SqliteUserRepository(database);
+    roles = new SqliteRoleRepository(database);
+    service = new IdentityBootstrapService(database, users, roles, new PasswordHasher());
+
+    process.env[ADMIN_EMAIL_ENV] = 'chief@test.local';
+    process.env[ADMIN_PASSWORD_ENV] = 'Adm1n-Secret!';
+  });
+
+  afterEach(() => {
+    database.onModuleDestroy();
+
+    if (previousAdminEmail === undefined) {
+      delete process.env[ADMIN_EMAIL_ENV];
+    } else {
+      process.env[ADMIN_EMAIL_ENV] = previousAdminEmail;
+    }
+
+    if (previousAdminPassword === undefined) {
+      delete process.env[ADMIN_PASSWORD_ENV];
+    } else {
+      process.env[ADMIN_PASSWORD_ENV] = previousAdminPassword;
+    }
+  });
+
+  it('creates the built-in admin role synced with the whole catalog', async () => {
+    await service.onApplicationBootstrap();
+
+    const admin = await roles.findByName('admin');
+
+    expect(admin).not.toBeNull();
+    expect(admin?.builtIn).toBe(true);
+    expect(admin?.isProtected).toBe(true);
+    expect([...(admin?.permissions ?? [])]).toEqual([...allPermissionKeys()]);
+  });
+
+  it('re-syncs the admin role on later boots when the catalog grew', async () => {
+    await service.onApplicationBootstrap();
+
+    // Simulate a role saved by an older version of the catalog.
+    const admin = (await roles.findByName('admin'))!;
+    admin.changePermissions(['users:read']);
+    await roles.update(admin);
+
+    await service.onApplicationBootstrap();
+
+    const synced = (await roles.findByName('admin'))!;
+    expect([...synced.permissions]).toEqual([...allPermissionKeys()]);
+  });
+
+  it('seeds editor and viewer once and assigns viewer to users without roles', async () => {
+    const ada = User.create({ email: 'ada@example.com', name: 'Ada' });
+    await users.save(ada);
+
+    await service.onApplicationBootstrap();
+
+    const viewer = await roles.findByName('viewer');
+    const editor = await roles.findByName('editor');
+
+    expect(viewer).not.toBeNull();
+    expect(editor).not.toBeNull();
+    expect(viewer?.builtIn).toBe(false);
+    await expect(users.listUserIdsWithoutRoles()).resolves.toEqual([]);
+
+    // The marker makes the seed a one-shot: deleting the roles later sticks.
+    await roles.delete(viewer!.id);
+    await service.onApplicationBootstrap();
+    await expect(roles.findByName('viewer')).resolves.toBeNull();
+  });
+
+  it('creates the administrator account with credentials and the admin role', async () => {
+    await service.onApplicationBootstrap();
+
+    const admin = await users.findByEmail('chief@test.local');
+
+    expect(admin).not.toBeNull();
+    expect(admin?.hasPassword).toBe(true);
+    expect(admin?.status).toBe('active');
+    await expect(users.existsActiveAdmin()).resolves.toBe(true);
+  });
+
+  it('respects an existing active administrator and does not create another', async () => {
+    await service.onApplicationBootstrap();
+    const firstAdmin = await users.findByEmail('chief@test.local');
+
+    process.env[ADMIN_EMAIL_ENV] = 'other@test.local';
+    await service.onApplicationBootstrap();
+
+    await expect(users.findByEmail('other@test.local')).resolves.toBeNull();
+    expect(await users.findByEmail('chief@test.local')).toMatchObject({ id: firstAdmin?.id });
+  });
+
+  it('resurrects a disabled administrator (lockout rescue)', async () => {
+    await service.onApplicationBootstrap();
+    const admin = (await users.findByEmail('chief@test.local'))!;
+
+    admin.changeStatus('disabled');
+    await users.update(admin);
+
+    await service.onApplicationBootstrap();
+
+    await expect(users.existsActiveAdmin()).resolves.toBe(true);
+  });
+
+  it('is idempotent across boots', async () => {
+    await service.onApplicationBootstrap();
+    await service.onApplicationBootstrap();
+
+    await expect(roles.findAll()).resolves.toHaveLength(3);
+    await expect(users.findAll()).resolves.toHaveLength(1);
+  });
+});

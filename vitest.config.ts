@@ -7,6 +7,7 @@ export default defineConfig({
   test: {
     globals: true,
     root: './',
-    include: ['**/*.spec.ts'],
+    // Backend unit specs only; the frontend has its own runner (`ng test`).
+    include: ['src/**/*.spec.ts'],
   },
 });
