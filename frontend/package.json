@@ -11,7 +11,7 @@
     "build": "ng build",
     "build:all": "ng build shell && ng build users && ng build dashboard",
     "test": "ng test",
-    "test:all": "ng test ui && ng test data-access && ng test shell && ng test users && ng test dashboard"
+    "test:all": "ng test ui && ng test data-access && ng test auth && ng test shell && ng test users && ng test dashboard"
   },
   "private": true,
   "packageManager": "npm@11.16.0",

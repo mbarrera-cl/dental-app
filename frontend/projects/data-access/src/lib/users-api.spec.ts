@@ -79,4 +79,27 @@ describe('UsersApi', () => {
     expect(request.request.method).toBe('DELETE');
     request.flush(null, { status: 200, statusText: 'OK' });
   });
+
+  it('resets a password, optionally asking the backend to generate it', () => {
+    let generated: string | undefined;
+    api.setPassword('user-1', { generate: true }).subscribe((result) => {
+      generated = result.generatedPassword;
+    });
+
+    const request = http.expectOne('http://api.test/v1/users/user-1/password');
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({ generate: true });
+
+    request.flush({ generatedPassword: 'Fancy-123!' });
+    expect(generated).toBe('Fancy-123!');
+  });
+
+  it('replaces the direct permissions of a user', () => {
+    api.updatePermissions('user-1', ['users:read', 'roles:read']).subscribe();
+
+    const request = http.expectOne('http://api.test/v1/users/user-1/permissions');
+    expect(request.request.method).toBe('PUT');
+    expect(request.request.body).toEqual({ permissions: ['users:read', 'roles:read'] });
+    request.flush({ ...ADA, directPermissions: ['users:read', 'roles:read'] });
+  });
 });
