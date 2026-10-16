@@ -48,6 +48,15 @@ export class User extends Entity<UserProps> {
     return this.props.createdAt;
   }
 
+  /** Mutators enforce the same invariants as `create`. */
+  changeName(name: string): void {
+    this.props.name = User.normalizeName(name);
+  }
+
+  changeEmail(email: Email): void {
+    this.props.email = email;
+  }
+
   private static normalizeName(name: string): string {
     const normalized = name.trim();
 

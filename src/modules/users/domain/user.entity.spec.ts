@@ -28,6 +28,17 @@ describe('User', () => {
     expect(() => User.create({ ...validProps, name: '   ' })).toThrow(InvalidNameError);
   });
 
+  it('applies changes through mutators, re-validating invariants', () => {
+    const user = User.create(validProps);
+
+    user.changeName('  Grace Hopper ');
+    user.changeEmail(Email.create('Grace@Example.com'));
+
+    expect(user.name).toBe('Grace Hopper');
+    expect(user.email).toBe('grace@example.com');
+    expect(() => user.changeName('   ')).toThrow(InvalidNameError);
+  });
+
   it('reconstitutes a persisted user preserving its id', () => {
     const user = User.reconstitute(
       {

@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { UserRepositoryPort } from '../../../application/ports/user-repository.port.js';
 import type { User } from '../../../domain/user.entity.js';
+import { UserNotFoundError } from '../../../domain/user.errors.js';
 
 /**
  * Driven adapter: keeps users in memory for local development and tests.
@@ -13,6 +14,20 @@ export class InMemoryUserRepository extends UserRepositoryPort {
 
   async save(user: User): Promise<void> {
     this.users.set(user.id, user);
+  }
+
+  async update(user: User): Promise<void> {
+    if (!this.users.has(user.id)) {
+      throw new UserNotFoundError(user.id);
+    }
+
+    this.users.set(user.id, user);
+  }
+
+  async delete(id: string): Promise<void> {
+    if (!this.users.delete(id)) {
+      throw new UserNotFoundError(id);
+    }
   }
 
   async findById(id: string): Promise<User | null> {

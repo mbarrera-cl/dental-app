@@ -16,6 +16,14 @@ export class InvalidNameError extends DomainError {
   }
 }
 
+export class EmptyUserUpdateError extends DomainError {
+  readonly kind: DomainErrorKind = 'validation';
+
+  constructor() {
+    super('At least one of "name" or "email" must be provided');
+  }
+}
+
 export class UserNotFoundError extends DomainError {
   readonly kind: DomainErrorKind = 'not_found';
 

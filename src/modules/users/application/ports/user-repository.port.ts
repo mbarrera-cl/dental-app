@@ -11,6 +11,12 @@ import type { User } from '../../domain/user.entity.js';
 export abstract class UserRepositoryPort {
   abstract save(user: User): Promise<void>;
 
+  /** Updates an existing user; throws `UserNotFoundError` when it does not exist. */
+  abstract update(user: User): Promise<void>;
+
+  /** Deletes a user; throws `UserNotFoundError` when it does not exist. */
+  abstract delete(id: string): Promise<void>;
+
   abstract findById(id: string): Promise<User | null>;
 
   /** Expects an already normalized email (as produced by the `Email` value object). */

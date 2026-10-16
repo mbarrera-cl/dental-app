@@ -8,6 +8,12 @@ dist/
 # Test artifacts
 coverage/
 
+# Local SQLite database
+data/
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+
 # Environment
 .env
 .env.*
