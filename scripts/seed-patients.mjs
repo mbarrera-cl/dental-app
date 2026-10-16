@@ -6,12 +6,36 @@
  * Usage: node scripts/seed-patients.mjs [count] [baseUrl]
  *   node scripts/seed-patients.mjs 100 http://localhost:3000
  *
- * Requires a running server. Re-running is safe: existing RUTs (409) are
- * reported as "skipped".
+ * Requires a running server. Signs in as the bootstrap administrator first
+ * (override with ADMIN_EMAIL / ADMIN_PASSWORD). Re-running is safe: existing
+ * RUTs (409) are reported as "skipped".
  */
 const count = Number.parseInt(process.argv[2] ?? '100', 10);
 const baseUrl =
   process.argv[3] ?? process.env.BASE_URL ?? 'http://localhost:3000';
+const adminEmail = process.env.ADMIN_EMAIL ?? 'admin@hexa.local';
+const adminPassword = process.env.ADMIN_PASSWORD ?? 'Admin123!';
+
+/** Signs in as the administrator and returns the `Authorization` header. */
+async function login() {
+  const response = await fetch(`${baseUrl}/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: adminEmail, password: adminPassword }),
+  });
+
+  if (!response.ok) {
+    console.error(
+      `Could not sign in as ${adminEmail} (${response.status}). ` +
+        'Set ADMIN_EMAIL/ADMIN_PASSWORD if you changed the bootstrap admin.',
+    );
+    process.exit(1);
+  }
+
+  const { accessToken } = await response.json();
+
+  return `Bearer ${accessToken}`;
+}
 
 const NOMBRES = [
   'Camila',
@@ -207,6 +231,7 @@ function buildPayload(i) {
 }
 
 async function main() {
+  const authorization = await login();
   let created = 0;
   let skipped = 0;
   const failures = [];
@@ -216,7 +241,7 @@ async function main() {
 
     const response = await fetch(`${baseUrl}/patients`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', Authorization: authorization },
       body: JSON.stringify(payload),
     });
 

@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 #
-# Starts the hexagonal backend (:3000) and the four Angular microfrontends
-# (shell :4200, patients :4203, users :4201, dashboard :4202) for local
-# development.
+# Starts the hexagonal backend (:3000) and the Angular microfrontends
+# (shell :4200, patients :4203, users :4201, dashboard :4202, admin :4204)
+# for local development.
 #
 # Usage:
 #   ./scripts/dev-all.sh              # builds the backend, then starts everything
@@ -32,6 +32,9 @@ echo "Backend API      → http://localhost:${backend_port}"
 echo "Swagger UI       → http://localhost:${backend_port}/docs"
 echo "Shell (open me)  → http://localhost:4200"
 echo "Patients remote  → http://localhost:4203"
+echo "Users remote     → http://localhost:4201"
+echo "Dashboard remote → http://localhost:4202"
+echo "Admin remote     → http://localhost:4204"
 echo
 
 # Never leak the backend's PORT into the frontends (see above).

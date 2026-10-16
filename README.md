@@ -155,9 +155,10 @@ the API seeds a guaranteed administrator on boot:
 — change it in production). See [Authentication & RBAC](#authentication--rbac).
 
 **CORS:** the API allows the microfrontend dev servers
-(`http://localhost:4200`, `:4201`, `:4202`, `:4203`) by default. Override the
-allow-list with a comma-separated env var:
-`CORS_ORIGIN=https://app.example.com,https://admin.example.com`.
+(`http://localhost:4200`, `:4201`, `:4202`, `:4203`, `:4204`) by default.
+Override the allow-list with a comma-separated env var:
+`CORS_ORIGIN=https://app.example.com,https://admin.example.com` (credentials
+are enabled, so `*` is not allowed).
 
 ## Authentication & RBAC
 
@@ -184,6 +185,128 @@ TOKEN=$(curl -s -X POST http://localhost:3000/auth/login \
 curl -s http://localhost:3000/patients -H "Authorization: Bearer $TOKEN"
 ```
 
+### Permission catalog
+
+Permissions are grouped in categories (one per module, plus a UI-only
+`dashboard` category) and declared in code:
+
+| Category    | Permissions                                                                                                  |
+| ----------- | ------------------------------------------------------------------------------------------------------------ |
+| `users`     | `users:read` · `users:create` · `users:update` · `users:delete` · `users:reset-password` · `users:permissions` |
+| `patients`  | `patients:read` · `patients:create` · `patients:update` · `patients:delete`                                   |
+| `roles`     | `roles:read` · `roles:create` · `roles:update` · `roles:delete`                                               |
+| `settings`  | `settings:read` · `settings:update`                                                                           |
+| `apikeys`   | `apikeys:self` · `apikeys:read` · `apikeys:manage`                                                            |
+| `dashboard` | `dashboard:read`                                                                                              |
+
+The **effective permissions** of a principal are the union of its roles plus
+direct grants, resolved per request by the global guards
+(`@RequirePermissions` = allOf, `@RequireAnyPermissions` = anyOf, `@Public()`
+opts a route out). Roles are 100% data-driven — the admin panel creates and
+edits them against the same catalog.
+
+**Seeded roles:**
+
+- `admin` — built-in and protected: synced with the full catalog on every
+  boot, its name is frozen and it must keep every administration permission
+  (`ADMIN_CRITICAL_PERMISSIONS`), so the system cannot lock itself out.
+- `editor` — viewer plus user creation and editing (no deletions, no
+  roles/settings administration).
+- `viewer` — dashboard, user list and own API keys.
+
+**Workflow — adding a permission (3 steps):**
+
+1. Add the key to the category in the owning module
+   (`src/modules/<context>/permissions.ts`); the aggregator picks it up.
+2. Protect the endpoint with `@RequirePermissions('<key>')` (or
+   `@RequireAnyPermissions`).
+3. Add its label under `permissions.items` in
+   `frontend/projects/ui/src/lib/i18n/translations` (es + en).
+
+The boot-time sync grants new keys to `admin` automatically and the permission
+matrix shows them in every role editor.
+
+### Settings (runtime configuration)
+
+Every value lives in the `settings` table and is editable from the admin panel.
+The registry (`src/modules/settings/domain/settings-registry.ts`) is the single
+source of truth: type, bounds, default and description.
+
+| Group            | Setting                        | Default | Meaning                              |
+| ---------------- | ------------------------------ | ------- | ------------------------------------ |
+| `passwordPolicy` | `minLength` / `maxLength`      | 8 / 128 | Length bounds                        |
+| `passwordPolicy` | `requireUppercase` … `requireSymbol` | true | Character-class rules                |
+| `passwordPolicy` | `historyCount`                 | 3       | Passwords that cannot be reused (0 = off) |
+| `passwordPolicy` | `expirationDays`               | 90      | Password expiry (0 = never)          |
+| `login`          | `maxFailedAttempts`            | 5       | Lockout threshold (0 = off)          |
+| `login`          | `lockDurationMinutes`          | 15      | Lockout window                       |
+| `session`        | `accessTokenTtlMinutes`        | 15      | Access token lifetime                |
+| `session`        | `refreshTokenTtlDays`          | 7       | Refresh token lifetime               |
+| `apiKeys`        | `defaultExpirationDays`        | 0       | Default key expiry (0 = never)       |
+| `apiKeys`        | `maxKeysPerUser`               | 10      | Active keys per user                 |
+
+**Adding a setting:** one entry in `SETTING_DEFINITIONS` (+ an i18n label).
+`GET /settings` returns it and the admin panel renders the right control with
+no frontend change; `PATCH /settings` validates type, bounds and unknown keys.
+
+### API keys
+
+Personal credentials that act **as their owner**: on every request the key's
+scopes are intersected with the owner's *current* effective permissions, so
+changing a role or disabling the account applies instantly. Secrets
+(`hexa_<fingerprint>_<random>`) carry 256 bits of entropy and are stored as
+SHA-256 hashes — no scrypt needed — and shown exactly once.
+
+```bash
+# Create a key scoped to the dashboard (omit `scopes` to inherit everything)
+curl -s -X POST http://localhost:3000/apikeys \
+  -H "Authorization: Bearer $TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"name":"ci","scopes":["dashboard:read"],"expiresInDays":90}'
+
+# Use it like a bearer token
+curl -s http://localhost:3000/permissions -H 'X-Api-Key: hexa_ab12cd34_...'
+```
+
+With `apikeys:self` any user manages their own keys; `apikeys:read` lists any
+user's keys (`?userId=`, `?all=true`) and `apikeys:manage` creates, rotates and
+revokes on behalf of others. Rotation keeps identity and scopes but kills the
+old secret immediately; `apiKeys.maxKeysPerUser` counts only active keys.
+
+### Environment variables
+
+| Variable                          | Default                        | Purpose                                                                |
+| --------------------------------- | ------------------------------ | ---------------------------------------------------------------------- |
+| `JWT_SECRET`                      | dev fallback (with a warning)  | HS256 signing key — **required in production**                         |
+| `ADMIN_EMAIL` / `ADMIN_PASSWORD`  | `admin@hexa.local` / `Admin123!` | Bootstrap admin (created only when no active admin exists)           |
+| `COOKIE_SAMESITE`                 | `lax`                          | Refresh cookie SameSite; cross-site prod → `none`                      |
+| `COOKIE_SECURE`                   | `true` in production           | Force `Secure` on the refresh cookie                                   |
+| `CORS_ORIGIN`                     | the dev servers `:4200`–`:4204` | Comma-separated allow-list (credentials enabled: no `*`)              |
+| `DATABASE_PATH`                   | `data/hexa.sqlite`             | SQLite file                                                            |
+| `PORT`                            | `3000`                         | API port                                                               |
+
+### Security notes & trade-offs
+
+- The refresh cookie is httpOnly and scoped to `/auth`; mutating endpoints use
+  `Bearer`/`X-Api-Key` headers (immune to CSRF) and `SameSite` adds defense in
+  depth. The access token lives in memory only.
+- Refresh replay detection keeps a 30-second grace window so concurrent tabs
+  do not raise false positives — a documented trade-off, real reuse still
+  revokes the family.
+- scrypt runs async with moderate parameters; API keys use SHA-256 because
+  their entropy is 256 bits.
+- If you lock yourself out: the protected `admin` role, the last-admin rule
+  and `npm run admin:rescue` (direct SQL, prints a fresh password once) are
+  the escape hatches.
+
+### Scripts
+
+```bash
+./scripts/auth-demo.sh          # curl walkthrough: cookie rotation + Bearer + X-Api-Key
+npm run admin:rescue            # forced admin reset (SQL direct), password printed once
+npm run admin:rescue ada@example.com
+```
+
 ### Endpoints
 
 Everything below requires an authenticated session **except** the public auth
@@ -202,13 +325,21 @@ routes. Authorization is per permission; the seeded admin holds all of them.
 
 #### Users
 
-| Method | Path         | Success | Failure                                                                |
-| ------ | ------------ | ------- | ---------------------------------------------------------------------- |
-| POST   | `/users`     | `201`   | `400` invalid payload · `409` email taken                              |
-| GET    | `/users`     | `200`   |                                                                        |
-| GET    | `/users/:id` | `200`   | `404` unknown user                                                     |
-| PATCH  | `/users/:id` | `200`   | `400` invalid/empty payload · `404` unknown user · `409` email taken   |
-| DELETE | `/users/:id` | `204`   | `404` unknown user                                                     |
+| Method | Path                       | Permission            | Success | Failure                                                                        |
+| ------ | -------------------------- | --------------------- | ------- | ------------------------------------------------------------------------------ |
+| POST   | `/users`                   | `users:create`        | `201`   | `400` invalid payload · `409` email taken                                       |
+| GET    | `/users`                   | `users:read`          | `200`   |                                                                                  |
+| GET    | `/users/:id`               | `users:read`          | `200`   | `404` unknown user                                                               |
+| PATCH  | `/users/:id`               | `users:update`        | `200`   | `400` invalid/empty payload · `404` unknown · `409` email taken / last admin    |
+| DELETE | `/users/:id`               | `users:delete`        | `204`   | `404` unknown user · `409` last admin                                            |
+| POST   | `/users/:id/password`      | `users:reset-password` | `200`  | `400` policy violation · `404` unknown user · `409` reused password             |
+| PUT    | `/users/:id/permissions`   | `users:permissions`   | `200`   | `400` unknown permission key · `404` unknown user                                |
+
+`POST /users/:id/password` takes `{ "password": "…" }` or `{ "generate": true }`
+(the generated value comes back **once**), unlocks the account and forces a
+change at next login. `PUT /users/:id/permissions` replaces the direct grants
+(`users:permissions`). Both are rules the panel uses; deleting, disabling or
+demoting the last active admin is rejected with `409 LastAdminError`.
 
 ```bash
 # Create
@@ -230,6 +361,22 @@ curl -s -X PATCH http://localhost:3000/users/<id> \
 # Delete
 curl -s -X DELETE http://localhost:3000/users/<id> -H "Authorization: Bearer $TOKEN"
 ```
+
+#### Roles, settings, permissions and API keys
+
+| Method | Path                    | Permission                                    | Success | Failure                                             |
+| ------ | ----------------------- | --------------------------------------------- | ------- | --------------------------------------------------- |
+| GET    | `/roles` · `/roles/:id` | `roles:read`                                  | `200`   | `404` unknown role                                   |
+| POST   | `/roles`                | `roles:create`                                | `201`   | `400` invalid · `409` name taken/reserved            |
+| PATCH  | `/roles/:id`            | `roles:update`                                | `200`   | `400` invalid · `404` unknown · `409` admin protected |
+| DELETE | `/roles/:id`            | `roles:delete`                                | `204`   | `404` unknown · `409` assigned/admin protected       |
+| GET    | `/permissions`          | any session                                   | `200`   |                                                      |
+| GET    | `/settings`             | `settings:read`                               | `200`   |                                                      |
+| PATCH  | `/settings`             | `settings:update`                             | `200`   | `400` unknown key / invalid value / empty body       |
+| GET    | `/apikeys`              | `apikeys:self` (own) · `apikeys:read` (`?userId=`, `?all=true`) | `200` | `403` without permission |
+| POST   | `/apikeys`              | `apikeys:self` (own) · `apikeys:manage` (others) | `201` | `400` bad scopes/expiry · `404` owner · `409` key limit |
+| POST   | `/apikeys/:id/rotate`   | owner · `apikeys:manage`                      | `200`   | `404` unknown · `409` revoked                        |
+| DELETE | `/apikeys/:id`          | owner · `apikeys:manage`                      | `204`   | `404` unknown · `409` already revoked                |
 
 #### Patients
 
@@ -285,9 +432,8 @@ lives in `scripts/crud-demo.sh` — run it against a live server:
 ./scripts/crud-demo.sh
 ```
 
-> ⚠️ `scripts/crud-demo.sh` and the seed scripts below predate the authentication
-> milestone: they call the API anonymously and will receive `401` until they are
-> updated to sign in first.
+All demo scripts sign in as the bootstrap administrator first (override with
+`ADMIN_EMAIL` / `ADMIN_PASSWORD`).
 
 To seed demo data (default 100 records, idempotent — existing emails/RUTs are skipped):
 
@@ -322,27 +468,28 @@ npm run seed:patients -- 50   # custom count
 
 ## Frontend — Angular 22 microfrontends
 
-The `frontend/` folder contains an Angular 22 workspace with a **shell** (host) and
-three **remotes** composed at runtime with **Native Federation** — each app is built
-and served independently:
+The `frontend/` folder contains an Angular 22 workspace with a **shell** (host)
+and four **remotes** composed at runtime with **Native Federation** — each app
+is built and served independently:
 
-| App         | Port | Role   | Contents                                                         |
-| ----------- | ---- | ------ | ---------------------------------------------------------------- |
-| `shell`     | 4200 | host   | Layout, navigation, language switcher, shared toaster             |
-| `patients`  | 4203 | remote | Full patient CRUD: list + search, create, edit, delete + RUT form |
-| `users`     | 4201 | remote | Full users CRUD: list + search, create, edit, delete              |
-| `dashboard` | 4202 | remote | Live summary: total patients + the 5 most recent                  |
+| App         | Port | Role   | Contents                                                                          |
+| ----------- | ---- | ------ | --------------------------------------------------------------------------------- |
+| `shell`     | 4200 | host   | Layout, login, navigation, language switcher, account (own API keys)              |
+| `patients`  | 4203 | remote | Full patient CRUD: list + search, create, edit, delete + RUT form                 |
+| `users`     | 4201 | remote | Account management: roles, status, direct permissions, password resets            |
+| `dashboard` | 4202 | remote | Live summary: total patients + the 5 most recent                                  |
+| `admin`     | 4204 | remote | Admin panel: role editor with the permission matrix, dynamic settings, API keys   |
 
 Shared code lives in three libraries:
 
 - **`projects/ui`** — spartan/ui (the Angular shadcn/ui port) components generated
   with the spartan CLI and imported through path aliases (`@ui/button`, `@ui/dialog`,
   `@ui/table`, …), plus the Tailwind v4 theme and the i18n dictionaries.
-- **`projects/data-access`** — typed `UsersApi` / `PatientsApi` / `AuthApi`
-  (HttpClient) over the REST API, the RUT/phone helpers that mirror the backend
-  value objects (módulo 11 validation, canonical formatting) and `mapApiError`,
-  which translates backend error names (`PatientAlreadyExistsError`, …) into i18n
-  keys.
+- **`projects/data-access`** — typed HTTP clients (`UsersApi`, `PatientsApi`,
+  `AuthApi`, `RolesApi`, `SettingsApi`, `PermissionsApi`, `ApiKeysApi`), the
+  RUT/phone helpers that mirror the backend value objects (módulo 11
+  validation, canonical formatting) and `mapApiError`, which translates backend
+  error names (`PatientAlreadyExistsError`, …) into i18n keys.
 - **`projects/auth`** — session store (signals), JWT interceptor with single-flight
   refresh-and-retry, route/permission guards and the permission matrix shared by
   the admin views.
@@ -358,7 +505,7 @@ in the shell re-renders the remotes too. The selection is persisted in
 One command (backend + microfrontends):
 
 ```bash
-./scripts/dev-all.sh           # builds the backend and starts :3000, :4200, :4201, :4202, :4203
+./scripts/dev-all.sh           # builds the backend and starts :3000, :4200–:4204
 ./scripts/dev-all.sh --skip-build
 ```
 
@@ -368,13 +515,14 @@ Or in separate terminals:
 npm run start:dev              # backend on :3000
 cd frontend
 npm install                    # first time only
-npm run start:all              # shell + patients + users + dashboard (concurrently)
+npm run start:all              # shell + patients + users + dashboard + admin (concurrently)
 ```
 
 Open <http://localhost:4200> — the shell lazily loads each remote from its own dev
 server through `loadRemoteModule` (see `projects/shell/src/app/app.routes.ts`). Each
 remote also runs standalone (`npm run start:patients` → :4203,
-`npm run start:users` → :4201) thanks to its own `app.config.ts` + `bootstrap.ts`.
+`npm run start:users` → :4201, `npm run start:admin` → :4204) thanks to its own
+`app.config.ts` + `bootstrap.ts`.
 
 More scripts (inside `frontend/`):
 
@@ -463,11 +611,14 @@ Guidelines when writing adapters:
 - **Adapter integration** (`sqlite-user.repository.spec.ts`,
   `sqlite-patient.repository.spec.ts`) — runs the real SQLite adapters against a
   `:memory:` database, including error translation.
-- **REST e2e** (`test/**/*.e2e-spec.ts` — users, patients, auth and identity flows) —
-  boots the real `AppModule` through `configureApp` and swaps the `SqliteDatabase`
-  provider for a fresh `:memory:` instance per test (`overrideProvider`), so pipes,
-  filters, routing, guards and SQL are all exercised over HTTP without touching the
-  file database.
+- **REST e2e** (`test/**/*.e2e-spec.ts` — auth, users, patients, identity and
+  API keys) — boots the real `AppModule` through `configureApp` and swaps the
+  `SqliteDatabase` provider for a fresh `:memory:` instance per test
+  (`overrideProvider`), so pipes, filters, routing, guards and SQL are all
+  exercised over HTTP without touching the file database. The auth spec covers
+  login → refresh rotation → replay rejection, lockout, password policy and
+  `must_change_password`; the API keys spec covers the `X-Api-Key` lifecycle
+  (create → use → rotate → revoke), scope intersection and cross-user rules.
 
 ## Conventions & decisions
 
@@ -480,10 +631,11 @@ Guidelines when writing adapters:
   queue consumer instead of HTTP.
 - **DTOs never cross layer boundaries.** They exist only in `infrastructure/http`;
   use cases take simple command/query objects and return domain objects.
-- **Permissions are declared per endpoint** with `@RequirePermissions('<key>')` from the
-  code catalog; the global guards resolve them per request from roles ∪ direct grants,
-  and routes that must stay open are marked `@Public()`. Adding a permission is a
-  one-line catalog change plus the decorator.
+- **Permissions are declared per endpoint** with `@RequirePermissions('<key>')` (allOf)
+  or `@RequireAnyPermissions(...)` (anyOf) from the code catalog; the global guards
+  resolve them per request from roles ∪ direct grants, and routes that must stay open
+  are marked `@Public()`. See the 3-step workflow in
+  [Permission catalog](#permission-catalog).
 - **ESM:** relative imports include the `.js` extension (`nodenext` resolution).
 - **One module per bounded context** under `src/modules/<context>`, each with its own
   `domain` / `application` / `infrastructure` folders and composition root.

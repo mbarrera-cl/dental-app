@@ -23,6 +23,7 @@
     "start:prod": "node dist/main",
     "seed": "node scripts/seed-users.mjs",
     "seed:patients": "node scripts/seed-patients.mjs",
+    "admin:rescue": "node scripts/rescue-admin.mjs",
     "lint": "oxlint --type-aware src/ test/",
     "test": "vitest run",
     "test:watch": "vitest",
