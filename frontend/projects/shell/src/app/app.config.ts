@@ -7,12 +7,19 @@ import {
 } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { authInterceptor, SessionStore } from 'auth';
-import { CaroIaGateway } from 'data-access';
+import { API_BASE_URL, CaroIaGateway } from 'data-access';
 import { provideAppTransloco, provideSpartanHlm } from 'ui';
 import { BrandingStore } from './branding/branding-store';
 import { CaroIaHttpGateway } from './caro-ia/caro-ia.http-gateway';
 import { NavigationStore } from './navigation/navigation-store';
 import { routes } from './app.routes';
+
+const runtimeApiUrl = (window as unknown as { __HEXA_CONFIG__?: { apiUrl?: string } })
+  .__HEXA_CONFIG__?.apiUrl?.trim();
+const defaultApiUrl =
+  window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    ? 'http://localhost:3000'
+    : window.location.origin;
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -35,5 +42,7 @@ export const appConfig: ApplicationConfig = {
     provideSpartanHlm(),
     // CaroIA backend real: HTTP + SSE, con audio transitorio y sin adjuntos.
     { provide: CaroIaGateway, useClass: CaroIaHttpGateway },
+    // Same-origin in production; config.js can override it at runtime.
+    { provide: API_BASE_URL, useValue: runtimeApiUrl || defaultApiUrl },
   ],
 };

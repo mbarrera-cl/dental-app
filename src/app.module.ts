@@ -19,6 +19,7 @@ import { DatabaseModule } from './shared/infrastructure/database/database.module
 import { JwtAuthGuard } from './shared/security/jwt-auth.guard.js';
 import { PermissionsGuard } from './shared/security/permissions.guard.js';
 import { SecurityModule } from './shared/security/security.module.js';
+import { HealthController } from './shared/infrastructure/http/health.controller.js';
 
 /**
  * Composition root of the application. Every feature lives in
@@ -48,6 +49,7 @@ import { SecurityModule } from './shared/security/security.module.js';
     McpModule,
     CaroIaModule,
   ],
+  controllers: [HealthController],
   providers: [
     IdentityBootstrapService,
     // Order matters: authenticate first, authorize second.
