@@ -8,6 +8,7 @@ import { NavigationModule } from './modules/navigation/navigation.module.js';
 import { PatientsModule } from './modules/patients/patients.module.js';
 import { RolesModule } from './modules/roles/roles.module.js';
 import { SettingsModule } from './modules/settings/settings.module.js';
+import { QuotesModule } from './modules/quotes/quotes.module.js';
 import { UcoModule } from './modules/uco/uco.module.js';
 import { UsersModule } from './modules/users/users.module.js';
 import { IdentityBootstrapService } from './shared/infrastructure/bootstrap/identity-bootstrap.service.js';
@@ -39,6 +40,7 @@ import { SecurityModule } from './shared/security/security.module.js';
     ClinicModule,
     ClinicalModule,
     UcoModule,
+    QuotesModule,
   ],
   providers: [
     IdentityBootstrapService,

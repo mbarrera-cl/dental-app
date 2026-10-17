@@ -26,5 +26,6 @@ import { UcoController } from './infrastructure/http/uco.controller.js';
     // Swap this binding for another database adapter (Postgres, MongoDB, ...).
     { provide: UcoProcedureRepositoryPort, useClass: SqliteUcoProcedureRepository },
   ],
+  exports: [UcoProcedureRepositoryPort],
 })
 export class UcoModule {}

@@ -3,6 +3,8 @@ import type { RoleRef } from './principal.js';
 /** Raw access data of a user, read straight from persistence. */
 export interface UserAccess {
   status: 'active' | 'disabled';
+  /** Display name, used for audit trails and document snapshots. */
+  name: string;
   roles: RoleRef[];
   /** Union of the permissions granted by every assigned role. */
   rolePermissions: readonly string[];

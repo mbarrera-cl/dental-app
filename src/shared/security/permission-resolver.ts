@@ -9,9 +9,7 @@ export interface PermissionBreakdown {
   fromRoles: string[];
   direct: string[];
   effective: string[];
-}
-
-/**
+}/**
  * The **single** place where a user's effective permissions are computed:
  * `union(role permissions) ∪ direct permissions`, filtered against the
  * catalog (a role saved before the catalog shrank must not grant ghosts).
@@ -55,6 +53,7 @@ export class PermissionResolver {
     return {
       type: 'user',
       userId,
+      name: access.name,
       permissions: new Set([...access.rolePermissions, ...access.directPermissions].filter(isPermissionKey)),
       roles: access.roles,
     };

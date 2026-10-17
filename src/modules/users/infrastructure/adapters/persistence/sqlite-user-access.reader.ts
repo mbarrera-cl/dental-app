@@ -29,8 +29,8 @@ export class SqliteUserAccessReader extends UserAccessReaderPort {
 
   async load(userId: string): Promise<UserAccess | null> {
     const user = this.db.connection
-      .prepare('SELECT status FROM users WHERE id = ?')
-      .get(userId) as unknown as { status: string } | undefined;
+      .prepare('SELECT status, name FROM users WHERE id = ?')
+      .get(userId) as unknown as { status: string; name: string } | undefined;
 
     if (user === undefined) {
       return null;
@@ -54,6 +54,7 @@ export class SqliteUserAccessReader extends UserAccessReaderPort {
 
     return {
       status: user.status === 'disabled' ? 'disabled' : 'active',
+      name: user.name,
       roles,
       rolePermissions: roleRows.flatMap((row) => parsePermissions(row.permissions)),
       directPermissions: directRows.map((row) => row.permission_key),

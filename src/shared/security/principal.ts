@@ -13,6 +13,8 @@ export interface RoleRef {
 export interface Principal {
   type: 'user' | 'apikey';
   userId: string;
+  /** Display name of the actor, used for audit trails and document snapshots. */
+  name: string;
   /** Only present for `apikey` principals. */
   apiKeyId?: string;
   permissions: ReadonlySet<string>;

@@ -56,6 +56,7 @@ export class ApiKeyAuthenticatorService extends ApiKeyAuthenticatorPort {
       type: 'apikey',
       userId: apiKey.userId,
       apiKeyId: apiKey.id,
+      name: access.name,
       permissions,
       roles: access.roles,
     };
