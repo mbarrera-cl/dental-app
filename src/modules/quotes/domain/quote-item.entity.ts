@@ -43,7 +43,8 @@ export class QuoteItem extends Entity<QuoteItemProps> {
     const normalized = normalizeItemInput(input);
 
     return new QuoteItem({
-      position: normalized.position,      ucoCode: normalized.ucoCode,
+      position: normalized.position,
+      ucoCode: normalized.ucoCode,
       description: normalized.description,
       piezaDental: normalized.piezaDental,
       quantity: normalized.quantity,
