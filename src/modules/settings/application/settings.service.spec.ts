@@ -110,21 +110,12 @@ describe('SettingsService', () => {
     });
   });
 
-  it('rejects settings flagged as managed by their own module', async () => {
+  it('writes managed keys when called by their owning module', async () => {
     const { repository, service } = setup();
 
-    await expect(service.update({ 'clinic.logo.version': 2 })).rejects.toMatchObject({
-      name: 'SettingsValueInvalidError',
-      details: {
-        problems: [
-          {
-            key: 'clinic.logo.version',
-            reason: 'is managed internally and cannot be edited',
-          },
-        ],
-      },
-    });
-    expect(repository.stored).toEqual({});
+    await service.update({ 'clinic.logo.version': 3 });
+
+    expect(repository.stored).toEqual({ 'clinic.logo.version': 3 });
   });
 
   it('enforces cross-field consistency between min and max length', async () => {

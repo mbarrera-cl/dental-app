@@ -119,9 +119,17 @@ export function ensureSchema(db: SqliteDatabase): void {
       contacto_telefono      TEXT,
       contacto_parentesco    TEXT,
       notas                  TEXT,
+      numero_historia        TEXT,
       created_at             TEXT NOT NULL
     );
   `);
+
+  // Sequential clinical record number (`HC-000123`), assigned on create and
+  // backfilled for pre-existing rows by `PatientNumberBootstrapService`.
+  addColumnIfMissing(db, 'patients', 'numero_historia', 'TEXT');
+  connection.exec(
+    'CREATE UNIQUE INDEX IF NOT EXISTS idx_patients_numero_historia ON patients (numero_historia) WHERE numero_historia IS NOT NULL;',
+  );
 
   connection.exec(`
     CREATE TABLE IF NOT EXISTS settings (
@@ -163,11 +171,29 @@ export function ensureSchema(db: SqliteDatabase): void {
   `);
 
   connection.exec(`
+    CREATE TABLE IF NOT EXISTS clinic_assets (
+      id         TEXT PRIMARY KEY,
+      variant    TEXT NOT NULL,
+      mime       TEXT NOT NULL,
+      width      INTEGER NOT NULL,
+      height     INTEGER NOT NULL,
+      bytes      BLOB NOT NULL,
+      size       INTEGER NOT NULL,
+      hash       TEXT NOT NULL,
+      version    INTEGER NOT NULL,
+      active     INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT NOT NULL,
+      created_by TEXT REFERENCES users(id)
+    );
+  `);
+
+  connection.exec(`
     CREATE INDEX IF NOT EXISTS idx_user_roles_role_id ON user_roles (role_id);
     CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user_id ON refresh_tokens (user_id);
     CREATE INDEX IF NOT EXISTS idx_password_history_user_id ON password_history (user_id);
     CREATE INDEX IF NOT EXISTS idx_api_keys_user_id ON api_keys (user_id);
     CREATE INDEX IF NOT EXISTS idx_menu_items_parent ON menu_items (parent_id, position);
+    CREATE INDEX IF NOT EXISTS idx_assets_variant ON clinic_assets (variant, active, version DESC);
   `);
 }
 

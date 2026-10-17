@@ -16,6 +16,7 @@ const STATUS_BY_KIND: Record<DomainErrorKind, HttpStatus> = {
   not_found: HttpStatus.NOT_FOUND,
   conflict: HttpStatus.CONFLICT,
   locked: HttpStatus.LOCKED,
+  unsupported_media: HttpStatus.UNSUPPORTED_MEDIA_TYPE,
   unexpected: HttpStatus.INTERNAL_SERVER_ERROR,
 };
 

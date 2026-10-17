@@ -10,6 +10,7 @@ export type DomainErrorKind =
   | 'not_found'
   | 'conflict'
   | 'locked'
+  | 'unsupported_media'
   | 'unexpected';
 
 export interface DomainErrorOptions extends ErrorOptions {

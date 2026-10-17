@@ -73,6 +73,10 @@ export class SettingsService {
   /**
    * Validates every provided value against the registry (all-or-nothing),
    * persists them and returns the fresh overview.
+   *
+   * This is the internal API: modules that own a `managed` setting (e.g.
+   * `clinic.logo.version`) call it directly. The HTTP boundary rejects those
+   * keys in `UpdateSettingsUseCase`.
    */
   async update(values: Readonly<Record<string, unknown>>): Promise<SettingOverview[]> {
     const entries = Object.entries(values);
@@ -94,12 +98,6 @@ export class SettingsService {
 
     for (const [key, value] of entries) {
       const definition = findSettingDefinition(key)!;
-
-      if (definition.managed === true) {
-        problems.push({ key, reason: 'is managed internally and cannot be edited' });
-        continue;
-      }
-
       const coerced = coerceSettingValue(definition, value);
 
       if (!coerced.ok) {
