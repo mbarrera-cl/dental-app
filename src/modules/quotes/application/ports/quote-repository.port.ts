@@ -20,9 +20,6 @@ export abstract class QuoteRepositoryPort {
 
   abstract findAll(): Promise<Quote[]>;
 
-  /** Deletes a quote and its items/versions (cascade); throws `QuoteNotFoundError` when missing. */
-  abstract delete(id: string): Promise<void>;
-
   /** Next folio number of `year`, atomically (the counters row is upserted). */
   abstract nextFolioNumber(year: number): Promise<number>;
 

@@ -128,6 +128,12 @@ export class QuoteResponseDto {
   @ApiProperty({ required: false })
   sanctionedAt: string | null;
 
+  @ApiProperty({ required: false, description: 'Set when the quote is in the trash' })
+  deletedAt: string | null;
+
+  @ApiProperty({ required: false })
+  deletedByName: string | null;
+
   @ApiProperty({ type: [QuoteItemResponseDto] })
   items: QuoteItemResponseDto[];
 
@@ -154,6 +160,8 @@ export class QuoteResponseDto {
     dto.updatedAt = quote.updatedAt.toISOString();
     dto.sanctionedByName = quote.sanctionedByName;
     dto.sanctionedAt = quote.sanctionedAt === null ? null : quote.sanctionedAt.toISOString();
+    dto.deletedAt = quote.deletedAt === null ? null : quote.deletedAt.toISOString();
+    dto.deletedByName = quote.deletedByName;
     dto.items = quote.items.map((item) => QuoteItemResponseDto.fromDomain(item));
     return dto;
   }

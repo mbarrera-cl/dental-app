@@ -31,6 +31,9 @@ interface QuoteRow {
   sanctioned_by: string | null;
   sanctioned_by_name: string | null;
   sanctioned_at: string | null;
+  deleted_at: string | null;
+  deleted_by: string | null;
+  deleted_by_name: string | null;
 }
 
 interface QuoteItemRow {
@@ -81,8 +84,9 @@ export class SqliteQuoteRepository extends QuoteRepositoryPort {
              (id, folio, patient_id, patient_name, patient_rut, patient_email, status,
               valid_until, notes, subtotal, discount_total, total, version, replaces_quote_id,
               created_by, created_by_name, created_at, updated_by, updated_by_name, updated_at,
-              sanctioned_by, sanctioned_by_name, sanctioned_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+              sanctioned_by, sanctioned_by_name, sanctioned_at,
+              deleted_at, deleted_by, deleted_by_name)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         )
         .run(
           quote.id,
@@ -108,6 +112,9 @@ export class SqliteQuoteRepository extends QuoteRepositoryPort {
           quote.sanctionedBy,
           quote.sanctionedByName,
           toIso(quote.sanctionedAt),
+          toIso(quote.deletedAt),
+          quote.deletedBy,
+          quote.deletedByName,
         );
 
       this.insertItems(quote);
@@ -126,7 +133,8 @@ export class SqliteQuoteRepository extends QuoteRepositoryPort {
         `UPDATE quotes SET
            status = ?, valid_until = ?, notes = ?, subtotal = ?, discount_total = ?, total = ?,
            version = ?, updated_by = ?, updated_by_name = ?, updated_at = ?,
-           sanctioned_by = ?, sanctioned_by_name = ?, sanctioned_at = ?
+           sanctioned_by = ?, sanctioned_by_name = ?, sanctioned_at = ?,
+           deleted_at = ?, deleted_by = ?, deleted_by_name = ?
          WHERE id = ?`,
       )
       .run(
@@ -143,6 +151,9 @@ export class SqliteQuoteRepository extends QuoteRepositoryPort {
         quote.sanctionedBy,
         quote.sanctionedByName,
         toIso(quote.sanctionedAt),
+        toIso(quote.deletedAt),
+        quote.deletedBy,
+        quote.deletedByName,
         quote.id,
       );
 
@@ -151,16 +162,6 @@ export class SqliteQuoteRepository extends QuoteRepositoryPort {
     }
 
     this.replaceItems(quote);
-  }
-
-  async delete(id: string): Promise<void> {
-    const result = this.db.connection
-      .prepare('DELETE FROM quotes WHERE id = ?')
-      .run(id);
-
-    if (result.changes === 0) {
-      throw new QuoteNotFoundError(id);
-    }
   }
 
   async findById(id: string): Promise<Quote | null> {
@@ -332,6 +333,9 @@ export class SqliteQuoteRepository extends QuoteRepositoryPort {
       sanctionedBy: row.sanctioned_by,
       sanctionedByName: row.sanctioned_by_name,
       sanctionedAt: toDate(row.sanctioned_at),
+      deletedAt: toDate(row.deleted_at),
+      deletedBy: row.deleted_by,
+      deletedByName: row.deleted_by_name,
     };
 
     return Quote.reconstitute(props, row.id);

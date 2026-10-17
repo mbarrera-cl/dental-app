@@ -20,6 +20,7 @@ import { DuplicateQuoteUseCase } from '../../application/use-cases/duplicate-quo
 import { GetQuoteUseCase } from '../../application/use-cases/get-quote.use-case.js';
 import { ListQuoteVersionsUseCase, type QuoteVersion } from '../../application/use-cases/list-quote-versions.use-case.js';
 import { ListQuotesUseCase } from '../../application/use-cases/list-quotes.use-case.js';
+import { RestoreQuoteUseCase } from '../../application/use-cases/restore-quote.use-case.js';
 import { SanctionQuoteUseCase } from '../../application/use-cases/sanction-quote.use-case.js';
 import { UpdateQuoteUseCase } from '../../application/use-cases/update-quote.use-case.js';
 import { quotesPermissions } from '../../permissions.js';
@@ -46,6 +47,7 @@ export class QuotesController {
     private readonly remove: DeleteQuoteUseCase,
     private readonly decideItem: DecideQuoteItemUseCase,
     private readonly sanction: SanctionQuoteUseCase,
+    private readonly restore: RestoreQuoteUseCase,
     private readonly duplicate: DuplicateQuoteUseCase,
     private readonly versions: ListQuoteVersionsUseCase,
   ) {}
@@ -58,6 +60,7 @@ export class QuotesController {
   @ApiQuery({ name: 'q', required: false })
   @ApiQuery({ name: 'from', required: false })
   @ApiQuery({ name: 'to', required: false })
+  @ApiQuery({ name: 'deleted', required: false, enum: ['exclude', 'only', 'all'] })
   @ApiOkResponse({ type: [QuoteResponseDto] })
   async findAll(
     @Query('patientId') patientId?: string,
@@ -65,8 +68,16 @@ export class QuotesController {
     @Query('q') q?: string,
     @Query('from') from?: string,
     @Query('to') to?: string,
+    @Query('deleted') deleted?: string,
   ): Promise<QuoteResponseDto[]> {
-    const quotes = await this.list.execute({ patientId, status, q, from, to });
+    const quotes = await this.list.execute({
+      patientId,
+      status,
+      q,
+      from,
+      to,
+      deleted: deleted === 'only' || deleted === 'all' ? deleted : 'exclude',
+    });
 
     return quotes.map((quote) => QuoteResponseDto.fromDomain(quote));
   }
@@ -131,12 +142,35 @@ export class QuotesController {
   @Delete(':id')
   @RequirePermissions(quotesPermissions.delete)
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Delete a draft quotation' })
-  @ApiNoContentResponse({ description: 'The draft was deleted.' })
+  @ApiOperation({
+    summary: 'Move a quotation to the trash (soft delete, any status)',
+  })
+  @ApiNoContentResponse({ description: 'The quotation is now in the trash.' })
   @ApiNotFoundResponse({ description: 'No quote with this id exists.' })
-  @ApiConflictResponse({ description: 'Only drafts can be deleted.' })
-  async removeOne(@Param('id') id: string): Promise<void> {
-    await this.remove.execute({ id });
+  async removeOne(
+    @Param('id') id: string,
+    @CurrentPrincipal() principal: Principal,
+  ): Promise<void> {
+    await this.remove.execute({ id, actorId: principal.userId, actorName: principal.name });
+  }
+
+  @Post(':id/restore')
+  @RequirePermissions(quotesPermissions.delete)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Restore a quotation from the trash' })
+  @ApiOkResponse({ type: QuoteResponseDto })
+  @ApiNotFoundResponse({ description: 'No quote with this id exists.' })
+  async restoreOne(
+    @Param('id') id: string,
+    @CurrentPrincipal() principal: Principal,
+  ): Promise<QuoteResponseDto> {
+    const quote = await this.restore.execute({
+      id,
+      actorId: principal.userId,
+      actorName: principal.name,
+    });
+
+    return QuoteResponseDto.fromDomain(quote);
   }
 
   @Post(':id/duplicate')

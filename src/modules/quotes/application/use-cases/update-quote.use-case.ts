@@ -38,7 +38,7 @@ export class UpdateQuoteUseCase implements UseCase<UpdateQuoteCommand, Quote> {
   async execute(command: UpdateQuoteCommand): Promise<Quote> {
     const quote = await this.quotes.findById(command.id);
 
-    if (quote === null) {
+    if (quote === null || quote.isDeleted) {
       throw new QuoteNotFoundError(command.id);
     }
 

@@ -36,6 +36,10 @@ export interface QuoteProps {
   sanctionedBy: string | null;
   sanctionedByName: string | null;
   sanctionedAt: Date | null;
+  /** Papelera: a trashed quote is hidden from the active surface but restorable. */
+  deletedAt: Date | null;
+  deletedBy: string | null;
+  deletedByName: string | null;
 }
 
 export interface CreateQuoteProps {
@@ -111,6 +115,9 @@ export class Quote extends Entity<QuoteProps> {
       sanctionedBy: null,
       sanctionedByName: null,
       sanctionedAt: null,
+      deletedAt: null,
+      deletedBy: null,
+      deletedByName: null,
     });
   }
 
@@ -197,6 +204,22 @@ export class Quote extends Entity<QuoteProps> {
 
   get sanctionedAt(): Date | null {
     return this.props.sanctionedAt;
+  }
+
+  get deletedAt(): Date | null {
+    return this.props.deletedAt;
+  }
+
+  get deletedBy(): string | null {
+    return this.props.deletedBy;
+  }
+
+  get deletedByName(): string | null {
+    return this.props.deletedByName;
+  }
+
+  get isDeleted(): boolean {
+    return this.props.deletedAt !== null;
   }
 
   get subtotal(): number {
@@ -295,6 +318,10 @@ export class Quote extends Entity<QuoteProps> {
    * with undecided items. Records who and when.
    */
   sanction(status: 'aprobada' | 'rechazada', actorId: string | null, actorName: string): void {
+    if (this.isDeleted) {
+      throw new Error('quotes.status.deleted');
+    }
+
     if (this.props.status === 'aprobada' || this.props.status === 'rechazada') {
       throw new Error('quotes.status.alreadySanctioned');
     }
@@ -341,6 +368,9 @@ export class Quote extends Entity<QuoteProps> {
       sanctionedBy: null,
       sanctionedByName: null,
       sanctionedAt: null,
+      deletedAt: null,
+      deletedBy: null,
+      deletedByName: null,
     });
   }
 
@@ -377,6 +407,36 @@ export class Quote extends Entity<QuoteProps> {
     };
   }
 
+  /** Moves the quote to the trash (any status). Idempotent. */
+  softDelete(actorId: string | null, actorName: string): void {
+    if (this.isDeleted) {
+      return;
+    }
+
+    this.props.deletedAt = new Date();
+    this.props.deletedBy = actorId;
+    this.props.deletedByName = actorName.trim();
+    this.props.updatedBy = actorId;
+    this.props.updatedByName = actorName.trim();
+    this.props.updatedAt = this.props.deletedAt;
+    this.props.version += 1;
+  }
+
+  /** Brings the quote back from the trash, keeping its status. Idempotent. */
+  restore(actorId: string | null, actorName: string): void {
+    if (!this.isDeleted) {
+      return;
+    }
+
+    this.props.deletedAt = null;
+    this.props.deletedBy = null;
+    this.props.deletedByName = null;
+    this.props.updatedBy = actorId;
+    this.props.updatedByName = actorName.trim();
+    this.props.updatedAt = new Date();
+    this.props.version += 1;
+  }
+
   private item(itemId: string): QuoteItem {
     const item = this.props.items.find((line) => line.id === itemId);
 
@@ -388,6 +448,10 @@ export class Quote extends Entity<QuoteProps> {
   }
 
   private assertEditable(): void {
+    if (this.isDeleted) {
+      throw new Error('quotes.status.deleted');
+    }
+
     if (this.props.status === 'aprobada' || this.props.status === 'rechazada') {
       throw new Error('quotes.status.locked');
     }

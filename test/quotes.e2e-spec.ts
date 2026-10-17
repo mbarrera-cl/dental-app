@@ -21,6 +21,9 @@ interface QuoteBody {
   discountTotal: number;
   total: number;
   version: number;
+  deletedAt: string | null;
+  deletedByName: string | null;
+  sanctionedByName: string | null;
   items: Array<{ id: string; description: string; netAmount: number; status: string }>;
 }
 
@@ -199,7 +202,7 @@ describe('Quotes API (e2e)', () => {
     expect(duplicate.items).toHaveLength(2);
   });
 
-  it('deletes only draft quotes', async () => {
+  it('moves a draft to the trash and restores it', async () => {
     const created = (await createQuote(validQuote()).expect(201)).body as QuoteBody;
 
     await request(app.getHttpServer())
@@ -207,8 +210,108 @@ describe('Quotes API (e2e)', () => {
       .set('Authorization', authorization)
       .expect(204);
 
-    const remaining = (await list().expect(200)).body as QuoteBody[];
-    expect(remaining).toHaveLength(0);
+    // Hidden from the active list and from the detail endpoint.
+    expect((await list().expect(200)).body as QuoteBody[]).toHaveLength(0);
+    await request(app.getHttpServer())
+      .get(`/quotes/${created.id}`)
+      .set('Authorization', authorization)
+      .expect(404);
+
+    // Visible in the trash, with its deletion metadata.
+    const trash = (await list(authorization, '?deleted=only').expect(200)).body as QuoteBody[];
+    expect(trash).toHaveLength(1);
+    expect(trash[0]!.id).toBe(created.id);
+    expect(trash[0]!.deletedAt).not.toBeNull();
+    expect(trash[0]!.deletedByName).toBe('Administrator');
+
+    // The merge view shows both.
+    expect((await list(authorization, '?deleted=all').expect(200)).body as QuoteBody[]).toHaveLength(1);
+
+    const restored = (await request(app.getHttpServer())
+      .post(`/quotes/${created.id}/restore`)
+      .set('Authorization', authorization)
+      .expect(200)).body as QuoteBody;
+
+    expect(restored.deletedAt).toBeNull();
+    expect((await list().expect(200)).body as QuoteBody[]).toHaveLength(1);
+    expect((await list(authorization, '?deleted=only').expect(200)).body as QuoteBody[]).toHaveLength(0);
+  });
+
+  it('trashes a sanctioned quote, keeps its status and restores it', async () => {
+    const created = (await createQuote(validQuote()).expect(201)).body as QuoteBody;
+
+    await request(app.getHttpServer())
+      .patch(`/quotes/${created.id}/status`)
+      .set('Authorization', authorization)
+      .send({ status: 'aprobada' })
+      .expect(200);
+
+    await request(app.getHttpServer())
+      .delete(`/quotes/${created.id}`)
+      .set('Authorization', authorization)
+      .expect(204);
+
+    const trash = (await list(authorization, '?deleted=only').expect(200)).body as QuoteBody[];
+    expect(trash[0]!.status).toBe('aprobada');
+
+    const restored = (await request(app.getHttpServer())
+      .post(`/quotes/${created.id}/restore`)
+      .set('Authorization', authorization)
+      .expect(200)).body as QuoteBody;
+
+    expect(restored.status).toBe('aprobada');
+    expect(restored.sanctionedByName).toBe('Administrator');
+  });
+
+  it('blocks editing, deciding, sanctioning and duplicating a trashed quote', async () => {
+    const created = (await createQuote(validQuote()).expect(201)).body as QuoteBody;
+    const itemId = created.items[0]!.id;
+
+    await request(app.getHttpServer())
+      .delete(`/quotes/${created.id}`)
+      .set('Authorization', authorization)
+      .expect(204);
+
+    await updateQuote(created.id, {
+      items: [{ description: 'Otra', quantity: 1, unitPrice: 1 }],
+    }).expect(404);
+
+    await request(app.getHttpServer())
+      .patch(`/quotes/${created.id}/items/${itemId}/status`)
+      .set('Authorization', authorization)
+      .send({ status: 'aprobado' })
+      .expect(404);
+
+    await request(app.getHttpServer())
+      .patch(`/quotes/${created.id}/status`)
+      .set('Authorization', authorization)
+      .send({ status: 'aprobada' })
+      .expect(404);
+
+    await request(app.getHttpServer())
+      .post(`/quotes/${created.id}/duplicate`)
+      .set('Authorization', authorization)
+      .expect(404);
+  });
+
+  it('records deletion and restoration in the version trail', async () => {
+    const created = (await createQuote(validQuote()).expect(201)).body as QuoteBody;
+
+    await request(app.getHttpServer())
+      .delete(`/quotes/${created.id}`)
+      .set('Authorization', authorization)
+      .expect(204);
+    await request(app.getHttpServer())
+      .post(`/quotes/${created.id}/restore`)
+      .set('Authorization', authorization)
+      .expect(200);
+
+    const versions = (await request(app.getHttpServer())
+      .get(`/quotes/${created.id}/versions`)
+      .set('Authorization', authorization)
+      .expect(200)).body as Array<{ action: string }>;
+
+    expect(versions.map((version) => version.action)).toEqual(['created', 'deleted', 'restored']);
   });
 
   it('exposes the version trail', async () => {
@@ -230,6 +333,7 @@ describe('Quotes API (e2e)', () => {
     const outsider = await createUserWithPermissions('quote-outside@e2e.local', ['patients:read']);
 
     await list(reader).expect(200);
+    await list(reader, '?deleted=only').expect(200);
     await createQuote(validQuote(), reader).expect(403);
     await request(app.getHttpServer()).patch(`/quotes/any/status`).set('Authorization', reader).send({ status: 'aprobada' }).expect(403);
 

@@ -9,11 +9,13 @@ export interface ListQuotesQuery {
   q?: string;
   from?: string;
   to?: string;
+  /** `exclude` (default) hides the trash; `only` lists it; `all` merges both. */
+  deleted?: 'exclude' | 'only' | 'all';
 }
 
 /**
  * Lists quotations with the filters the list page needs: by patient, status,
- * text (folio), or a date range on the creation date.
+ * text (folio), a date range on the creation date and the trash view.
  */
 @Injectable()
 export class ListQuotesUseCase implements UseCase<ListQuotesQuery, Quote[]> {
@@ -21,8 +23,10 @@ export class ListQuotesUseCase implements UseCase<ListQuotesQuery, Quote[]> {
 
   async execute(query: ListQuotesQuery): Promise<Quote[]> {
     const all = await this.quotes.findAll();
+    const deleted = query.deleted ?? 'exclude';
 
     return all
+      .filter((quote) => (deleted === 'all' ? true : deleted === 'only' ? quote.isDeleted : !quote.isDeleted))
       .filter((quote) => (query.patientId === undefined ? true : quote.patientId === query.patientId))
       .filter((quote) => (query.status === undefined ? true : quote.status === query.status))
       .filter((quote) => {

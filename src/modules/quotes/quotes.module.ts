@@ -11,6 +11,7 @@ import { DuplicateQuoteUseCase } from './application/use-cases/duplicate-quote.u
 import { GetQuoteUseCase } from './application/use-cases/get-quote.use-case.js';
 import { ListQuoteVersionsUseCase } from './application/use-cases/list-quote-versions.use-case.js';
 import { ListQuotesUseCase } from './application/use-cases/list-quotes.use-case.js';
+import { RestoreQuoteUseCase } from './application/use-cases/restore-quote.use-case.js';
 import { SanctionQuoteUseCase } from './application/use-cases/sanction-quote.use-case.js';
 import { UpdateQuoteUseCase } from './application/use-cases/update-quote.use-case.js';
 import { SqliteQuoteRepository } from './infrastructure/adapters/persistence/sqlite-quote.repository.js';
@@ -30,6 +31,7 @@ import { QuotesController } from './infrastructure/http/quotes.controller.js';
     GetQuoteUseCase,
     UpdateQuoteUseCase,
     DeleteQuoteUseCase,
+    RestoreQuoteUseCase,
     DecideQuoteItemUseCase,
     SanctionQuoteUseCase,
     DuplicateQuoteUseCase,

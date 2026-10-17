@@ -200,6 +200,19 @@ const STATUS_VARIANT: Record<RowStatus, 'secondary' | 'outline' | 'default' | 'd
           </tbody>
         </table>
       </div>
+
+      @if (trashCount() > 0) {
+        <p class="text-muted-foreground text-sm" data-testid="patient-quotes-trash">
+          {{ 'patientQuotes.trashCount' | transloco: { count: trashCount() } }}
+          <a
+            class="text-primary hover:underline"
+            routerLink="/quotes"
+            [queryParams]="{ patientId: patientId(), deleted: 'only' }"
+          >
+            {{ 'patientQuotes.openTrash' | transloco }}
+          </a>
+        </p>
+      }
     </section>
   `,
 })
@@ -219,6 +232,8 @@ export class PatientQuotesPage {
   protected readonly quotes = signal<Quote[]>([]);
   protected readonly loading = signal(true);
   protected readonly loadError = signal<string | null>(null);
+  /** Quotations of this patient currently in the trash (link target only). */
+  protected readonly trashCount = signal(0);
 
   protected readonly hasQuotes = computed(() => this.quotes().length > 0);
 
@@ -249,6 +264,12 @@ export class PatientQuotesPage {
       next: (quotes) => this.quotes.set(quotes),
       error: (error: unknown) => this.loadError.set(mapApiError(error)),
       complete: () => this.loading.set(false),
+    });
+
+    // The trash link only matters when there is something in it.
+    this.api.list({ patientId, deleted: 'only' }).subscribe({
+      next: (trash) => this.trashCount.set(trash.length),
+      error: () => this.trashCount.set(0),
     });
   }
 

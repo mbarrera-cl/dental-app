@@ -15,7 +15,8 @@ export class GetQuoteUseCase implements UseCase<GetQuoteQuery, Quote> {
   async execute(query: GetQuoteQuery): Promise<Quote> {
     const quote = await this.quotes.findById(query.id);
 
-    if (quote === null) {
+    // A trashed quote is not part of the active surface (restore it first).
+    if (quote === null || quote.isDeleted) {
       throw new QuoteNotFoundError(query.id);
     }
 

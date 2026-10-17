@@ -87,6 +87,34 @@ describe('Quote', () => {
     expect(() => quote.sanction('aprobada', 'u-2', 'Luis')).toThrow('quotes.status.alreadySanctioned');
   });
 
+  it('moves to the trash and back, preserving the status and history', () => {
+    const quote = makeQuote();
+
+    quote.sanction('aprobada', 'u-1', 'Ana');
+    const statusBefore = quote.status;
+
+    quote.softDelete('u-2', 'Luis');
+    expect(quote.isDeleted).toBe(true);
+    expect(quote.deletedByName).toBe('Luis');
+    expect(quote.status).toBe(statusBefore);
+
+    // Idempotent: a second delete does not move the timestamp/version.
+    const versionAfterDelete = quote.version;
+    quote.softDelete('u-2', 'Luis');
+    expect(quote.version).toBe(versionAfterDelete);
+
+    // A trashed quote cannot be edited nor sanctioned.
+    expect(() =>
+      quote.update({ items: [{ description: 'X', quantity: 1, unitPrice: 10 }], actorId: 'u', actorName: 'X' }),
+    ).toThrow('quotes.status.deleted');
+    expect(() => quote.sanction('rechazada', 'u', 'X')).toThrow('quotes.status.deleted');
+
+    quote.restore('u-3', 'María');
+    expect(quote.isDeleted).toBe(false);
+    expect(quote.deletedByName).toBeNull();
+    expect(quote.status).toBe(statusBefore);
+  });
+
   it('duplicates into a new draft version referencing the source', () => {
     const source = makeQuote();
     const copy = source.duplicate('u-2', 'Luis', 'COT-2026-0002');

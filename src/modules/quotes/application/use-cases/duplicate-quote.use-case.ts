@@ -24,7 +24,7 @@ export class DuplicateQuoteUseCase implements UseCase<DuplicateQuoteCommand, Quo
   async execute(command: DuplicateQuoteCommand): Promise<Quote> {
     const source = await this.quotes.findById(command.id);
 
-    if (source === null) {
+    if (source === null || source.isDeleted) {
       throw new QuoteNotFoundError(command.id);
     }
 

@@ -34,6 +34,8 @@ const QUOTE: Quote = {
   updatedAt: '2026-10-17T10:00:00.000Z',
   sanctionedByName: null,
   sanctionedAt: null,
+  deletedAt: null,
+  deletedByName: null,
   items: [],
 };
 
@@ -63,12 +65,25 @@ describe('PatientQuotesPage', () => {
     http = TestBed.inject(HttpTestingController);
   });
 
-  function render(quotes: Quote[] = [QUOTE]): ComponentFixture<PatientQuotesPage> {
+  function render(quotes: Quote[] = [QUOTE], trash: Quote[] = []): ComponentFixture<PatientQuotesPage> {
     const fixture = TestBed.createComponent(PatientQuotesPage);
     fixture.detectChanges();
     http
-      .expectOne((request) => request.url === `${BASE}/quotes` && request.params.get('patientId') === PATIENT_ID)
+      .expectOne(
+        (request) =>
+          request.url === `${BASE}/quotes` &&
+          request.params.get('patientId') === PATIENT_ID &&
+          !request.params.has('deleted'),
+      )
       .flush(quotes);
+    http
+      .expectOne(
+        (request) =>
+          request.url === `${BASE}/quotes` &&
+          request.params.get('patientId') === PATIENT_ID &&
+          request.params.get('deleted') === 'only',
+      )
+      .flush(trash);
     fixture.detectChanges();
 
     return fixture;
@@ -102,6 +117,15 @@ describe('PatientQuotesPage', () => {
     expect(native(fixture).textContent).toContain('Este paciente todavía no tiene presupuestos');
   });
 
+  it('links to the patient trash when it has trashed quotations', () => {
+    const fixture = render([], [{ ...QUOTE, deletedAt: '2026-10-17T11:00:00.000Z', deletedByName: 'Ana' }]);
+
+    const trash = native(fixture).querySelector('[data-testid="patient-quotes-trash"]');
+    expect(trash).not.toBeNull();
+    expect(trash!.textContent).toContain('1');
+    expect(trash!.querySelector('a')!.getAttribute('href')).toContain('deleted=only');
+  });
+
   it('reloads when the patient route param changes', () => {
     const fixture = render();
     const page = fixture.componentInstance as unknown as { patientId: () => string };
@@ -110,7 +134,20 @@ describe('PatientQuotesPage', () => {
     fixture.detectChanges();
 
     http
-      .expectOne((request) => request.url === `${BASE}/quotes` && request.params.get('patientId') === 'patient-2')
+      .expectOne(
+        (request) =>
+          request.url === `${BASE}/quotes` &&
+          request.params.get('patientId') === 'patient-2' &&
+          !request.params.has('deleted'),
+      )
+      .flush([]);
+    http
+      .expectOne(
+        (request) =>
+          request.url === `${BASE}/quotes` &&
+          request.params.get('patientId') === 'patient-2' &&
+          request.params.get('deleted') === 'only',
+      )
       .flush([]);
 
     expect(page.patientId()).toBe('patient-2');

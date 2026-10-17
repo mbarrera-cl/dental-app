@@ -45,6 +45,9 @@ export interface Quote {
   updatedAt: string;
   sanctionedByName: string | null;
   sanctionedAt: string | null;
+  /** Set when the quotation is in the trash (soft deleted). */
+  deletedAt: string | null;
+  deletedByName: string | null;
   items: QuoteItem[];
 }
 

@@ -307,6 +307,12 @@ export function ensureSchema(db: SqliteDatabase): void {
     );
   `);
 
+  // Soft delete (papelera): a trashed quote keeps its folio and history and can
+  // be restored. `GET /quotes` hides it unless `deleted=only|all` asks for it.
+  addColumnIfMissing(db, 'quotes', 'deleted_at', 'TEXT');
+  addColumnIfMissing(db, 'quotes', 'deleted_by', 'TEXT REFERENCES users(id) ON DELETE SET NULL');
+  addColumnIfMissing(db, 'quotes', 'deleted_by_name', 'TEXT');
+
   connection.exec(`
     CREATE TABLE IF NOT EXISTS quote_items (
       id                     TEXT PRIMARY KEY,
@@ -378,6 +384,7 @@ export function ensureSchema(db: SqliteDatabase): void {
     CREATE INDEX IF NOT EXISTS idx_uco_code ON uco_procedures (code);
     CREATE INDEX IF NOT EXISTS idx_quotes_patient ON quotes (patient_id);
     CREATE INDEX IF NOT EXISTS idx_quotes_status ON quotes (status);
+    CREATE INDEX IF NOT EXISTS idx_quotes_deleted ON quotes (deleted_at);
     CREATE INDEX IF NOT EXISTS idx_quotes_folio ON quotes (folio);
     CREATE INDEX IF NOT EXISTS idx_quote_items_quote ON quote_items (quote_id, position);
     CREATE INDEX IF NOT EXISTS idx_quote_versions_quote ON quote_versions (quote_id, version);

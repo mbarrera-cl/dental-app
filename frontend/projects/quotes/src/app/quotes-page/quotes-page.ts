@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
@@ -12,6 +12,7 @@ import {
   lucideSearchX,
   lucideTrash2,
   lucideTriangleAlert,
+  lucideUndo2,
 } from '@ng-icons/lucide';
 import { toast } from '@spartan-ng/brain/sonner';
 import { HlmButton } from '@ui/button';
@@ -61,6 +62,7 @@ const STATUS_VARIANT: Record<RowStatus, 'secondary' | 'outline' | 'default' | 'd
     lucideSearchX,
     lucideTrash2,
     lucideTriangleAlert,
+    lucideUndo2,
   }),
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -88,6 +90,43 @@ const STATUS_VARIANT: Record<RowStatus, 'secondary' | 'outline' | 'default' | 'd
           </a>
         </div>
       </header>
+
+      <div class="flex flex-wrap items-center gap-2" role="tablist" [attr.aria-label]="'quotes.view.label' | transloco">
+        <button
+          hlmBtn
+          type="button"
+          size="sm"
+          [variant]="view() === 'active' ? 'default' : 'outline'"
+          role="tab"
+          [attr.aria-selected]="view() === 'active'"
+          data-testid="quotes-view-active"
+          (click)="setView('active')"
+        >
+          {{ 'quotes.view.active' | transloco }}
+        </button>
+        <button
+          hlmBtn
+          type="button"
+          size="sm"
+          [variant]="view() === 'trash' ? 'default' : 'outline'"
+          role="tab"
+          [attr.aria-selected]="view() === 'trash'"
+          data-testid="quotes-view-trash"
+          (click)="setView('trash')"
+        >
+          <ng-icon name="lucideTrash2" />
+          {{ 'quotes.view.trash' | transloco }}
+        </button>
+      </div>
+
+      @if (view() === 'trash') {
+        <div
+          class="bg-muted/50 rounded-lg border px-4 py-3 text-sm"
+          data-testid="quotes-trash-banner"
+        >
+          {{ 'quotes.trash.banner' | transloco }}
+        </div>
+      }
 
       @if (patientId() !== null) {
         <div
@@ -163,7 +202,15 @@ const STATUS_VARIANT: Record<RowStatus, 'secondary' | 'outline' | 'default' | 'd
                 <td hlmTd colspan="7" class="py-12">
                   <div class="text-muted-foreground flex flex-col items-center gap-2 text-center">
                     <ng-icon name="lucideSearchX" class="size-6" />
-                    <p>{{ (quotes().length === 0 ? 'quotes.empty' : 'quotes.noMatches') | transloco }}</p>
+                    <p>
+                      {{
+                        (view() === 'trash'
+                          ? 'quotes.trash.empty'
+                          : quotes().length === 0
+                            ? 'quotes.empty'
+                            : 'quotes.noMatches') | transloco
+                      }}
+                    </p>
                   </div>
                 </td>
               </tr>
@@ -171,7 +218,11 @@ const STATUS_VARIANT: Record<RowStatus, 'secondary' | 'outline' | 'default' | 'd
               @for (quote of filtered(); track quote.id) {
                 <tr hlmTr data-testid="quotes-row">
                   <td hlmTd>
-                    <a routerLink="/quotes/{{ quote.id }}" class="text-primary hover:underline">{{ quote.folio }}</a>
+                    @if (view() === 'trash') {
+                      <span class="font-mono">{{ quote.folio }}</span>
+                    } @else {
+                      <a routerLink="/quotes/{{ quote.id }}" class="text-primary font-mono hover:underline">{{ quote.folio }}</a>
+                    }
                   </td>
                   <td hlmTd>
                     <div class="grid gap-0.5">
@@ -186,38 +237,62 @@ const STATUS_VARIANT: Record<RowStatus, 'secondary' | 'outline' | 'default' | 'd
                       {{ 'quotes.status.' + statusOf(quote) | transloco }}
                     </span>
                   </td>
-                  <td hlmTd class="text-muted-foreground hidden md:table-cell">{{ formatDate(quote.createdAt) }} · {{ quote.createdByName }}</td>
+                  <td hlmTd class="text-muted-foreground hidden md:table-cell">
+                    @if (view() === 'trash') {
+                      {{ 'quotes.trash.deletedAt' | transloco: { date: formatDate(quote.deletedAt ?? '') } }}
+                      @if (quote.deletedByName) {
+                        · {{ quote.deletedByName }}
+                      }
+                    } @else {
+                      {{ formatDate(quote.createdAt) }} · {{ quote.createdByName }}
+                    }
+                  </td>
                   <td hlmTd>
                     <div class="flex justify-end gap-1">
-                      <a hlmBtn variant="ghost" size="icon-sm" [routerLink]="['/quotes', quote.id, 'print']" [attr.aria-label]="'quotes.printAction' | transloco" [attr.data-testid]="'quotes-print-' + quote.id">
-                        <ng-icon name="lucidePrinter" />
-                      </a>
-                      <button
-                        *hasPermission="permissionKeys.quotes.approve"
-                        hlmBtn
-                        variant="ghost"
-                        size="icon-sm"
-                        type="button"
-                        class="text-destructive"
-                        [disabled]="quote.status === 'aprobada' || quote.status === 'rechazada'"
-                        [attr.aria-label]="'quotes.sanction' | transloco"
-                        [attr.data-testid]="'quotes-sanction-' + quote.id"
-                        (click)="askSanction(quote)"
-                      >
-                        <ng-icon name="lucideBadgeDollarSign" />
-                      </button>
-                      <button
-                        *hasPermission="permissionKeys.quotes.delete"
-                        hlmBtn
-                        variant="ghost"
-                        size="icon-sm"
-                        type="button"
-                        [attr.aria-label]="'quotes.delete' | transloco"
-                        [attr.data-testid]="'quotes-delete-' + quote.id"
-                        (click)="askDelete(quote)"
-                      >
-                        <ng-icon name="lucideTrash2" />
-                      </button>
+                      @if (view() === 'trash') {
+                        <button
+                          *hasPermission="permissionKeys.quotes.delete"
+                          hlmBtn
+                          variant="outline"
+                          size="sm"
+                          type="button"
+                          [attr.data-testid]="'quotes-restore-' + quote.id"
+                          (click)="askRestore(quote)"
+                        >
+                          <ng-icon name="lucideUndo2" />
+                          {{ 'quotes.trash.restore' | transloco }}
+                        </button>
+                      } @else {
+                        <a hlmBtn variant="ghost" size="icon-sm" [routerLink]="['/quotes', quote.id, 'print']" [attr.aria-label]="'quotes.printAction' | transloco" [attr.data-testid]="'quotes-print-' + quote.id">
+                          <ng-icon name="lucidePrinter" />
+                        </a>
+                        <button
+                          *hasPermission="permissionKeys.quotes.approve"
+                          hlmBtn
+                          variant="ghost"
+                          size="icon-sm"
+                          type="button"
+                          class="text-destructive"
+                          [disabled]="quote.status === 'aprobada' || quote.status === 'rechazada'"
+                          [attr.aria-label]="'quotes.sanction' | transloco"
+                          [attr.data-testid]="'quotes-sanction-' + quote.id"
+                          (click)="askSanction(quote)"
+                        >
+                          <ng-icon name="lucideBadgeDollarSign" />
+                        </button>
+                        <button
+                          *hasPermission="permissionKeys.quotes.delete"
+                          hlmBtn
+                          variant="ghost"
+                          size="icon-sm"
+                          type="button"
+                          [attr.aria-label]="'quotes.trash.move' | transloco"
+                          [attr.data-testid]="'quotes-delete-' + quote.id"
+                          (click)="askDelete(quote)"
+                        >
+                          <ng-icon name="lucideTrash2" />
+                        </button>
+                      }
                     </div>
                   </td>
                 </tr>
@@ -233,6 +308,7 @@ export class QuotesPage {
   private readonly api = inject(QuotesApi);
   private readonly patientsApi = inject(PatientsApi);
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly session = inject(SessionStore);
   private readonly transloco = inject(TranslocoService);
 
@@ -246,6 +322,8 @@ export class QuotesPage {
   protected readonly loading = signal(true);
   /** Deep link filter: `/quotes?patientId=…` shows one patient's quotations. */
   protected readonly patientId = signal<string | null>(null);
+  /** `active` (default) or `trash`; the URL (`?deleted=only`) is the source of truth. */
+  protected readonly view = signal<'active' | 'trash'>('active');
   protected readonly patientLabel = signal<string | null>(null);
   protected readonly loadError = signal<string | null>(null);
   protected readonly query = signal('');
@@ -266,12 +344,13 @@ export class QuotesPage {
   constructor() {
     this.route.queryParamMap
       .pipe(
-        map((params) => params.get('patientId')),
-        distinctUntilChanged(),
+        map((params) => ({ patientId: params.get('patientId'), deleted: params.get('deleted') })),
+        distinctUntilChanged((a, b) => a.patientId === b.patientId && a.deleted === b.deleted),
       )
-      .subscribe((patientId) => {
+      .subscribe(({ patientId, deleted }) => {
         const normalized = patientId === null || patientId === '' ? null : patientId;
         this.patientId.set(normalized);
+        this.view.set(deleted === 'only' ? 'trash' : 'active');
         this.loadPatientLabel(normalized);
         this.load();
       });
@@ -298,7 +377,10 @@ export class QuotesPage {
     this.loadError.set(null);
 
     const patientId = this.patientId();
-    const filter = patientId === null ? {} : { patientId };
+    const filter = {
+      ...(patientId === null ? {} : { patientId }),
+      ...(this.view() === 'trash' ? { deleted: 'only' as const } : {}),
+    };
 
     this.api.list(filter).subscribe({
       next: (quotes) => this.quotes.set(quotes),
@@ -341,6 +423,29 @@ export class QuotesPage {
     void this.api.sanction(quote.id, approve && !rejected ? 'aprobada' : 'rechazada').subscribe({
       next: () => {
         toast.success(this.transloco.translate('quotes.sanctioned', { folio: quote.folio }));
+        this.load();
+      },
+      error: (error: unknown) => toast.error(mapApiError(error)),
+    });
+  }
+
+  /** Switches the trash view, keeping the URL (and the patient filter) in sync. */
+  protected setView(view: 'active' | 'trash'): void {
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { deleted: view === 'trash' ? 'only' : null },
+      queryParamsHandling: 'merge',
+    });
+  }
+
+  protected askRestore(quote: Quote): void {
+    if (!window.confirm(this.transloco.translate('quotes.trash.restoreConfirm', { folio: quote.folio }))) {
+      return;
+    }
+
+    void this.api.restore(quote.id).subscribe({
+      next: () => {
+        toast.success(this.transloco.translate('quotes.trash.restored', { folio: quote.folio }));
         this.load();
       },
       error: (error: unknown) => toast.error(mapApiError(error)),

@@ -30,6 +30,8 @@ const QUOTE: Quote = {
   updatedAt: '2026-10-17T10:00:00.000Z',
   sanctionedByName: null,
   sanctionedAt: null,
+  deletedAt: null,
+  deletedByName: null,
   items: [],
 };
 
@@ -138,6 +140,27 @@ describe('QuotesApi', () => {
 
     http.expectOne('http://api.test/v1/quotes/quote-1/versions').flush(versions);
     expect(received).toEqual(versions);
+  });
+
+  it('lists the trash when asked', () => {
+    api.list({ patientId: 'patient-1', deleted: 'only' }).subscribe();
+
+    const request = http.expectOne((req) => req.url === 'http://api.test/v1/quotes');
+    expect(request.request.params.get('deleted')).toBe('only');
+    expect(request.request.params.get('patientId')).toBe('patient-1');
+    request.flush([]);
+  });
+
+  it('restores a quote from the trash', () => {
+    let received: Quote | undefined;
+    api.restore('quote-1').subscribe((quote) => (received = quote));
+
+    const request = http.expectOne('http://api.test/v1/quotes/quote-1/restore');
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({});
+    request.flush(QUOTE);
+
+    expect(received).toEqual(QUOTE);
   });
 
   it('deletes a draft', () => {

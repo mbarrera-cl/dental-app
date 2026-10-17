@@ -15,7 +15,15 @@ export class QuotesApi {
   private readonly http = inject(HttpClient);
   private readonly baseUrl = inject(API_BASE_URL).replace(/\/+$/, '');
 
-  list(query: { patientId?: string; status?: string; q?: string } = {}): Observable<Quote[]> {
+  list(
+    query: {
+      patientId?: string;
+      status?: string;
+      q?: string;
+      /** `exclude` (default) hides the trash; `only` lists it; `all` merges both. */
+      deleted?: 'exclude' | 'only' | 'all';
+    } = {},
+  ): Observable<Quote[]> {
     return this.http.get<Quote[]>(`${this.baseUrl}/quotes`, { params: { ...query } });
   }
 
@@ -31,8 +39,17 @@ export class QuotesApi {
     return this.http.put<Quote>(`${this.baseUrl}/quotes/${encodeURIComponent(id)}`, payload);
   }
 
+  /** Moves the quotation to the trash (soft delete, any status). */
   delete(id: string): Observable<void> {
     return this.http.delete<void>(`${this.baseUrl}/quotes/${encodeURIComponent(id)}`);
+  }
+
+  /** Brings a quotation back from the trash, keeping its status. */
+  restore(id: string): Observable<Quote> {
+    return this.http.post<Quote>(
+      `${this.baseUrl}/quotes/${encodeURIComponent(id)}/restore`,
+      {},
+    );
   }
 
   duplicate(id: string): Observable<Quote> {

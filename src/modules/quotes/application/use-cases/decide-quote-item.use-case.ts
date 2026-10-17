@@ -24,7 +24,7 @@ export class DecideQuoteItemUseCase implements UseCase<DecideQuoteItemCommand, Q
   async execute(command: DecideQuoteItemCommand): Promise<Quote> {
     const quote = await this.quotes.findById(command.quoteId);
 
-    if (quote === null) {
+    if (quote === null || quote.isDeleted) {
       throw new QuoteNotFoundError(command.quoteId);
     }
 
