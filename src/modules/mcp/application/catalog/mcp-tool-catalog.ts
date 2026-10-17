@@ -4,6 +4,7 @@ import { z } from 'zod';
 import type { Principal } from '../../../../shared/security/principal.js';
 import type { DeepSeekToolDefinition } from '../../../caro-ia/application/deepseek.client.js';
 import { ActivityTools } from '../tools/activity.tools.js';
+import { PatientsFacade } from '../facades/patients.facade.js';
 import { PatientsTools } from '../tools/patients.tools.js';
 import { QuotesTools } from '../tools/quotes.tools.js';
 import { UcoTools } from '../tools/uco.tools.js';
@@ -208,6 +209,7 @@ export class McpToolCatalog {
     patients: PatientsTools,
     uco: UcoTools,
     activity: ActivityTools,
+    private readonly patientsFacade: PatientsFacade,
   ) {
     const instances: Record<string, ToolInstance> = {
       Patients: patients as unknown as ToolInstance,
@@ -291,8 +293,12 @@ export class McpToolCatalog {
     return { data, summary: summarize(name, data) };
   }
 
-  describeApproval(name: string, arguments_: Record<string, unknown>): ApprovalDescription {
-    const parameters = approvalParameters(arguments_);
+  async describeApproval(
+    name: string,
+    arguments_: Record<string, unknown>,
+  ): Promise<ApprovalDescription> {
+    const patientName = await this.resolvePatientName(arguments_);
+    const parameters = approvalParameters(arguments_, patientName);
     const title = APPROVAL_TITLES[name] ?? this.labelOf(name);
     const summary =
       name === 'hexa_quotes_create'
@@ -300,6 +306,24 @@ export class McpToolCatalog {
         : 'Se ejecutará una acción de escritura en Hexa. Revisa los datos antes de aprobar.';
 
     return { title, summary, parameters };
+  }
+
+  private async resolvePatientName(
+    arguments_: Record<string, unknown>,
+  ): Promise<string | null> {
+    try {
+      if (typeof arguments_.patientId === 'string') {
+        return (await this.patientsFacade.resolve({ patientId: arguments_.patientId })).nombreCompleto;
+      }
+
+      if (typeof arguments_.patientRut === 'string') {
+        return (await this.patientsFacade.resolve({ rut: arguments_.patientRut })).nombreCompleto;
+      }
+    } catch {
+      // The approval still renders with the raw reference.
+    }
+
+    return null;
   }
 
   private definitionOf(entry: CatalogEntry): DeepSeekToolDefinition {
@@ -440,6 +464,7 @@ function display(value: unknown): string {
 
 function approvalParameters(
   arguments_: Record<string, unknown>,
+  patientName: string | null,
 ): Array<{ label: string; value: string }> {
   const parameters: Array<{ label: string; value: string }> = [];
   const add = (label: string, value: unknown): void => {
@@ -450,7 +475,7 @@ function approvalParameters(
     parameters.push({ label, value: display(value).slice(0, 120) });
   };
 
-  add('Paciente', arguments_.patientRut ?? arguments_.patientId);
+  add('Paciente', patientName ?? arguments_.patientRut ?? arguments_.patientId);
   add('Presupuesto', arguments_.quoteId);
   add('Línea', arguments_.itemId);
   add('Estado', arguments_.status);

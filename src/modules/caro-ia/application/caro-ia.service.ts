@@ -48,6 +48,9 @@ const MAX_HISTORY_MESSAGES = 20;
 const MAX_AUDIO_BYTES = 26_214_400;
 const STREAM_DELAY_MS = readDelay();
 
+const WRITES_DISABLED_NOTE = `
+Las herramientas de escritura están deshabilitadas en este entorno. Si el usuario pide crear, modificar, aprobar, rechazar, borrar o restaurar algo, no digas que la herramienta no existe: explica que un administrador debe activar caroIa.allowWrites y mcp.allowWrites. Puedes seguir consultando datos con las herramientas de lectura.`;
+
 const SYSTEM_PROMPT = `Eres CaroIA, el asistente de presupuestos de Hexa (clínica dental).
 Solo puedes responder usando la información devuelta por las herramientas MCP de Hexa.
 No uses conocimiento general ni inventes datos, precios, pacientes, presupuestos o IDs.
@@ -213,7 +216,11 @@ export class CaroIaService {
 
     const tools: DeepSeekToolDefinition[] = [...domainTools, noAnswerTool()];
     const messages: DeepSeekMessage[] = [
-      { role: 'system', content: SYSTEM_PROMPT },
+      {
+        role: 'system',
+        content: includeWrites ? SYSTEM_PROMPT : `${SYSTEM_PROMPT}
+${WRITES_DISABLED_NOTE}`,
+      },
       ...history.slice(-MAX_HISTORY_MESSAGES).map((message) => ({
         role: message.role,
         content: message.content,
@@ -554,7 +561,7 @@ export class CaroIaService {
       toolCalls,
       citations,
     );
-    const description = this.catalog.describeApproval(call.function.name, args);
+    const description = await this.catalog.describeApproval(call.function.name, args);
     const approval: CaroPendingApproval = {
       id: randomUUID(),
       tool: call.function.name,
