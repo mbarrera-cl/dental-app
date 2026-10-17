@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import type { Principal } from '../../../../shared/security/principal.js';
 import { SettingsService } from '../../../settings/application/settings.service.js';
 import { UcoProcedureRepositoryPort } from '../../../uco/application/ports/uco-procedure-repository.port.js';
+import { ChangeQuoteStatusUseCase } from '../../../quotes/application/use-cases/change-quote-status.use-case.js';
 import { CreateQuoteUseCase } from '../../../quotes/application/use-cases/create-quote.use-case.js';
 import { DecideQuoteItemUseCase } from '../../../quotes/application/use-cases/decide-quote-item.use-case.js';
 import { DeleteQuoteUseCase } from '../../../quotes/application/use-cases/delete-quote.use-case.js';
@@ -115,6 +116,7 @@ export class QuotesFacade {
     private readonly duplicateQuote: DuplicateQuoteUseCase,
     private readonly decideItem: DecideQuoteItemUseCase,
     private readonly sanctionQuote: SanctionQuoteUseCase,
+    private readonly changeStatusUseCase: ChangeQuoteStatusUseCase,
     private readonly versions: ListQuoteVersionsUseCase,
   ) {}
 
@@ -183,6 +185,21 @@ export class QuotesFacade {
       await this.decideItem.execute({
         quoteId,
         itemId,
+        status,
+        actorId: actor.userId,
+        actorName: actor.name,
+      }),
+    );
+  }
+
+  async changeStatus(
+    quoteId: string,
+    status: QuoteStatus,
+    actor: Principal,
+  ): Promise<QuoteView> {
+    return toView(
+      await this.changeStatusUseCase.execute({
+        id: quoteId,
         status,
         actorId: actor.userId,
         actorName: actor.name,

@@ -114,12 +114,12 @@ describe('QuotesApi', () => {
     request.flush(QUOTE);
   });
 
-  it('sanctions a quote', () => {
-    api.sanction('quote-1', 'aprobada').subscribe();
+  it('changes the workflow status of a quote', () => {
+    api.setStatus('quote-1', 'sin_respuesta').subscribe();
 
     const request = http.expectOne('http://api.test/v1/quotes/quote-1/status');
     expect(request.request.method).toBe('PATCH');
-    expect(request.request.body).toEqual({ status: 'aprobada' });
+    expect(request.request.body).toEqual({ status: 'sin_respuesta' });
     request.flush(QUOTE);
   });
 

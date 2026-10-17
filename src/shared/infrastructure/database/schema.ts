@@ -475,6 +475,15 @@ export function ensureSchema(db: SqliteDatabase): void {
     CREATE INDEX IF NOT EXISTS idx_quote_items_quote ON quote_items (quote_id, position);
     CREATE INDEX IF NOT EXISTS idx_quote_versions_quote ON quote_versions (quote_id, version);
   `);
+
+  // "entregada" became the explicit "sin_respuesta" workflow state. Update
+  // current rows and the snapshots kept by the version trail in place.
+  connection.exec(`
+    UPDATE quotes SET status = 'sin_respuesta' WHERE status = 'entregada';
+    UPDATE quote_versions
+      SET snapshot_json = REPLACE(snapshot_json, '"status":"entregada"', '"status":"sin_respuesta"')
+      WHERE snapshot_json LIKE '%"status":"entregada"%';
+  `);
 }
 
 /**

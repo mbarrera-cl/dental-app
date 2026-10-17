@@ -5,7 +5,7 @@ import {
   type QuoteItemStatus,
 } from './quote-item.entity.js';
 
-export type QuoteStatus = 'borrador' | 'entregada' | 'aprobada' | 'rechazada';
+export type QuoteStatus = 'borrador' | 'sin_respuesta' | 'aprobada' | 'rechazada';
 
 /** Money is always integer CLP. */
 export interface QuoteTotals {
@@ -83,8 +83,8 @@ export interface QuoteSnapshot {
 
 /**
  * A dental quotation: a snapshot of the patient plus its lines. Totals are
- * recomputed on the server (never trusted from the client). A sanctioned
- * quote is immutable; editing requires duplicating it.
+ * recomputed on the server (never trusted from the client). Any non-deleted
+ * quote is editable; its workflow status is changed explicitly.
  */
 export class Quote extends Entity<QuoteProps> {
   private constructor(props: QuoteProps, id?: string) {
@@ -247,7 +247,8 @@ export class Quote extends Entity<QuoteProps> {
 
   /**
    * Replaces the lines and the editable header fields, recomputing totals.
-   * Only valid on a draft/entregada quote (not sanctioned). Bumps the version
+   * Any non-deleted quote can be edited; the status is changed explicitly with
+   * `changeStatus`, never as a side effect of saving lines. Bumps the version
    * on every save.
    */
   update(input: {
@@ -257,7 +258,7 @@ export class Quote extends Entity<QuoteProps> {
     actorId: string | null;
     actorName: string;
   }): void {
-    this.assertEditable();
+    this.assertNotDeleted();
 
     if (input.validUntil !== undefined) {
       this.props.validUntil = input.validUntil;
@@ -272,6 +273,9 @@ export class Quote extends Entity<QuoteProps> {
 
       if (existing !== undefined) {
         existing.change({
+          ucoCode: item.ucoCode ?? null,
+          description: item.description,
+          piezaDental: item.piezaDental ?? null,
           quantity: item.quantity,
           unitPrice: item.unitPrice,
           discountPercent: item.discountPercent ?? 0,
@@ -285,23 +289,44 @@ export class Quote extends Entity<QuoteProps> {
     this.touch(input.actorId, input.actorName);
   }
 
-  /** Deliver the quote: from borrador to entregada (optional transition). */
+  /** Marks the quote as sent/awaiting a response. */
   deliver(actorId: string | null, actorName: string): void {
-    if (this.props.status !== 'borrador') {
-      throw new Error('quotes.status.onlyFromDraft');
+    this.changeStatus('sin_respuesta', actorId, actorName);
+  }
+
+  /**
+   * Explicitly changes the workflow status. Approved/rejected statuses record
+   * the sanction actor/time; returning to draft or awaiting response clears
+   * that metadata. Editing lines does not call this method.
+   */
+  changeStatus(status: QuoteStatus, actorId: string | null, actorName: string): void {
+    this.assertNotDeleted();
+
+    if (this.props.status === status) {
+      return;
     }
 
-    this.props.status = 'entregada';
+    this.props.status = status;
+
+    if (status === 'aprobada' || status === 'rechazada') {
+      this.props.sanctionedBy = actorId;
+      this.props.sanctionedByName = actorName.trim();
+      this.props.sanctionedAt = new Date();
+    } else {
+      this.props.sanctionedBy = null;
+      this.props.sanctionedByName = null;
+      this.props.sanctionedAt = null;
+    }
+
     this.touch(actorId, actorName);
   }
 
   /**
-   * Decides the acceptance state of one line. Lines of a sanctioned quote are
-   * locked; otherwise any `generado`/decided transition is allowed (decided →
-   * generated is a "reopen").
+   * Decides the acceptance state of one line. Any `generado`/decided
+   * transition is allowed (decided → generated is a "reopen").
    */
   decideItem(itemId: string, status: QuoteItemStatus, actorId: string | null, actorName: string): void {
-    this.assertEditable();
+    this.assertNotDeleted();
     const item = this.item(itemId);
 
     if (status === 'generado') {
@@ -313,24 +338,9 @@ export class Quote extends Entity<QuoteProps> {
     this.touch(actorId, actorName);
   }
 
-  /**
-   * Sanctions the quote (approve/reject). Closes it; the sanction wins even
-   * with undecided items. Records who and when.
-   */
+  /** Sanctions the quote (approve/reject), recording who and when. */
   sanction(status: 'aprobada' | 'rechazada', actorId: string | null, actorName: string): void {
-    if (this.isDeleted) {
-      throw new Error('quotes.status.deleted');
-    }
-
-    if (this.props.status === 'aprobada' || this.props.status === 'rechazada') {
-      throw new Error('quotes.status.alreadySanctioned');
-    }
-
-    this.props.status = status;
-    this.props.sanctionedBy = actorId;
-    this.props.sanctionedByName = actorName;
-    this.props.sanctionedAt = new Date();
-    this.touch(actorId, actorName);
+    this.changeStatus(status, actorId, actorName);
   }
 
   /** A new version referencing this quote; bumps the version and resets to draft. */
@@ -447,13 +457,9 @@ export class Quote extends Entity<QuoteProps> {
     return item;
   }
 
-  private assertEditable(): void {
+  private assertNotDeleted(): void {
     if (this.isDeleted) {
       throw new Error('quotes.status.deleted');
-    }
-
-    if (this.props.status === 'aprobada' || this.props.status === 'rechazada') {
-      throw new Error('quotes.status.locked');
     }
   }
 

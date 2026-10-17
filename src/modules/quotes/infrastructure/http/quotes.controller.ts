@@ -3,6 +3,7 @@ import {
   ApiBadRequestResponse,
   ApiConflictResponse,
   ApiCreatedResponse,
+  ApiForbiddenResponse,
   ApiNoContentResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
@@ -12,7 +13,11 @@ import {
 } from '@nestjs/swagger';
 import { CurrentPrincipal } from '../../../../shared/security/current-principal.decorator.js';
 import type { Principal } from '../../../../shared/security/principal.js';
+import { RequireAnyPermissions } from '../../../../shared/security/require-any-permissions.decorator.js';
+import { PermissionDeniedError } from '../../../../shared/security/permission.errors.js';
+import { ActivityAction } from '../../../activity/infrastructure/http/activity-action.decorator.js';
 import { RequirePermissions } from '../../../../shared/security/require-permissions.decorator.js';
+import { ChangeQuoteStatusUseCase } from '../../application/use-cases/change-quote-status.use-case.js';
 import { CreateQuoteUseCase } from '../../application/use-cases/create-quote.use-case.js';
 import { DecideQuoteItemUseCase } from '../../application/use-cases/decide-quote-item.use-case.js';
 import { DeleteQuoteUseCase } from '../../application/use-cases/delete-quote.use-case.js';
@@ -21,13 +26,12 @@ import { GetQuoteUseCase } from '../../application/use-cases/get-quote.use-case.
 import { ListQuoteVersionsUseCase, type QuoteVersion } from '../../application/use-cases/list-quote-versions.use-case.js';
 import { ListQuotesUseCase } from '../../application/use-cases/list-quotes.use-case.js';
 import { RestoreQuoteUseCase } from '../../application/use-cases/restore-quote.use-case.js';
-import { SanctionQuoteUseCase } from '../../application/use-cases/sanction-quote.use-case.js';
 import { UpdateQuoteUseCase } from '../../application/use-cases/update-quote.use-case.js';
 import { quotesPermissions } from '../../permissions.js';
 import {
+  ChangeQuoteStatusRequestDto,
   CreateQuoteRequestDto,
   DecideQuoteItemRequestDto,
-  SanctionQuoteRequestDto,
   UpdateQuoteRequestDto,
 } from './dtos/quote.request.dto.js';
 import { QuoteResponseDto } from './dtos/quote.response.dto.js';
@@ -46,7 +50,7 @@ export class QuotesController {
     private readonly update: UpdateQuoteUseCase,
     private readonly remove: DeleteQuoteUseCase,
     private readonly decideItem: DecideQuoteItemUseCase,
-    private readonly sanction: SanctionQuoteUseCase,
+    private readonly changeStatus: ChangeQuoteStatusUseCase,
     private readonly restore: RestoreQuoteUseCase,
     private readonly duplicate: DuplicateQuoteUseCase,
     private readonly versions: ListQuoteVersionsUseCase,
@@ -117,7 +121,7 @@ export class QuotesController {
 
   @Put(':id')
   @RequirePermissions(quotesPermissions.update)
-  @ApiOperation({ summary: 'Save the current state of a draft/entregada quote' })
+  @ApiOperation({ summary: 'Save the current state of any non-deleted quote' })
   @ApiOkResponse({ type: QuoteResponseDto })
   @ApiBadRequestResponse({ description: 'The payload failed validation.' })
   @ApiNotFoundResponse({ description: 'No quote with this id exists.' })
@@ -215,17 +219,25 @@ export class QuotesController {
   }
 
   @Patch(':id/status')
-  @RequirePermissions(quotesPermissions.approve)
-  @ApiOperation({ summary: 'Sanction (approve/reject) a quotation' })
+  @ActivityAction({ action: 'quotes.status', subjectType: 'quote', subjectParam: 'id' })
+  @RequireAnyPermissions(quotesPermissions.update, quotesPermissions.approve)
+  @ApiOperation({ summary: 'Change the workflow status of a quotation' })
   @ApiOkResponse({ type: QuoteResponseDto })
   @ApiNotFoundResponse({ description: 'No quote with this id exists.' })
-  @ApiConflictResponse({ description: 'The quote is already sanctioned.' })
-  async sanctionOne(
+  @ApiForbiddenResponse({ description: 'The caller lacks the permission for the target status.' })
+  async changeStatusOne(
     @Param('id') id: string,
-    @Body() body: SanctionQuoteRequestDto,
+    @Body() body: ChangeQuoteStatusRequestDto,
     @CurrentPrincipal() principal: Principal,
   ): Promise<QuoteResponseDto> {
-    const quote = await this.sanction.execute({
+    const needsApproval = body.status === 'aprobada' || body.status === 'rechazada';
+    const required = needsApproval ? quotesPermissions.approve : quotesPermissions.update;
+
+    if (!principal.permissions.has(required)) {
+      throw new PermissionDeniedError([required]);
+    }
+
+    const quote = await this.changeStatus.execute({
       id,
       status: body.status,
       actorId: principal.userId,

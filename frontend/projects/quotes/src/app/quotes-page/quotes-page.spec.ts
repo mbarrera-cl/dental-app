@@ -53,6 +53,7 @@ interface PageHandle {
   view: { (): 'active' | 'trash' };
   filtered: () => Quote[];
   statusOf: (quote: Quote) => string;
+  isExpired: (quote: Quote) => boolean;
   askRestore(quote: Quote): void;
 }
 
@@ -115,6 +116,7 @@ describe('QuotesPage', () => {
     expect(rows.length).toBe(2);
     expect(native(fixture).textContent).toContain('COT-2026-0001');
     expect(native(fixture).textContent).toContain('Camila Rojas Pérez');
+    expect(native(fixture).querySelector('[data-testid="quotes-edit-quote-1"]')).not.toBeNull();
   });
 
   it('filters by folio or patient name', () => {
@@ -142,12 +144,17 @@ describe('QuotesPage', () => {
     expect(page.filtered()).toHaveLength(0);
   });
 
-  it('derives the expired state from validUntil', () => {
+  it('keeps the workflow status and shows expiry as a separate warning', () => {
     const fixture = render();
     const page = handle(fixture);
 
     expect(page.statusOf(QUOTE)).toBe('borrador');
-    expect(page.statusOf(EXPIRED)).toBe('vencida');
+    expect(page.statusOf(EXPIRED)).toBe('borrador');
+    expect(page.isExpired(QUOTE)).toBe(false);
+    expect(page.isExpired(EXPIRED)).toBe(true);
+    expect(native(fixture).querySelector('[data-testid="quotes-expired"]')?.textContent).toContain(
+      'Vencida',
+    );
   });
 
   it('filters by patient when the URL carries ?patientId', () => {
@@ -207,8 +214,9 @@ describe('QuotesPage', () => {
     expect(native(fixture).querySelector('[data-testid="quotes-trash-banner"]')).not.toBeNull();
     expect(native(fixture).querySelectorAll('[data-testid="quotes-row"]').length).toBe(1);
     expect(native(fixture).querySelector('[data-testid="quotes-restore-quote-2"]')).not.toBeNull();
-    // No print/sanction/delete actions in the trash.
+    // No print/edit/delete actions in the trash.
     expect(native(fixture).querySelector('[data-testid="quotes-print-quote-2"]')).toBeNull();
+    expect(native(fixture).querySelector('[data-testid="quotes-edit-quote-2"]')).toBeNull();
     expect(native(fixture).querySelector('[data-testid="quotes-delete-quote-2"]')).toBeNull();
   });
 

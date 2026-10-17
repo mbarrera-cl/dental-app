@@ -4,7 +4,6 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
-  lucideBadgeDollarSign,
   lucideFileText,
   lucidePlus,
   lucidePrinter,
@@ -17,18 +16,15 @@ import { HlmButton } from '@ui/button';
 import { HlmSkeleton } from '@ui/skeleton';
 import { HlmTBody, HlmTable, HlmTableContainer, HlmTd, HlmTh, HlmTHead, HlmTr } from '@ui/table';
 import { HasPermissionDirective, PERMISSION_KEYS } from 'auth';
-import { QuotesApi, mapApiError, type Quote } from 'data-access';
+import { QuotesApi, mapApiError, type Quote, type QuoteStatus } from 'data-access';
 import { distinctUntilChanged, map } from 'rxjs';
 import { formatDateTime } from 'ui';
 
-type RowStatus = 'borrador' | 'entregada' | 'aprobada' | 'rechazada' | 'vencida';
-
-const STATUS_VARIANT: Record<RowStatus, 'secondary' | 'outline' | 'default' | 'destructive'> = {
+const STATUS_VARIANT: Record<QuoteStatus, 'secondary' | 'outline' | 'default' | 'destructive'> = {
   borrador: 'outline',
-  entregada: 'secondary',
+  sin_respuesta: 'secondary',
   aprobada: 'default',
   rechazada: 'destructive',
-  vencida: 'outline',
 };
 
 /**
@@ -56,8 +52,7 @@ const STATUS_VARIANT: Record<RowStatus, 'secondary' | 'outline' | 'default' | 'd
     HasPermissionDirective,
   ],
   providers: provideIcons({
-    lucideBadgeDollarSign,
-    lucideFileText,
+      lucideFileText,
     lucidePlus,
     lucidePrinter,
     lucideRefreshCw,
@@ -166,9 +161,16 @@ const STATUS_VARIANT: Record<RowStatus, 'secondary' | 'outline' | 'default' | 'd
                     {{ formatMoney(quote.approvedTotal) }}
                   </td>
                   <td hlmTd>
-                    <span hlmBadge [variant]="statusVariant(quote)">
-                      {{ 'quotes.status.' + statusOf(quote) | transloco }}
-                    </span>
+                    <div class="grid justify-items-start gap-1">
+                      <span hlmBadge [variant]="statusVariant(quote)">
+                        {{ 'quotes.status.' + statusOf(quote) | transloco }}
+                      </span>
+                      @if (isExpired(quote)) {
+                        <span class="text-destructive text-[10px] font-medium">
+                          {{ 'quotes.status.vencida' | transloco }}
+                        </span>
+                      }
+                    </div>
                   </td>
                   <td hlmTd>
                     <div class="flex justify-end gap-1">
@@ -273,18 +275,20 @@ export class PatientQuotesPage {
     });
   }
 
-  protected statusOf(quote: Quote): RowStatus {
-    if (quote.status === 'borrador' || quote.status === 'entregada') {
-      return quote.validUntil !== null && new Date(quote.validUntil) < new Date()
-        ? 'vencida'
-        : quote.status;
-    }
-
+  protected statusOf(quote: Quote): QuoteStatus {
     return quote.status;
   }
 
-  protected statusVariant(quote: Quote): (typeof STATUS_VARIANT)[RowStatus] {
+  protected statusVariant(quote: Quote): (typeof STATUS_VARIANT)[QuoteStatus] {
     return STATUS_VARIANT[this.statusOf(quote)];
+  }
+
+  protected isExpired(quote: Quote): boolean {
+    return (
+      (quote.status === 'borrador' || quote.status === 'sin_respuesta') &&
+      quote.validUntil !== null &&
+      new Date(quote.validUntil) < new Date()
+    );
   }
 
   protected formatMoney(value: number): string {

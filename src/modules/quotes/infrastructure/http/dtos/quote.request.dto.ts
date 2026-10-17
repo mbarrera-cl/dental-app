@@ -95,7 +95,7 @@ export class DecideQuoteItemRequestDto {
   status: 'generado' | 'aprobado' | 'rechazado';
 }
 
-export class SanctionQuoteRequestDto {
-  @IsIn(['aprobada', 'rechazada'])
-  status: 'aprobada' | 'rechazada';
+export class ChangeQuoteStatusRequestDto {
+  @IsIn(['borrador', 'sin_respuesta', 'aprobada', 'rechazada'])
+  status: 'borrador' | 'sin_respuesta' | 'aprobada' | 'rechazada';
 }

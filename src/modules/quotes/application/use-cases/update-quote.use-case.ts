@@ -3,7 +3,7 @@ import type { UseCase } from '../../../../shared/application/use-case.js';
 import { UcoProcedureRepositoryPort } from '../../../uco/application/ports/uco-procedure-repository.port.js';
 import type { QuoteItemInput } from '../../domain/quote-item.entity.js';
 import { Quote } from '../../domain/quote.entity.js';
-import { QuoteLockedError, QuoteNotFoundError } from '../../domain/quote.errors.js';
+import { QuoteNotFoundError } from '../../domain/quote.errors.js';
 import { QuoteRepositoryPort } from '../ports/quote-repository.port.js';
 
 export interface UpdateQuoteCommand {
@@ -24,9 +24,9 @@ export interface UpdateQuoteCommand {
 }
 
 /**
- * Saves the current state of a draft/entregada quote: replaces its lines,
- * recomputes totals and appends an `updated` version entry. A sanctioned
- * quote is locked (edit requires duplicating it).
+ * Saves the current state of any non-deleted quote: replaces its lines,
+ * recomputes totals and appends an `updated` version entry. The workflow
+ * status is not changed by an edit.
  */
 @Injectable()
 export class UpdateQuoteUseCase implements UseCase<UpdateQuoteCommand, Quote> {
@@ -40,10 +40,6 @@ export class UpdateQuoteUseCase implements UseCase<UpdateQuoteCommand, Quote> {
 
     if (quote === null || quote.isDeleted) {
       throw new QuoteNotFoundError(command.id);
-    }
-
-    if (quote.status === 'aprobada' || quote.status === 'rechazada') {
-      throw new QuoteLockedError(command.id);
     }
 
     const items = await this.resolveItems(command.items);

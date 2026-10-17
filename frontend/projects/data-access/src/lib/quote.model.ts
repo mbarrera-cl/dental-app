@@ -1,8 +1,8 @@
 /** Acceptance state of a single quote line. */
 export type QuoteItemStatus = 'generado' | 'aprobado' | 'rechazado';
 
-/** State of a quotation. `vencida` is derived from `validUntil`, never persisted. */
-export type QuoteStatus = 'borrador' | 'entregada' | 'aprobada' | 'rechazada';
+/** Persisted workflow state of a quotation. Expiry is shown separately. */
+export type QuoteStatus = 'borrador' | 'sin_respuesta' | 'aprobada' | 'rechazada';
 
 /** One line of a quotation. */
 export interface QuoteItem {

@@ -112,6 +112,7 @@ describe('MCP server (e2e)', () => {
         'hexa_quotes_get',
         'hexa_quotes_create',
         'hexa_quotes_sanction',
+        'hexa_quotes_set_status',
         'hexa_activity_list',
       ]),
     );

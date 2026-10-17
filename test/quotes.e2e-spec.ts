@@ -147,13 +147,19 @@ describe('Quotes API (e2e)', () => {
 
     const updated = (await updateQuote(created.id, {
       items: [
-        { description: 'Corona unitaria', quantity: 1, unitPrice: 15000 },
+        {
+          id: created.items[0]!.id,
+          description: 'Obturación editada',
+          quantity: 1,
+          unitPrice: 4000,
+        },
         { description: 'Sellante', quantity: 2, unitPrice: 800 },
       ],
     }).expect(200)).body as QuoteBody;
 
     expect(updated.items).toHaveLength(2);
-    expect(updated.subtotal).toBe(16600);
+    expect(updated.items[0]?.description).toBe('Obturación editada');
+    expect(updated.subtotal).toBe(5600);
     expect(updated.version).toBe(2);
   });
 
@@ -171,21 +177,33 @@ describe('Quotes API (e2e)', () => {
     expect(approved?.status).toBe('aprobado');
   });
 
-  it('sanctions a quote (approve) and locks it', async () => {
+  it('changes status through the selector and keeps an approved quote editable', async () => {
     const created = (await createQuote(validQuote()).expect(201)).body as QuoteBody;
 
-    const sanctioned = (await request(app.getHttpServer())
-      .patch(`/quotes/${created.id}/status`)
-      .set('Authorization', authorization)
-      .send({ status: 'aprobada' })
-      .expect(200)).body as QuoteBody;
+    const sanction = (status: string) =>
+      request(app.getHttpServer())
+        .patch(`/quotes/${created.id}/status`)
+        .set('Authorization', authorization)
+        .send({ status });
 
-    expect(sanctioned.status).toBe('aprobada');
+    expect(((await sanction('sin_respuesta').expect(200)).body as QuoteBody).status).toBe(
+      'sin_respuesta',
+    );
+    const approved = (await sanction('aprobada').expect(200)).body as QuoteBody;
+    expect(approved.status).toBe('aprobada');
+    expect(approved.sanctionedByName).toBe('Administrator');
 
-    // A sanctioned quote cannot be edited (it is locked: 423).
-    await updateQuote(created.id, {
+    // Editing does not silently change the explicit status.
+    const edited = (await updateQuote(created.id, {
       items: [{ description: 'Otra cosa', quantity: 1, unitPrice: 1 }],
-    }).expect(423);
+    }).expect(200)).body as QuoteBody;
+    expect(edited.status).toBe('aprobada');
+    expect(edited.total).toBe(1);
+
+    expect(((await sanction('rechazada').expect(200)).body as QuoteBody).status).toBe('rechazada');
+    const draft = (await sanction('borrador').expect(200)).body as QuoteBody;
+    expect(draft.status).toBe('borrador');
+    expect(draft.sanctionedByName).toBeNull();
   });
 
   it('duplicates a quote into a new draft referencing the source', async () => {
@@ -336,6 +354,37 @@ describe('Quotes API (e2e)', () => {
     await list(reader, '?deleted=only').expect(200);
     await createQuote(validQuote(), reader).expect(403);
     await request(app.getHttpServer()).patch(`/quotes/any/status`).set('Authorization', reader).send({ status: 'aprobada' }).expect(403);
+
+    const updater = await createUserWithPermissions('quote-updater@e2e.local', [
+      'quotes:read',
+      'quotes:update',
+    ]);
+    const approver = await createUserWithPermissions('quote-approver@e2e.local', [
+      'quotes:read',
+      'quotes:approve',
+    ]);
+    const editable = (await createQuote(validQuote()).expect(201)).body as QuoteBody;
+
+    await request(app.getHttpServer())
+      .patch(`/quotes/${editable.id}/status`)
+      .set('Authorization', updater)
+      .send({ status: 'sin_respuesta' })
+      .expect(200);
+    await request(app.getHttpServer())
+      .patch(`/quotes/${editable.id}/status`)
+      .set('Authorization', updater)
+      .send({ status: 'aprobada' })
+      .expect(403);
+    await request(app.getHttpServer())
+      .patch(`/quotes/${editable.id}/status`)
+      .set('Authorization', approver)
+      .send({ status: 'aprobada' })
+      .expect(200);
+    await request(app.getHttpServer())
+      .patch(`/quotes/${editable.id}/status`)
+      .set('Authorization', approver)
+      .send({ status: 'borrador' })
+      .expect(403);
 
     await list(outsider).expect(403);
     await createQuote(validQuote(), outsider).expect(403);

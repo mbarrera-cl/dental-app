@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import type { UseCase } from '../../../../shared/application/use-case.js';
 import { Quote } from '../../domain/quote.entity.js';
-import { QuoteItemNotFoundError, QuoteLockedError, QuoteNotFoundError } from '../../domain/quote.errors.js';
+import { QuoteItemNotFoundError, QuoteNotFoundError } from '../../domain/quote.errors.js';
 import { QuoteRepositoryPort } from '../ports/quote-repository.port.js';
 
 export interface DecideQuoteItemCommand {
@@ -14,8 +14,8 @@ export interface DecideQuoteItemCommand {
 
 /**
  * Decides the acceptance state of one line (patient acceptance recorded by
- * staff). Lines of a sanctioned quote are locked. A decided line can be
- * reopened to `generado` while the quote is still open.
+ * staff). A decided line can be reopened to `generado`, including on an
+ * approved/rejected quote if the user edits it.
  */
 @Injectable()
 export class DecideQuoteItemUseCase implements UseCase<DecideQuoteItemCommand, Quote> {
@@ -26,10 +26,6 @@ export class DecideQuoteItemUseCase implements UseCase<DecideQuoteItemCommand, Q
 
     if (quote === null || quote.isDeleted) {
       throw new QuoteNotFoundError(command.quoteId);
-    }
-
-    if (quote.status === 'aprobada' || quote.status === 'rechazada') {
-      throw new QuoteLockedError(command.quoteId);
     }
 
     if (!quote.items.some((item) => item.id === command.itemId)) {

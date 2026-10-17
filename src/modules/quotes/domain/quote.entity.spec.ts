@@ -57,6 +57,29 @@ describe('Quote', () => {
     expect(quote.updatedByName).toBe('Luis');
   });
 
+  it('updates the description of an existing line', () => {
+    const quote = makeQuote();
+    const first = quote.items[0]!;
+
+    quote.update({
+      items: [
+        {
+          id: first.id,
+          ucoCode: first.ucoCode,
+          description: 'Obturación modificada',
+          quantity: 2,
+          unitPrice: 4500,
+        },
+      ],
+      actorId: 'u-2',
+      actorName: 'Luis',
+    });
+
+    expect(quote.items[0]?.description).toBe('Obturación modificada');
+    expect(quote.items[0]?.quantity).toBe(2);
+    expect(quote.total).toBe(9000);
+  });
+
   it('decides an item and computes the approved total', () => {
     const quote = makeQuote();
 
@@ -67,7 +90,7 @@ describe('Quote', () => {
     expect(quote.approvedTotal).toBe(first.netAmount);
   });
 
-  it('sanctions the quote and locks it', () => {
+  it('sanctions the quote and still allows editing it explicitly', () => {
     const quote = makeQuote();
 
     quote.sanction('aprobada', 'u-3', 'María');
@@ -75,16 +98,35 @@ describe('Quote', () => {
     expect(quote.sanctionedByName).toBe('María');
     expect(quote.sanctionedAt).not.toBeNull();
 
-    expect(() =>
-      quote.update({ items: [{ description: 'X', quantity: 1, unitPrice: 10 }], actorId: 'u', actorName: 'X' }),
-    ).toThrow('quotes.status.locked');
+    quote.update({
+      items: [{ description: 'X', quantity: 1, unitPrice: 10 }],
+      actorId: 'u',
+      actorName: 'X',
+    });
+
+    expect(quote.status).toBe('aprobada');
+    expect(quote.total).toBe(10);
   });
 
-  it('cannot sanction twice', () => {
+  it('changes status explicitly and keeps sanction metadata coherent', () => {
     const quote = makeQuote();
-    quote.sanction('rechazada', 'u-1', 'Ana');
 
-    expect(() => quote.sanction('aprobada', 'u-2', 'Luis')).toThrow('quotes.status.alreadySanctioned');
+    quote.changeStatus('sin_respuesta', 'u-1', 'Ana');
+    expect(quote.status).toBe('sin_respuesta');
+    expect(quote.sanctionedAt).toBeNull();
+
+    quote.changeStatus('rechazada', 'u-2', 'Luis');
+    expect(quote.status).toBe('rechazada');
+    expect(quote.sanctionedByName).toBe('Luis');
+
+    quote.changeStatus('aprobada', 'u-3', 'María');
+    expect(quote.status).toBe('aprobada');
+    expect(quote.sanctionedByName).toBe('María');
+
+    quote.changeStatus('borrador', 'u-4', 'Pedro');
+    expect(quote.status).toBe('borrador');
+    expect(quote.sanctionedBy).toBeNull();
+    expect(quote.sanctionedAt).toBeNull();
   });
 
   it('moves to the trash and back, preserving the status and history', () => {

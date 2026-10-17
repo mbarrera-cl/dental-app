@@ -3,7 +3,8 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { type ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import { beforeEach, describe, expect, it } from 'vitest';
-import type { Patient, UcoProcedure } from 'data-access';
+import type { Patient, Quote, UcoProcedure } from 'data-access';
+import { SessionStore } from 'auth';
 import { provideAppTransloco, provideSpartanHlm } from 'ui';
 import { QuoteEditor } from './quote-editor';
 
@@ -25,6 +26,49 @@ const PATIENT: Patient = {
   notas: null,
   numeroHistoria: 'HC-000001',
   createdAt: '2026-10-16T10:00:00.000Z',
+};
+
+const QUOTE: Quote = {
+  id: 'quote-1',
+  folio: 'COT-2026-0001',
+  patientId: PATIENT.id,
+  patientName: 'Camila Rojas Pérez',
+  patientRut: '12345678-5',
+  patientEmail: null,
+  status: 'aprobada',
+  validUntil: '2099-01-01T00:00:00.000Z',
+  notes: null,
+  subtotal: 14000,
+  discountTotal: 1000,
+  total: 13000,
+  approvedTotal: 0,
+  version: 2,
+  replacesQuoteId: null,
+  createdByName: 'Ana',
+  createdAt: '2026-10-17T10:00:00.000Z',
+  updatedByName: 'Ana',
+  updatedAt: '2026-10-17T10:00:00.000Z',
+  sanctionedByName: 'Ana',
+  sanctionedAt: '2026-10-17T10:00:00.000Z',
+  deletedAt: null,
+  deletedByName: null,
+  items: [
+    {
+      id: 'item-1',
+      ucoCode: '020001',
+      description: 'Obturación de una superficie',
+      piezaDental: null,
+      quantity: 1,
+      unitPrice: 14000,
+      discountPercent: 0,
+      subtotal: 14000,
+      discountAmount: 0,
+      netAmount: 14000,
+      status: 'aprobado',
+      statusChangedByName: 'Ana',
+      statusChangedAt: '2026-10-17T10:00:00.000Z',
+    },
+  ],
 };
 
 const PROCEDURE: UcoProcedure = {
@@ -51,9 +95,11 @@ interface PageHandle {
 describe('QuoteEditor', () => {
   let http: HttpTestingController;
   let queryParams: Record<string, string>;
+  let routeId = '';
 
   beforeEach(async () => {
     queryParams = {};
+    routeId = '';
 
     await TestBed.configureTestingModule({
       imports: [QuoteEditor],
@@ -67,10 +113,16 @@ describe('QuoteEditor', () => {
         provideAppTransloco(),
         provideSpartanHlm(),
         {
+          provide: SessionStore,
+          useValue: { has: () => true, hasAll: () => true, hasAny: () => true },
+        },
+        {
           provide: ActivatedRoute,
           useValue: {
             snapshot: {
-              paramMap: convertToParamMap({}),
+              get paramMap() {
+                return convertToParamMap(routeId === '' ? {} : { id: routeId });
+              },
               get queryParamMap() {
                 return convertToParamMap(queryParams);
               },
@@ -124,6 +176,30 @@ describe('QuoteEditor', () => {
     const native = fixture.nativeElement as HTMLElement;
     expect(native.querySelector('[data-testid="quote-patient-search"]')).toBeNull();
     expect(native.querySelector('[data-testid="quote-patient-locked"]')?.textContent).toContain('Camila');
+  });
+
+  it('keeps an approved quote editable and exposes the four-state selector', () => {
+    routeId = QUOTE.id;
+    const fixture = TestBed.createComponent(QuoteEditor);
+    fixture.detectChanges();
+    http.expectOne(`${BASE}/patients`).flush([PATIENT]);
+    http.expectOne((req) => req.url === `${BASE}/uco`).flush([PROCEDURE]);
+    http.expectOne(`${BASE}/quotes/${QUOTE.id}`).flush(QUOTE);
+    fixture.detectChanges();
+
+    const native = fixture.nativeElement as HTMLElement;
+    const select = native.querySelector<HTMLSelectElement>('[data-testid="quote-status-select"]');
+    expect(select).not.toBeNull();
+    expect([...select!.options].map((option) => option.value)).toEqual([
+      'borrador',
+      'sin_respuesta',
+      'aprobada',
+      'rechazada',
+    ]);
+    expect(native.querySelector('[data-testid="quote-save"]')).not.toBeNull();
+    expect(
+      native.querySelector<HTMLInputElement>('[data-testid="quote-item-desc"]')?.disabled,
+    ).toBe(false);
   });
 
   it('creates a quote for the selected patient', () => {

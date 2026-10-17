@@ -74,10 +74,11 @@ role applies immediately.
 | `hexa_quotes_get` | `quotes:read` | — | Lines, totals and patient snapshot |
 | `hexa_quotes_versions` | `quotes:read` | — | Version trail with snapshots |
 | `hexa_quotes_create` | `quotes:create` | ✅ | Creates a **draft**; price derived from `quotes.ucoRate` when `unitPrice` is omitted |
-| `hexa_quotes_update` | `quotes:update` | ✅ | Replaces the lines of a draft/entregada quote |
+| `hexa_quotes_update` | `quotes:update` | ✅ | Replaces the lines of any non-deleted quote |
 | `hexa_quotes_duplicate` | `quotes:create` | ✅ | New draft version |
 | `hexa_quotes_decide_item` | `quotes:update` | ✅ | Approve/reject a line — **confirm** |
 | `hexa_quotes_sanction` | `quotes:approve` | ✅ | Approve/reject the quote — **confirm** |
+| `hexa_quotes_set_status` | `quotes:approve` | ✅ | Change status: borrador, sin_respuesta, aprobada, rechazada — **confirm** |
 | `hexa_quotes_delete` | `quotes:delete` | ✅ | Trash (soft delete) — **confirm** |
 | `hexa_quotes_restore` | `quotes:delete` | ✅ | Restore from trash — **confirm** |
 | `hexa_activity_list` | `activity:read` or `activity:read-all` | — | Own actions unless the key has `read-all` |

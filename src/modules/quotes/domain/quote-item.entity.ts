@@ -120,18 +120,28 @@ export class QuoteItem extends Entity<QuoteItemProps> {
     return this.props.statusChangedAt;
   }
 
-  /** Recomputes values when the price/quantity/discount changes. */
-  change(input: { quantity: number; unitPrice: number; discountPercent: number }): void {
+  /** Edits the line and recomputes its money fields. */
+  change(input: {
+    ucoCode?: string | null;
+    description?: string;
+    piezaDental?: string | null;
+    quantity: number;
+    unitPrice: number;
+    discountPercent: number;
+  }): void {
     const normalized = normalizeItemInput({
       position: this.props.position,
-      ucoCode: this.props.ucoCode,
-      description: this.props.description,
-      piezaDental: this.props.piezaDental,
+      ucoCode: input.ucoCode === undefined ? this.props.ucoCode : input.ucoCode,
+      description: input.description ?? this.props.description,
+      piezaDental: input.piezaDental === undefined ? this.props.piezaDental : input.piezaDental,
       quantity: input.quantity,
       unitPrice: input.unitPrice,
       discountPercent: input.discountPercent,
     });
 
+    this.props.ucoCode = normalized.ucoCode;
+    this.props.description = normalized.description;
+    this.props.piezaDental = normalized.piezaDental;
     this.props.quantity = normalized.quantity;
     this.props.unitPrice = normalized.unitPrice;
     this.props.discountPercent = normalized.discountPercent;

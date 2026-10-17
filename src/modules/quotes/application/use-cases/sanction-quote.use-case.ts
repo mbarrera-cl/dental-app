@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import type { UseCase } from '../../../../shared/application/use-case.js';
 import { Quote } from '../../domain/quote.entity.js';
-import { QuoteAlreadySanctionedError, QuoteNotFoundError } from '../../domain/quote.errors.js';
+import { QuoteNotFoundError } from '../../domain/quote.errors.js';
 import { QuoteRepositoryPort } from '../ports/quote-repository.port.js';
 
 export interface SanctionQuoteCommand {
@@ -12,9 +12,9 @@ export interface SanctionQuoteCommand {
 }
 
 /**
- * Sanctions a quotation (approve/reject). The sanction wins even with
- * undecided items, closes the quote and records who and when. This is the
- * `quotes:approve` capability.
+ * Sanctions a quotation (approve/reject), records who and when and appends
+ * the version trail entry. This remains the MCP-facing approve/reject path;
+ * the UI uses `ChangeQuoteStatusUseCase` for the full selector.
  */
 @Injectable()
 export class SanctionQuoteUseCase implements UseCase<SanctionQuoteCommand, Quote> {
@@ -25,10 +25,6 @@ export class SanctionQuoteUseCase implements UseCase<SanctionQuoteCommand, Quote
 
     if (quote === null || quote.isDeleted) {
       throw new QuoteNotFoundError(command.id);
-    }
-
-    if (quote.status === 'aprobada' || quote.status === 'rechazada') {
-      throw new QuoteAlreadySanctionedError(command.id);
     }
 
     const now = new Date();

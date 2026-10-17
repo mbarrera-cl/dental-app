@@ -4,8 +4,8 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
-  lucideBadgeDollarSign,
   lucideFileText,
+  lucidePencil,
   lucidePrinter,
   lucideRefreshCw,
   lucideSearch,
@@ -19,22 +19,19 @@ import { HlmButton } from '@ui/button';
 import { HlmSkeleton } from '@ui/skeleton';
 import { HlmBadge } from '@ui/badge';
 import { HlmTBody, HlmTable, HlmTableContainer, HlmTd, HlmTh, HlmTHead, HlmTr } from '@ui/table';
-import { HasPermissionDirective, PERMISSION_KEYS, SessionStore } from 'auth';
-import { PatientsApi, QuotesApi, mapApiError, type Quote } from 'data-access';
+import { HasPermissionDirective, PERMISSION_KEYS } from 'auth';
+import { PatientsApi, QuotesApi, mapApiError, type Quote, type QuoteStatus } from 'data-access';
 import { distinctUntilChanged, map } from 'rxjs';
 import { formatDateTime } from 'ui';
 
-type RowStatus = 'borrador' | 'entregada' | 'aprobada' | 'rechazada' | 'vencida';
-
-const STATUS_VARIANT: Record<RowStatus, 'secondary' | 'outline' | 'default' | 'destructive'> = {
+const STATUS_VARIANT: Record<QuoteStatus, 'secondary' | 'outline' | 'default' | 'destructive'> = {
   borrador: 'outline',
-  entregada: 'secondary',
+  sin_respuesta: 'secondary',
   aprobada: 'default',
   rechazada: 'destructive',
-  vencida: 'outline',
 };
 
-/** List of quotations with filters and quick actions (print, duplicate, delete, sanction). */
+/** List of quotations with filters and quick actions (print, edit, delete, restore). */
 @Component({
   selector: 'app-quotes-page',
   imports: [
@@ -55,8 +52,8 @@ const STATUS_VARIANT: Record<RowStatus, 'secondary' | 'outline' | 'default' | 'd
   ],
   providers: provideIcons({
     lucideFileText,
-    lucideBadgeDollarSign,
-    lucidePrinter,
+  lucidePencil,
+      lucidePrinter,
     lucideRefreshCw,
     lucideSearch,
     lucideSearchX,
@@ -157,7 +154,7 @@ const STATUS_VARIANT: Record<RowStatus, 'secondary' | 'outline' | 'default' | 'd
         <select hlmInput class="w-auto" [value]="statusFilter()" (change)="statusFilter.set($any($event.target).value)" data-testid="quotes-status-filter">
           <option value="">{{ 'quotes.allStatuses' | transloco }}</option>
           <option value="borrador">{{ 'quotes.status.borrador' | transloco }}</option>
-          <option value="entregada">{{ 'quotes.status.entregada' | transloco }}</option>
+          <option value="sin_respuesta">{{ 'quotes.status.sin_respuesta' | transloco }}</option>
           <option value="aprobada">{{ 'quotes.status.aprobada' | transloco }}</option>
           <option value="rechazada">{{ 'quotes.status.rechazada' | transloco }}</option>
         </select>
@@ -233,9 +230,16 @@ const STATUS_VARIANT: Record<RowStatus, 'secondary' | 'outline' | 'default' | 'd
                   <td hlmTd class="hidden font-medium tabular-nums md:table-cell">{{ formatMoney(quote.total) }}</td>
                   <td hlmTd class="text-muted-foreground hidden tabular-nums lg:table-cell">{{ formatMoney(quote.approvedTotal) }}</td>
                   <td hlmTd>
-                    <span hlmBadge [variant]="statusVariant(quote)">
-                      {{ 'quotes.status.' + statusOf(quote) | transloco }}
-                    </span>
+                    <div class="grid justify-items-start gap-1">
+                      <span hlmBadge [variant]="statusVariant(quote)">
+                        {{ 'quotes.status.' + statusOf(quote) | transloco }}
+                      </span>
+                      @if (isExpired(quote)) {
+                        <span class="text-destructive text-[10px] font-medium" data-testid="quotes-expired">
+                          {{ 'quotes.status.vencida' | transloco }}
+                        </span>
+                      }
+                    </div>
                   </td>
                   <td hlmTd class="text-muted-foreground hidden md:table-cell">
                     @if (view() === 'trash') {
@@ -266,20 +270,17 @@ const STATUS_VARIANT: Record<RowStatus, 'secondary' | 'outline' | 'default' | 'd
                         <a hlmBtn variant="ghost" size="icon-sm" [routerLink]="['/quotes', quote.id, 'print']" [attr.aria-label]="'quotes.printAction' | transloco" [attr.data-testid]="'quotes-print-' + quote.id">
                           <ng-icon name="lucidePrinter" />
                         </a>
-                        <button
-                          *hasPermission="permissionKeys.quotes.approve"
+                        <a
+                          *hasPermission="permissionKeys.quotes.update"
                           hlmBtn
                           variant="ghost"
                           size="icon-sm"
-                          type="button"
-                          class="text-destructive"
-                          [disabled]="quote.status === 'aprobada' || quote.status === 'rechazada'"
-                          [attr.aria-label]="'quotes.sanction' | transloco"
-                          [attr.data-testid]="'quotes-sanction-' + quote.id"
-                          (click)="askSanction(quote)"
+                          [routerLink]="['/quotes', quote.id]"
+                          [attr.aria-label]="'quotes.editAction' | transloco"
+                          [attr.data-testid]="'quotes-edit-' + quote.id"
                         >
-                          <ng-icon name="lucideBadgeDollarSign" />
-                        </button>
+                          <ng-icon name="lucidePencil" />
+                        </a>
                         <button
                           *hasPermission="permissionKeys.quotes.delete"
                           hlmBtn
@@ -309,7 +310,6 @@ export class QuotesPage {
   private readonly patientsApi = inject(PatientsApi);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
-  private readonly session = inject(SessionStore);
   private readonly transloco = inject(TranslocoService);
 
   protected readonly permissionKeys = PERMISSION_KEYS;
@@ -389,16 +389,20 @@ export class QuotesPage {
     });
   }
 
-  protected statusOf(quote: Quote): RowStatus {
-    if (quote.status === 'borrador' || quote.status === 'entregada') {
-      return quote.validUntil !== null && new Date(quote.validUntil) < new Date() ? 'vencida' : quote.status;
-    }
-
+  protected statusOf(quote: Quote): QuoteStatus {
     return quote.status;
   }
 
-  protected statusVariant(quote: Quote): (typeof STATUS_VARIANT)[RowStatus] {
+  protected statusVariant(quote: Quote): (typeof STATUS_VARIANT)[QuoteStatus] {
     return STATUS_VARIANT[this.statusOf(quote)];
+  }
+
+  protected isExpired(quote: Quote): boolean {
+    return (
+      (quote.status === 'borrador' || quote.status === 'sin_respuesta') &&
+      quote.validUntil !== null &&
+      new Date(quote.validUntil) < new Date()
+    );
   }
 
   protected formatMoney(value: number): string {
@@ -411,22 +415,6 @@ export class QuotesPage {
 
   protected formatDate(value: string): string {
     return formatDateTime(value, this.language());
-  }
-
-  protected askSanction(quote: Quote): void {
-    const approve = window.confirm(
-      `${this.transloco.translate('quotes.sanctionConfirm', { folio: quote.folio })}\n\n` +
-        `${this.transloco.translate('quotes.sanctionApprove')} · ${this.transloco.translate('quotes.sanctionReject')}`,
-    );
-    const rejected = window.confirm(this.transloco.translate('quotes.sanctionRejectConfirm', { folio: quote.folio }));
-
-    void this.api.sanction(quote.id, approve && !rejected ? 'aprobada' : 'rechazada').subscribe({
-      next: () => {
-        toast.success(this.transloco.translate('quotes.sanctioned', { folio: quote.folio }));
-        this.load();
-      },
-      error: (error: unknown) => toast.error(mapApiError(error)),
-    });
   }
 
   /** Switches the trash view, keeping the URL (and the patient filter) in sync. */

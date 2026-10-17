@@ -83,7 +83,7 @@ export class QuoteResponseDto {
   @ApiProperty({ required: false })
   patientEmail: string | null;
 
-  @ApiProperty({ enum: ['borrador', 'entregada', 'aprobada', 'rechazada'] })
+  @ApiProperty({ enum: ['borrador', 'sin_respuesta', 'aprobada', 'rechazada'] })
   status: QuoteStatus;
 
   @ApiProperty({ required: false })

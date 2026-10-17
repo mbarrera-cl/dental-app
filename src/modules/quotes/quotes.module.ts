@@ -4,6 +4,7 @@ import { PatientsModule } from '../patients/patients.module.js';
 import { SettingsModule } from '../settings/settings.module.js';
 import { UcoModule } from '../uco/uco.module.js';
 import { QuoteRepositoryPort } from './application/ports/quote-repository.port.js';
+import { ChangeQuoteStatusUseCase } from './application/use-cases/change-quote-status.use-case.js';
 import { CreateQuoteUseCase } from './application/use-cases/create-quote.use-case.js';
 import { DecideQuoteItemUseCase } from './application/use-cases/decide-quote-item.use-case.js';
 import { DeleteQuoteUseCase } from './application/use-cases/delete-quote.use-case.js';
@@ -34,6 +35,7 @@ import { QuotesController } from './infrastructure/http/quotes.controller.js';
     RestoreQuoteUseCase,
     DecideQuoteItemUseCase,
     SanctionQuoteUseCase,
+    ChangeQuoteStatusUseCase,
     DuplicateQuoteUseCase,
     ListQuoteVersionsUseCase,
     // Swap this binding for another database adapter (Postgres, MongoDB, ...).
@@ -48,6 +50,7 @@ import { QuotesController } from './infrastructure/http/quotes.controller.js';
     RestoreQuoteUseCase,
     DecideQuoteItemUseCase,
     SanctionQuoteUseCase,
+    ChangeQuoteStatusUseCase,
     DuplicateQuoteUseCase,
     ListQuoteVersionsUseCase,
   ],

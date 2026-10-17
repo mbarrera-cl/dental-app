@@ -127,6 +127,13 @@ const ENTRIES: readonly Omit<CatalogEntry, 'instance' | 'method'>[] = [
     label: 'Aprobó o rechazó un presupuesto',
   },
   {
+    name: 'hexa_quotes_set_status',
+    permissions: ['quotes:approve'],
+    write: true,
+    confirm: true,
+    label: 'Cambió el estado del presupuesto',
+  },
+  {
     name: 'hexa_quotes_delete',
     permissions: ['quotes:delete'],
     write: true,
@@ -163,6 +170,7 @@ const METHODS: Readonly<Record<string, string>> = {
   hexa_quotes_duplicate: 'duplicate',
   hexa_quotes_decide_item: 'decideItem',
   hexa_quotes_sanction: 'sanction',
+  hexa_quotes_set_status: 'setStatus',
   hexa_quotes_delete: 'remove',
   hexa_quotes_restore: 'restore',
   hexa_activity_list: 'list',
@@ -174,6 +182,7 @@ const APPROVAL_TITLES: Readonly<Record<string, string>> = {
   hexa_quotes_duplicate: 'Duplicar presupuesto',
   hexa_quotes_decide_item: 'Decidir línea de presupuesto',
   hexa_quotes_sanction: 'Aprobar o rechazar presupuesto',
+  hexa_quotes_set_status: 'Cambiar estado del presupuesto',
   hexa_quotes_delete: 'Enviar presupuesto a la papelera',
   hexa_quotes_restore: 'Restaurar presupuesto',
 };
@@ -429,7 +438,7 @@ function summarize(name: string, data: unknown): string {
     return `${display(record.quote.folio)} · duplicado`;
   }
 
-  if (name === 'hexa_quotes_sanction' && isRecord(record.quote)) {
+  if ((name === 'hexa_quotes_sanction' || name === 'hexa_quotes_set_status') && isRecord(record.quote)) {
     return `${display(record.quote.folio)} · ${display(record.quote.status)}`;
   }
 

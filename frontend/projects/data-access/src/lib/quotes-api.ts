@@ -66,8 +66,16 @@ export class QuotesApi {
     );
   }
 
-  sanction(id: string, status: 'aprobada' | 'rechazada'): Observable<Quote> {
+  setStatus(
+    id: string,
+    status: 'borrador' | 'sin_respuesta' | 'aprobada' | 'rechazada',
+  ): Observable<Quote> {
     return this.http.patch<Quote>(`${this.baseUrl}/quotes/${encodeURIComponent(id)}/status`, { status });
+  }
+
+  /** @deprecated Use setStatus. Kept for callers that only approve/reject. */
+  sanction(id: string, status: 'aprobada' | 'rechazada'): Observable<Quote> {
+    return this.setStatus(id, status);
   }
 
   versions(id: string): Observable<QuoteVersion[]> {

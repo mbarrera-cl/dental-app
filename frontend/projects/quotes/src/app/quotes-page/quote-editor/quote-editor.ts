@@ -4,7 +4,6 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
-  lucideBadgeDollarSign,
   lucideCheck,
   lucideFileText,
   lucidePlus,
@@ -19,7 +18,7 @@ import { HlmBadge } from '@ui/badge';
 import { HlmButton } from '@ui/button';
 import { HlmInput } from '@ui/input';
 import { HlmLabel } from '@ui/label';
-import { HasPermissionDirective, PERMISSION_KEYS } from 'auth';
+import { HasPermissionDirective, PERMISSION_KEYS, SessionStore } from 'auth';
 import {
   mapApiError,
   PatientsApi,
@@ -28,6 +27,7 @@ import {
   type Patient,
   type Quote,
   type QuoteItemStatus,
+  type QuoteStatus,
   type UcoProcedure,
 } from 'data-access';
 
@@ -57,8 +57,7 @@ interface DraftItem {
     HasPermissionDirective,
   ],
   providers: provideIcons({
-    lucideBadgeDollarSign,
-    lucideCheck,
+      lucideCheck,
     lucideFileText,
     lucidePlus,
     lucideSearch,
@@ -77,11 +76,31 @@ interface DraftItem {
           </h2>
           <p class="text-muted-foreground text-sm">
             @if (quote(); as quote) {
-              {{ quote.folio }} · {{ 'quotes.status.' + quote.status | transloco }}
+              {{ quote.folio }}
             } @else {
               {{ 'quotes.new.subtitle' | transloco }}
             }
           </p>
+          @if (editing()) {
+            <div class="mt-2 flex flex-wrap items-center gap-2">
+              <label class="text-muted-foreground text-sm" for="quote-status">{{ 'quotes.editor.status' | transloco }}</label>
+              <select
+                id="quote-status"
+                hlmInput
+                class="w-auto"
+                data-testid="quote-status-select"
+                [value]="quote()?.status ?? 'borrador'"
+                [disabled]="!canChangeStatus()"
+                (change)="changeStatus($any($event.target).value, $any($event.target))"
+              >
+                @for (status of statuses; track status) {
+                  <option [value]="status" [disabled]="!canSetStatus(status)">
+                    {{ 'quotes.status.' + status | transloco }}
+                  </option>
+                }
+              </select>
+            </div>
+          }
         </div>
       </header>
 
@@ -149,7 +168,6 @@ interface DraftItem {
               variant="outline"
               size="sm"
               type="button"
-              [disabled]="locked()"
               data-testid="quote-item-manual"
               (click)="addManualItem()"
             >
@@ -196,8 +214,7 @@ interface DraftItem {
                   hlmInput
                   [value]="item.description"
                   (input)="setDescription($index, $any($event.target).value)"
-                  [disabled]="locked()"
-                  data-testid="quote-item-desc"
+                      data-testid="quote-item-desc"
                 />
               </div>
               <div class="grid gap-1">
@@ -208,8 +225,7 @@ interface DraftItem {
                   min="1"
                   [value]="item.quantity"
                   (input)="setQuantity($index, $any($event.target).valueAsNumber)"
-                  [disabled]="locked()"
-                />
+                    />
               </div>
               <div class="grid gap-1">
                 <span class="text-muted-foreground text-xs">{{ 'quotes.editor.unitPrice' | transloco }}</span>
@@ -219,8 +235,7 @@ interface DraftItem {
                   min="0"
                   [value]="item.unitPrice"
                   (input)="setUnitPrice($index, $any($event.target).valueAsNumber)"
-                  [disabled]="locked()"
-                />
+                    />
               </div>
               <div class="grid gap-1">
                 <span class="text-muted-foreground text-xs">{{ 'quotes.editor.discount' | transloco }}</span>
@@ -231,8 +246,7 @@ interface DraftItem {
                   max="100"
                   [value]="item.discountPercent"
                   (input)="setDiscount($index, $any($event.target).valueAsNumber)"
-                  [disabled]="locked()"
-                />
+                    />
               </div>
               <div class="grid items-end gap-1">
                 <span class="text-muted-foreground text-xs">{{ 'quotes.editor.net' | transloco }}</span>
@@ -244,7 +258,7 @@ interface DraftItem {
                     {{ 'quotes.itemStatus.' + itemStatusOf(item.id) | transloco }}
                   </span>
                 }
-                @if (item.id && !locked()) {
+                @if (item.id) {
                   <button
                     *hasPermission="permissionKeys.quotes.update"
                     hlmBtn
@@ -290,8 +304,7 @@ interface DraftItem {
                   variant="ghost"
                   size="icon-sm"
                   type="button"
-                  [disabled]="locked()"
-                  (click)="removeItem($index)"
+                      (click)="removeItem($index)"
                 >
                   <ng-icon name="lucideTrash2" />
                 </button>
@@ -319,37 +332,10 @@ interface DraftItem {
         </div>
 
         <div class="flex flex-wrap gap-2">
-          @if (editing() && !locked()) {
-            <button
-              *hasPermission="permissionKeys.quotes.approve"
-              hlmBtn
-              variant="outline"
-              type="button"
-              data-testid="quote-sanction-approve"
-              (click)="sanction('aprobada')"
-            >
-              <ng-icon name="lucideBadgeDollarSign" />
-              {{ 'quotes.editor.approve' | transloco }}
-            </button>
-            <button
-              *hasPermission="permissionKeys.quotes.approve"
-              hlmBtn
-              variant="outline"
-              type="button"
-              class="text-destructive"
-              data-testid="quote-sanction-reject"
-              (click)="sanction('rechazada')"
-            >
-              <ng-icon name="lucideX" />
-              {{ 'quotes.editor.reject' | transloco }}
-            </button>
-          }
-          @if (!locked()) {
-            <button hlmBtn type="button" (click)="create()" [disabled]="!canCreate()" data-testid="quote-save">
-              <ng-icon name="lucideCheck" />
-              {{ editing() ? ('quotes.editor.saveChanges' | transloco) : ('quotes.new.saveDraft' | transloco) }}
-            </button>
-          }
+          <button *hasPermission="permissionKeys.quotes.update" hlmBtn type="button" (click)="create()" [disabled]="!canCreate()" data-testid="quote-save">
+            <ng-icon name="lucideCheck" />
+            {{ editing() ? ('quotes.editor.saveChanges' | transloco) : ('quotes.new.saveDraft' | transloco) }}
+          </button>
         </div>
       </div>
     </section>
@@ -362,8 +348,18 @@ export class QuoteEditor {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly transloco = inject(TranslocoService);
+  private readonly session = inject(SessionStore);
 
   protected readonly permissionKeys = PERMISSION_KEYS;
+  protected readonly statuses: readonly QuoteStatus[] = [
+    'borrador',
+    'sin_respuesta',
+    'aprobada',
+    'rechazada',
+  ];
+  protected readonly canUpdate = computed(() => this.session.has(PERMISSION_KEYS.quotes.update));
+  protected readonly canApprove = computed(() => this.session.has(PERMISSION_KEYS.quotes.approve));
+  protected readonly canChangeStatus = computed(() => this.canUpdate() || this.canApprove());
 
   protected readonly language = toSignal(this.transloco.langChanges$, {
     initialValue: this.transloco.getActiveLang(),
@@ -601,11 +597,10 @@ export class QuoteEditor {
     });
   }
 
-  /** A sanctioned quote is locked: no edits, no item decisions, no sanction. */
-  protected locked(): boolean {
-    const status = this.quote()?.status;
-
-    return status === 'aprobada' || status === 'rechazada';
+  protected canSetStatus(status: QuoteStatus): boolean {
+    return status === 'aprobada' || status === 'rechazada'
+      ? this.canApprove()
+      : this.canUpdate();
   }
 
   protected itemStatusOf(itemId: string): QuoteItemStatus {
@@ -635,26 +630,43 @@ export class QuoteEditor {
     });
   }
 
-  /** Closes the quote approving or rejecting it (permission-gated in the UI and API). */
-  protected sanction(status: 'aprobada' | 'rechazada'): void {
+  protected changeStatus(status: QuoteStatus, select?: HTMLSelectElement): void {
     const quote = this.quote();
 
-    if (quote === null) {
+    if (quote === null || quote.status === status) {
       return;
     }
 
-    const key = status === 'aprobada' ? 'quotes.sanctionApproveConfirm' : 'quotes.sanctionRejectConfirm';
+    const reset = (): void => {
+      if (select !== undefined) {
+        select.value = quote.status;
+      }
+    };
+    const key = status === 'aprobada'
+      ? 'quotes.sanctionApproveConfirm'
+      : status === 'rechazada'
+        ? 'quotes.sanctionRejectConfirm'
+        : null;
 
-    if (!window.confirm(this.transloco.translate(key, { folio: quote.folio }))) {
+    if (key !== null && !window.confirm(this.transloco.translate(key, { folio: quote.folio }))) {
+      reset();
       return;
     }
 
-    this.api.sanction(quote.id, status).subscribe({
+    this.api.setStatus(quote.id, status).subscribe({
       next: (updated) => {
         this.quote.set(updated);
-        toast.success(this.transloco.translate('quotes.sanctioned', { folio: updated.folio }));
+        toast.success(
+          this.transloco.translate('quotes.statusChanged', {
+            folio: updated.folio,
+            status: this.transloco.translate(`quotes.status.${updated.status}`),
+          }),
+        );
       },
-      error: (error: unknown) => toast.error(mapApiError(error)),
+      error: (error: unknown) => {
+        reset();
+        toast.error(mapApiError(error));
+      },
     });
   }
 }

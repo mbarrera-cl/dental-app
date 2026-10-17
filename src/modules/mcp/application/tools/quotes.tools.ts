@@ -22,7 +22,7 @@ const itemsSchema = z.array(itemSchema).min(1).max(100);
 
 const listSchema = z.object({
   patientId: z.string().optional(),
-  status: z.enum(['borrador', 'entregada', 'aprobada', 'rechazada']).optional(),
+  status: z.enum(['borrador', 'sin_respuesta', 'aprobada', 'rechazada']).optional(),
   q: z.string().optional().describe('Folio search term.'),
   from: z.string().optional().describe('ISO-8601 lower bound on createdAt.'),
   to: z.string().optional().describe('ISO-8601 upper bound on createdAt.'),
@@ -61,6 +61,12 @@ const decideSchema = z.object({
 const sanctionSchema = z.object({
   quoteId: z.string().min(1),
   status: z.enum(['aprobada', 'rechazada']),
+  confirm: z.boolean().optional().describe('Must be true after the human approves the change.'),
+});
+
+const statusSchema = z.object({
+  quoteId: z.string().min(1),
+  status: z.enum(['borrador', 'sin_respuesta', 'aprobada', 'rechazada']),
   confirm: z.boolean().optional().describe('Must be true after the human approves the change.'),
 });
 
@@ -180,7 +186,7 @@ export class QuotesTools {
   @Tool({
     name: 'hexa_quotes_update',
     description:
-      'Replace the lines of a draft/entregada quotation and recompute totals. A sanctioned quotation is locked: duplicate it instead.',
+      'Replace the lines of any non-deleted quotation and recompute totals. Editing does not change the workflow status.',
     parameters: updateSchema,
   })
   async update(
@@ -276,6 +282,30 @@ export class QuotesTools {
       },
       args,
       async (actor) => ({ quote: await this.quotes.sanction(args.quoteId, args.status, actor) }),
+    );
+  }
+
+  @Tool({
+    name: 'hexa_quotes_set_status',
+    description:
+      'Change the workflow status of a quotation to borrador, sin_respuesta, aprobada or rechazada. SENSITIVE: ask the human first and call again with confirm: true.',
+    parameters: statusSchema,
+  })
+  async setStatus(
+    @Payload() args: z.infer<typeof statusSchema>,
+    @Ctx() ctx: McpContext,
+  ) {
+    return this.runner.run(
+      ctx,
+      {
+        tool: 'hexa_quotes_set_status',
+        permissions: ['quotes:approve'],
+        write: true,
+        confirm: true,
+        subject: quoteSubject,
+      },
+      args,
+      async (actor) => ({ quote: await this.quotes.changeStatus(args.quoteId, args.status, actor) }),
     );
   }
 
