@@ -138,7 +138,7 @@ activity purge, UCO catalog writes, quote email sending, patient deletion.
 For a local MCP client that launches a process:
 
 ```bash
-HEXA_MCP_API_KEY=hexa_... DATABASE_PATH=data/hexa.sqlite npm run mcp:stdio
+HEXA_MCP_API_KEY=hexa_... DATABASE_URL=postgresql://hexa:...@localhost:5433/hexa npm run mcp:stdio
 ```
 
 The process reuses the same database and use cases. `HEXA_MCP_API_KEY` is
@@ -156,16 +156,16 @@ Client configuration:
       "args": ["run", "mcp:stdio"],
       "env": {
         "HEXA_MCP_API_KEY": "hexa_...",
-        "DATABASE_PATH": "data/hexa.sqlite"
+        "DATABASE_URL": "postgresql://hexa:...@localhost:5433/hexa"
       }
     }
   }
 }
 ```
 
-> Running the STDIO process and the HTTP server against the same SQLite file
-> means two writers. WAL plus the 5 s busy timeout handles normal contention,
-> but PostgreSQL is the long-term fix for concurrent writes.
+> The STDIO process and the HTTP server share the same PostgreSQL database.
+> The connection pool handles concurrent writers; each tool call still
+> re-authenticates its API key, so revocation is immediate.
 
 ---
 

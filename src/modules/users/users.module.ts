@@ -14,9 +14,9 @@ import { ListUsersUseCase } from './application/use-cases/list-users.use-case.js
 import { SetUserPasswordUseCase } from './application/use-cases/set-user-password.use-case.js';
 import { UpdateUserPermissionsUseCase } from './application/use-cases/update-user-permissions.use-case.js';
 import { UpdateUserUseCase } from './application/use-cases/update-user.use-case.js';
-import { SqlitePasswordHistoryRepository } from './infrastructure/adapters/persistence/sqlite-password-history.repository.js';
-import { SqliteUserAccessReader } from './infrastructure/adapters/persistence/sqlite-user-access.reader.js';
-import { SqliteUserRepository } from './infrastructure/adapters/persistence/sqlite-user.repository.js';
+import { PostgresPasswordHistoryRepository } from './infrastructure/adapters/persistence/postgres-password-history.repository.js';
+import { PostgresUserAccessReader } from './infrastructure/adapters/persistence/postgres-user-access.reader.js';
+import { PostgresUserRepository } from './infrastructure/adapters/persistence/postgres-user.repository.js';
 import { UsersController } from './infrastructure/http/users.controller.js';
 
 /**
@@ -38,9 +38,9 @@ import { UsersController } from './infrastructure/http/users.controller.js';
     UpdateUserPermissionsUseCase,
     PermissionResolver,
     // Swap these bindings for other database adapters (Postgres, MongoDB, ...).
-    { provide: UserRepositoryPort, useClass: SqliteUserRepository },
-    { provide: PasswordHistoryPort, useClass: SqlitePasswordHistoryRepository },
-    { provide: UserAccessReaderPort, useClass: SqliteUserAccessReader },
+    { provide: UserRepositoryPort, useClass: PostgresUserRepository },
+    { provide: PasswordHistoryPort, useClass: PostgresPasswordHistoryRepository },
+    { provide: UserAccessReaderPort, useClass: PostgresUserAccessReader },
   ],
   exports: [UserRepositoryPort, PasswordHistoryPort, UserAccessReaderPort, PermissionResolver],
 })

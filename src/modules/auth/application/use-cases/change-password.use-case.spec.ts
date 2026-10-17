@@ -1,4 +1,5 @@
-import { SqliteDatabase } from '../../../../shared/infrastructure/database/sqlite-database.js';
+import { PostgresDatabase } from '../../../../shared/infrastructure/database/postgres-database.js';
+import { closePostgresTestDatabase, createPostgresTestDatabase } from '../../../../../test/helpers/postgres-test-database.js';
 import { JwtService } from '../../../../shared/security/jwt.js';
 import { PasswordHasher } from '../../../../shared/security/password-hasher.js';
 import { PasswordPolicyService } from '../../../../shared/security/password-policy.js';
@@ -8,21 +9,21 @@ import {
 } from '../../../../shared/security/password.errors.js';
 import { PermissionResolver } from '../../../../shared/security/permission-resolver.js';
 import { SettingsService } from '../../../settings/application/settings.service.js';
-import { SqliteSettingsRepository } from '../../../settings/infrastructure/adapters/persistence/sqlite-settings.repository.js';
+import { PostgresSettingsRepository } from '../../../settings/infrastructure/adapters/persistence/postgres-settings.repository.js';
 import { User } from '../../../users/domain/user.entity.js';
-import { SqlitePasswordHistoryRepository } from '../../../users/infrastructure/adapters/persistence/sqlite-password-history.repository.js';
-import { SqliteUserAccessReader } from '../../../users/infrastructure/adapters/persistence/sqlite-user-access.reader.js';
-import { SqliteUserRepository } from '../../../users/infrastructure/adapters/persistence/sqlite-user.repository.js';
+import { PostgresPasswordHistoryRepository } from '../../../users/infrastructure/adapters/persistence/postgres-password-history.repository.js';
+import { PostgresUserAccessReader } from '../../../users/infrastructure/adapters/persistence/postgres-user-access.reader.js';
+import { PostgresUserRepository } from '../../../users/infrastructure/adapters/persistence/postgres-user.repository.js';
 import { InvalidCredentialsError } from '../../domain/auth.errors.js';
-import { SqliteRefreshTokenRepository } from '../../infrastructure/adapters/persistence/sqlite-refresh-token.repository.js';
+import { PostgresRefreshTokenRepository } from '../../infrastructure/adapters/persistence/postgres-refresh-token.repository.js';
 import { LoginAttemptsService } from '../login-attempts.service.js';
 import { PasswordChangeService } from '../password-change.service.js';
 import { SessionService } from '../session.service.js';
 import { ChangePasswordUseCase } from './change-password.use-case.js';
 
 describe('ChangePasswordUseCase', () => {
-  let database: SqliteDatabase;
-  let users: SqliteUserRepository;
+  let database: PostgresDatabase;
+  let users: PostgresUserRepository;
   let hasher: PasswordHasher;
   let session: SessionService;
   let useCase: ChangePasswordUseCase;
@@ -30,25 +31,26 @@ describe('ChangePasswordUseCase', () => {
 
   const currentPassword = 'Valid-123!';
 
-  const activeSessions = (): number => {
-    const row = database.connection
-      .prepare('SELECT COUNT(*) AS count FROM refresh_tokens WHERE user_id = ? AND revoked_at IS NULL')
-      .get(userId) as unknown as { count: number };
+  const activeSessions = async (): Promise<number> => {
+    const row = await database.queryOne<{ count: string | number }>(
+      'SELECT COUNT(*) AS count FROM refresh_tokens WHERE user_id = $1 AND revoked_at IS NULL',
+      [userId],
+    );
 
-    return row.count;
+    return Number(row?.count ?? 0);
   };
 
   const execute = (newPassword: string) =>
     useCase.execute({ userId, currentPassword, newPassword });
 
   beforeEach(async () => {
-    database = new SqliteDatabase(':memory:');
-    users = new SqliteUserRepository(database);
+    database = await createPostgresTestDatabase();
+    users = new PostgresUserRepository(database);
     hasher = new PasswordHasher();
 
-    const settings = new SettingsService(new SqliteSettingsRepository(database));
-    const refreshTokens = new SqliteRefreshTokenRepository(database);
-    const resolver = new PermissionResolver(new SqliteUserAccessReader(database));
+    const settings = new SettingsService(new PostgresSettingsRepository(database));
+    const refreshTokens = new PostgresRefreshTokenRepository(database);
+    const resolver = new PermissionResolver(new PostgresUserAccessReader(database));
     session = new SessionService(new JwtService(), settings, refreshTokens, resolver);
 
     const passwordChange = new PasswordChangeService(
@@ -56,7 +58,7 @@ describe('ChangePasswordUseCase', () => {
       hasher,
       new PasswordPolicyService(settings),
       settings,
-      new SqlitePasswordHistoryRepository(database),
+      new PostgresPasswordHistoryRepository(database),
     );
 
     useCase = new ChangePasswordUseCase(
@@ -77,8 +79,8 @@ describe('ChangePasswordUseCase', () => {
     await users.save(user);
   });
 
-  afterEach(() => {
-    database.onModuleDestroy();
+  afterEach(async () => {
+    await closePostgresTestDatabase(database);
   });
 
   it('rejects a wrong current password and counts the failure', async () => {
@@ -135,7 +137,7 @@ describe('ChangePasswordUseCase', () => {
     const user = await users.findById(userId);
     await session.issueFor(user!);
     await session.issueFor(user!);
-    expect(activeSessions()).toBe(2);
+    await expect(activeSessions()).resolves.toBe(2);
 
     const result = await execute('New-456-Valid!');
 
@@ -148,11 +150,12 @@ describe('ChangePasswordUseCase', () => {
     expect(updated?.failedLoginAttempts).toBe(0);
 
     // Other sessions are gone; only the freshly issued pair stays active.
-    expect(activeSessions()).toBe(1);
+    await expect(activeSessions()).resolves.toBe(1);
 
-    const history = database.connection
-      .prepare('SELECT password_hash FROM password_history WHERE user_id = ?')
-      .all(userId) as unknown as Array<{ password_hash: string }>;
+    const history = await database.query<{ password_hash: string }>(
+      'SELECT password_hash FROM password_history WHERE user_id = $1',
+      [userId],
+    );
     expect(history).toHaveLength(1);
     expect(await hasher.verify(currentPassword, history[0]!.password_hash)).toBe(true);
   });

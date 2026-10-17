@@ -1,5 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { SqliteDatabase } from '../../../../../shared/infrastructure/database/sqlite-database.js';
+import {
+  PostgresDatabase,
+  isForeignKeyViolation,
+  isUniqueViolation,
+  isUuid,
+} from '../../../../../shared/infrastructure/database/postgres-database.js';
 import { PatientRepositoryPort } from '../../../application/ports/patient-repository.port.js';
 import { ContactoEmergencia } from '../../../domain/contacto-emergencia.vo.js';
 import { Direccion } from '../../../domain/direccion.vo.js';
@@ -16,10 +21,6 @@ import { Prevision } from '../../../domain/prevision.vo.js';
 import { Rut } from '../../../../../shared/domain/rut.vo.js';
 import { Telefono } from '../../../../../shared/domain/telefono.vo.js';
 
-/** SQLite status code for a violated UNIQUE constraint (SQLITE_CONSTRAINT_UNIQUE). */
-const SQLITE_CONSTRAINT_UNIQUE = 2067;
-
-/** `bootstrap_state` marker holding the last assigned history-number sequence. */
 const NUMERO_HISTORIA_SEQ_KEY = 'patients.numeroHistoriaSeq';
 
 interface PatientRow {
@@ -45,45 +46,29 @@ interface PatientRow {
   contacto_parentesco: string | null;
   notas: string | null;
   numero_historia: string | null;
-  created_at: string;
+  created_at: Date;
 }
 
-/**
- * Driven adapter backed by SQLite. It maps rows ⇄ domain objects, translates
- * driver errors into domain errors, and keeps every SQL statement in this
- * file — use cases and entities never see SQL.
- *
- * The `patients` table is created by the shared schema (`ensureSchema`); the
- * RUT is enforced with a UNIQUE constraint, which is the durable guard
- * behind the use case's check-then-save flow.
- */
 @Injectable()
-export class SqlitePatientRepository extends PatientRepositoryPort {
-  private readonly db: SqliteDatabase;
-
-  constructor(database: SqliteDatabase) {
+export class PostgresPatientRepository extends PatientRepositoryPort {
+  constructor(private readonly db: PostgresDatabase) {
     super();
-    this.db = database;
   }
 
   async save(patient: Patient): Promise<void> {
     try {
-      this.db.connection
-        .prepare(
-          `INSERT INTO patients (
-             id, rut, nombres, apellido_paterno, apellido_materno,
-             fecha_nacimiento, sexo, email, telefono,
-             direccion_region, direccion_comuna, direccion_calle, direccion_numero,
-             direccion_departamento, prevision_tipo, prevision_tramo, prevision_plan,
-             contacto_nombre, contacto_telefono, contacto_parentesco, notas,
-             numero_historia, created_at
-           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        )
-        .run(
-          patient.id,
-          ...this.toColumnValues(patient),
-          patient.createdAt.toISOString(),
-        );
+      await this.db.execute(
+        `INSERT INTO patients (
+           id, rut, nombres, apellido_paterno, apellido_materno,
+           fecha_nacimiento, sexo, email, telefono,
+           direccion_region, direccion_comuna, direccion_calle, direccion_numero,
+           direccion_departamento, prevision_tipo, prevision_tramo, prevision_plan,
+           contacto_nombre, contacto_telefono, contacto_parentesco, notas,
+           numero_historia, created_at
+         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13,
+                   $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)`,
+        [patient.id, ...this.toColumnValues(patient), patient.createdAt],
+      );
     } catch (error) {
       if (isUniqueViolation(error)) {
         throw new PatientAlreadyExistsError(patient.rut);
@@ -95,21 +80,20 @@ export class SqlitePatientRepository extends PatientRepositoryPort {
 
   async update(patient: Patient): Promise<void> {
     try {
-      const result = this.db.connection
-        .prepare(
-          `UPDATE patients SET
-             rut = ?, nombres = ?, apellido_paterno = ?, apellido_materno = ?,
-             fecha_nacimiento = ?, sexo = ?, email = ?, telefono = ?,
-             direccion_region = ?, direccion_comuna = ?, direccion_calle = ?,
-             direccion_numero = ?, direccion_departamento = ?,
-             prevision_tipo = ?, prevision_tramo = ?, prevision_plan = ?,
-             contacto_nombre = ?, contacto_telefono = ?, contacto_parentesco = ?,
-             notas = ?, numero_historia = ?
-           WHERE id = ?`,
-        )
-        .run(...this.toColumnValues(patient), patient.id);
+      const changed = await this.db.execute(
+        `UPDATE patients SET
+           rut = $1, nombres = $2, apellido_paterno = $3, apellido_materno = $4,
+           fecha_nacimiento = $5, sexo = $6, email = $7, telefono = $8,
+           direccion_region = $9, direccion_comuna = $10, direccion_calle = $11,
+           direccion_numero = $12, direccion_departamento = $13,
+           prevision_tipo = $14, prevision_tramo = $15, prevision_plan = $16,
+           contacto_nombre = $17, contacto_telefono = $18, contacto_parentesco = $19,
+           notas = $20, numero_historia = $21
+         WHERE id = $22`,
+        [...this.toColumnValues(patient), patient.id],
+      );
 
-      if (result.changes === 0) {
+      if (changed === 0) {
         throw new PatientNotFoundError(patient.id);
       }
     } catch (error) {
@@ -122,17 +106,17 @@ export class SqlitePatientRepository extends PatientRepositoryPort {
   }
 
   async delete(id: string): Promise<void> {
-    try {
-      const result = this.db.connection
-        .prepare('DELETE FROM patients WHERE id = ?')
-        .run(id);
+    if (!isUuid(id)) {
+      throw new PatientNotFoundError(id);
+    }
 
-      if (result.changes === 0) {
+    try {
+      const changed = await this.db.execute('DELETE FROM patients WHERE id = $1', [id]);
+
+      if (changed === 0) {
         throw new PatientNotFoundError(id);
       }
     } catch (error) {
-      // The patient is referenced by quotations (`ON DELETE RESTRICT`): a
-      // priced document must not disappear with the patient.
       if (isForeignKeyViolation(error)) {
         throw new PatientHasQuotesError(id);
       }
@@ -142,59 +126,49 @@ export class SqlitePatientRepository extends PatientRepositoryPort {
   }
 
   async findById(id: string): Promise<Patient | null> {
-    const row = this.db.connection
-      .prepare('SELECT * FROM patients WHERE id = ?')
-      .get(id) as unknown as PatientRow | undefined;
+    if (!isUuid(id)) {
+      return null;
+    }
 
-    return row === undefined ? null : this.toDomain(row);
+    const row = await this.db.queryOne<PatientRow>('SELECT * FROM patients WHERE id = $1', [id]);
+    return row === null ? null : this.toDomain(row);
   }
 
   async findByRut(rut: string): Promise<Patient | null> {
-    const row = this.db.connection
-      .prepare('SELECT * FROM patients WHERE rut = ?')
-      .get(rut) as unknown as PatientRow | undefined;
-
-    return row === undefined ? null : this.toDomain(row);
+    const row = await this.db.queryOne<PatientRow>('SELECT * FROM patients WHERE rut = $1', [rut]);
+    return row === null ? null : this.toDomain(row);
   }
 
   async findAll(): Promise<Patient[]> {
-    const rows = this.db.connection
-      .prepare('SELECT * FROM patients ORDER BY rowid ASC')
-      .all() as unknown as PatientRow[];
+    const rows = await this.db.query<PatientRow>(
+      'SELECT * FROM patients ORDER BY created_at ASC, id ASC',
+    );
 
     return rows.map((row) => this.toDomain(row));
   }
 
-  /**
-   * Reads/increments the sequence kept in `bootstrap_state` — the single
-   * writer of that marker is this adapter, so the read-modify-write needs no
-   * locking (`node:sqlite` is synchronous).
-   */
   async nextNumeroHistoria(): Promise<string> {
-    const row = this.db.connection
-      .prepare('SELECT value FROM bootstrap_state WHERE key = ?')
-      .get(NUMERO_HISTORIA_SEQ_KEY) as unknown as { value: string } | undefined;
+    const row = await this.db.queryOne<{ value: string }>(
+      `INSERT INTO bootstrap_state (key, value)
+       VALUES ($1, '1')
+       ON CONFLICT (key) DO UPDATE
+         SET value = (COALESCE(NULLIF(bootstrap_state.value, '')::integer, 0) + 1)::text
+       RETURNING value`,
+      [NUMERO_HISTORIA_SEQ_KEY],
+    );
 
-    const parsed = row === undefined ? 0 : Number.parseInt(row.value, 10);
-    const next = (Number.isNaN(parsed) ? 0 : parsed) + 1;
-
-    this.db.connection
-      .prepare('INSERT OR REPLACE INTO bootstrap_state (key, value) VALUES (?, ?)')
-      .run(NUMERO_HISTORIA_SEQ_KEY, String(next));
-
-    return formatNumeroHistoria(next);
+    return formatNumeroHistoria(Number(row?.value ?? 1));
   }
 
   async findWithoutNumeroHistoria(): Promise<Patient[]> {
-    const rows = this.db.connection
-      .prepare('SELECT * FROM patients WHERE numero_historia IS NULL ORDER BY rowid ASC')
-      .all() as unknown as PatientRow[];
+    const rows = await this.db.query<PatientRow>(
+      'SELECT * FROM patients WHERE numero_historia IS NULL ORDER BY created_at ASC, id ASC',
+    );
 
     return rows.map((row) => this.toDomain(row));
   }
 
-  /** Patient column values in INSERT/UPDATE order (never `id`/`created_at`). */
-  private toColumnValues(patient: Patient): Array<string | null> {
+  private toColumnValues(patient: Patient): Array<string | Date | null> {
     const direccion = patient.direccion;
     const prevision = patient.prevision;
     const contacto = patient.contactoEmergencia;
@@ -268,24 +242,4 @@ export class SqlitePatientRepository extends PatientRepositoryPort {
       row.id,
     );
   }
-}
-
-function isUniqueViolation(error: unknown): boolean {
-  return (
-    error instanceof Error &&
-    'errcode' in error &&
-    (error as { errcode?: number }).errcode === SQLITE_CONSTRAINT_UNIQUE
-  );
-}
-
-/** SQLite status code for a violated foreign key (SQLITE_CONSTRAINT_FOREIGNKEY). */
-const SQLITE_CONSTRAINT_FOREIGNKEY = 787;
-
-function isForeignKeyViolation(error: unknown): boolean {
-  return (
-    (error instanceof Error &&
-      'errcode' in error &&
-      (error as { errcode?: number }).errcode === SQLITE_CONSTRAINT_FOREIGNKEY) ||
-    (error instanceof Error && error.message.includes('FOREIGN KEY constraint failed'))
-  );
 }

@@ -7,7 +7,8 @@ import type { DeepSeekMessage, DeepSeekResult, DeepSeekToolDefinition } from './
 import { DeepSeekClient } from './../src/modules/caro-ia/application/deepseek.client.js';
 import { DeepgramClient } from './../src/modules/caro-ia/application/deepgram.client.js';
 import type { CaroTranscription } from './../src/modules/caro-ia/domain/caro-ia.models.js';
-import { SqliteDatabase } from './../src/shared/infrastructure/database/sqlite-database.js';
+import { PostgresDatabase } from './../src/shared/infrastructure/database/postgres-database.js';
+import { closePostgresTestDatabase, createPostgresTestDatabase } from './helpers/postgres-test-database.js';
 import { configureApp } from './../src/shared/infrastructure/app-setup.js';
 import { clearE2eAdminCredentials, loginAsAdmin, useE2eAdminCredentials } from './helpers/auth.js';
 
@@ -44,7 +45,7 @@ interface CaroEvent {
 
 describe('CaroIA API (e2e)', () => {
   let app: INestApplication<App>;
-  let database: SqliteDatabase;
+  let database: PostgresDatabase;
   let authorization: string;
   let deepseek: FakeDeepSeek;
   let patientId: string;
@@ -52,13 +53,13 @@ describe('CaroIA API (e2e)', () => {
 
   beforeAll(async () => {
     useE2eAdminCredentials();
-    database = new SqliteDatabase(':memory:');
+    database = await createPostgresTestDatabase();
     deepseek = new FakeDeepSeek();
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     })
-      .overrideProvider(SqliteDatabase)
+      .overrideProvider(PostgresDatabase)
       .useValue(database)
       .overrideProvider(DeepSeekClient)
       .useValue(deepseek)
@@ -89,7 +90,7 @@ describe('CaroIA API (e2e)', () => {
 
   afterAll(async () => {
     await app.close();
-    database.onModuleDestroy();
+    await closePostgresTestDatabase(database);
     clearE2eAdminCredentials();
   });
 

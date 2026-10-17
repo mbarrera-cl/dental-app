@@ -1,27 +1,27 @@
 #!/usr/bin/env node
 /**
- * Emergency rescue of the administrator account, straight through SQLite (no
- * HTTP, no session needed): restores or creates the account, grants the
+ * Emergency rescue of the administrator account, straight through PostgreSQL
+ * (no HTTP, no session needed): restores or creates the account, grants the
  * built-in `admin` role, clears any lock/disablement and sets a fresh
  * password — printed exactly once. The `admin` role permissions are synced
  * with the catalog on the next backend boot.
  *
  * Usage:
- *   node scripts/rescue-admin.mjs                    # admin@hexa.local
- *   node scripts/rescue-admin.mjs ada@example.com    # rescue any account
- *   ADMIN_PASSWORD='...' node scripts/rescue-admin.mjs
+ *   node --env-file=.env scripts/rescue-admin.mjs
+ *   node --env-file=.env.postgres scripts/rescue-admin.mjs ada@example.com
+ *   ADMIN_PASSWORD='...' node --env-file=.env scripts/rescue-admin.mjs
  */
 import { randomBytes, randomUUID, scrypt } from 'node:crypto';
-import { existsSync } from 'node:fs';
-import { DatabaseSync } from 'node:sqlite';
 import { promisify } from 'node:util';
+import pg from 'pg';
 
+const { Pool } = pg;
 const scryptAsync = promisify(scrypt);
 
 /** Must match `src/shared/security/password-hasher.ts`. */
 const SCRYPT = { cost: 16384, blockSize: 8, parallelization: 1, keyLength: 64, saltLength: 16 };
 
-const dbPath = process.env.DATABASE_PATH ?? 'data/hexa.sqlite';
+const databaseUrl = process.env.DATABASE_URL?.trim();
 const email = (process.argv[2] ?? process.env.ADMIN_EMAIL ?? 'admin@hexa.local').trim().toLowerCase();
 const password = process.env.ADMIN_PASSWORD ?? randomBytes(18).toString('base64url');
 
@@ -43,76 +43,80 @@ async function hash(value) {
   ].join('$');
 }
 
-if (!existsSync(dbPath)) {
-  console.error(`Database not found at ${dbPath}. Boot the API once or set DATABASE_PATH.`);
+if (!databaseUrl) {
+  console.error('DATABASE_URL is required (PostgreSQL connection string).');
   process.exit(1);
 }
 
-const db = new DatabaseSync(dbPath);
+const pool = new Pool({ connectionString: databaseUrl });
+const client = await pool.connect();
 
 try {
-  const schema = db
-    .prepare("SELECT 1 AS found FROM sqlite_master WHERE type = 'table' AND name = 'users'")
-    .get();
+  const schema = await client.query(
+    "SELECT 1 AS found FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'users'",
+  );
 
-  if (schema === undefined) {
+  if (schema.rowCount === 0) {
     console.error('The database has no schema yet. Boot the API once so it creates the tables.');
     process.exit(1);
   }
 
-  const now = new Date().toISOString();
   const passwordHash = await hash(password);
 
   // 1. The built-in admin role (created by the identity bootstrap on boot).
-  let role = db.prepare("SELECT id FROM roles WHERE name = 'admin'").get();
+  let role = await client.query(
+    "SELECT id FROM roles WHERE LOWER(name) = LOWER('admin') LIMIT 1",
+  );
 
-  if (role === undefined) {
-    role = { id: randomUUID() };
-    db.prepare(
-      'INSERT INTO roles (id, name, description, permissions, built_in, created_at, updated_at) VALUES (?, ?, ?, ?, 1, ?, ?)',
-    ).run(
-      role.id,
-      'admin',
-      'Built-in administrator (recreated by rescue).',
-      '[]',
-      now,
-      now,
+  if (role.rowCount === 0) {
+    const roleId = randomUUID();
+    await client.query(
+      `INSERT INTO roles (id, name, description, permissions, built_in, created_at, updated_at)
+       VALUES ($1, 'admin', 'Built-in administrator (recreated by rescue).', '[]'::jsonb, TRUE, NOW(), NOW())`,
+      [roleId],
     );
+    role = { rows: [{ id: roleId }] };
     console.log('Recreated the built-in "admin" role; its permissions sync on the next boot.');
   }
 
   // 2. The account: restored (active, unlocked, fresh password) or created.
-  const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(email);
+  const existing = await client.query('SELECT id FROM users WHERE email = $1', [email]);
   let userId;
 
-  if (existing === undefined) {
+  if (existing.rowCount === 0) {
     userId = randomUUID();
-    db.prepare(
+    await client.query(
       `INSERT INTO users
          (id, email, name, created_at, password_hash, status, failed_login_attempts,
           locked_until, password_changed_at, must_change_password, last_login_at)
-       VALUES (?, ?, ?, ?, ?, 'active', 0, NULL, ?, 0, NULL)`,
-    ).run(userId, email, 'Administrator', now, passwordHash, now);
+       VALUES ($1, $2, 'Administrator', NOW(), $3, 'active', 0, NULL, NOW(), FALSE, NULL)`,
+      [userId, email, passwordHash],
+    );
   } else {
-    userId = existing.id;
-    db.prepare(
+    userId = existing.rows[0].id;
+    await client.query(
       `UPDATE users
-          SET password_hash = ?, status = 'active', failed_login_attempts = 0,
-              locked_until = NULL, password_changed_at = ?, must_change_password = 0
-        WHERE id = ?`,
-    ).run(passwordHash, now, userId);
+          SET password_hash = $1, status = 'active', failed_login_attempts = 0,
+              locked_until = NULL, password_changed_at = NOW(), must_change_password = FALSE
+        WHERE id = $2`,
+      [passwordHash, userId],
+    );
   }
 
   // 3. The admin role on the account (keeps any other roles intact).
-  db.prepare('INSERT OR IGNORE INTO user_roles (user_id, role_id) VALUES (?, ?)').run(userId, role.id);
+  await client.query(
+    'INSERT INTO user_roles (user_id, role_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+    [userId, role.rows[0].id],
+  );
 
   console.log(
-    existing === undefined
+    existing.rowCount === 0
       ? `Created administrator "${email}" with a fresh password:`
       : `Restored administrator "${email}" with a fresh password:`,
   );
   console.log(`\n  ${password}\n`);
   console.log('Store it now: it will not be shown again. Change it after signing in.');
 } finally {
-  db.close();
+  client.release();
+  await pool.end();
 }

@@ -70,9 +70,8 @@ step "9. GET /users/$GRACE_ID — gone (404)"
 curlj "$BASE_URL/users/$GRACE_ID" -w '\n%{http_code}\n'
 
 step "10. Inspect the SQLite file directly"
-DB_PATH="${DATABASE_PATH:-data/hexa.sqlite}"
-if command -v sqlite3 >/dev/null; then
-  sqlite3 "$DB_PATH" 'SELECT id, email, name FROM users;'
+if [[ -n "${DATABASE_URL:-}" ]] && command -v psql >/dev/null; then
+  psql "$DATABASE_URL" -c 'SELECT id, email, name FROM users;'
 else
-  echo "(sqlite3 CLI not available — skipping)"
+  echo "(DATABASE_URL/psql not available — skipping)"
 fi

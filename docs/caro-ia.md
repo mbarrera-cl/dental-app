@@ -99,7 +99,7 @@ src/modules/caro-ia/
 │   └── deepgram.client.ts        # puerto + HTTP
 ├── domain/                       # modelos y errores
 ├── infrastructure/
-│   ├── adapters/persistence/     # SQLite
+│   ├── adapters/persistence/     # PostgreSQL
 │   └── http/                     # REST + SSE + multipart
 └── caro-ia.module.ts
 
@@ -149,11 +149,11 @@ devuelve `{ text, confidence, durationSeconds }`.
 
 ## Persistencia
 
-Tablas en SQLite (creadas por `ensureSchema`):
+Tablas en PostgreSQL (creadas por `PostgresDatabase.ensureSchema`):
 
 - `caro_conversations` — dueño, título, fechas, borrado lógico.
-- `caro_messages` — rol, contenido, tool calls y citas (JSON).
-- `caro_approvals` — tool, argumentos exactos, resumen, estado y expiración.
+- `caro_messages` — rol, contenido, tool calls y citas (`JSONB`).
+- `caro_approvals` — tool, argumentos exactos (`JSONB`), resumen, estado y expiración.
 
 No hay tabla de adjuntos. El borrado de una conversación es lógico; la
 retención opcional elimina físicamente las conversaciones antiguas y sus

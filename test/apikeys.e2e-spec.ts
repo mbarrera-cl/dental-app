@@ -4,7 +4,8 @@ import request from 'supertest';
 import type { App } from 'supertest/types.js';
 import { AppModule } from './../src/app.module.js';
 import { configureApp } from './../src/shared/infrastructure/app-setup.js';
-import { SqliteDatabase } from './../src/shared/infrastructure/database/sqlite-database.js';
+import { PostgresDatabase } from './../src/shared/infrastructure/database/postgres-database.js';
+import { closePostgresTestDatabase, createPostgresTestDatabase } from './helpers/postgres-test-database.js';
 import { clearE2eAdminCredentials, loginAsAdmin, useE2eAdminCredentials } from './helpers/auth.js';
 
 /**
@@ -14,18 +15,18 @@ import { clearE2eAdminCredentials, loginAsAdmin, useE2eAdminCredentials } from '
  */
 describe('API keys (e2e)', () => {
   let app: INestApplication<App>;
-  let database: SqliteDatabase;
+  let database: PostgresDatabase;
   /** `Bearer <access token>` of the bootstrap administrator. */
   let authorization: string;
 
   beforeEach(async () => {
     useE2eAdminCredentials();
-    database = new SqliteDatabase(':memory:');
+    database = await createPostgresTestDatabase();
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     })
-      .overrideProvider(SqliteDatabase)
+      .overrideProvider(PostgresDatabase)
       .useValue(database)
       .compile();
 
@@ -38,7 +39,7 @@ describe('API keys (e2e)', () => {
 
   afterEach(async () => {
     await app.close();
-    database.onModuleDestroy();
+    await closePostgresTestDatabase(database);
     clearE2eAdminCredentials();
   });
 
@@ -219,9 +220,10 @@ describe('API keys (e2e)', () => {
     const { id, key } = created.body as { id: string; key: string };
 
     // Fast-forward: the row expires in the past.
-    database.connection
-      .prepare('UPDATE api_keys SET expires_at = ? WHERE id = ?')
-      .run('2020-01-01T00:00:00.000Z', id);
+    await database.execute('UPDATE api_keys SET expires_at = $1 WHERE id = $2', [
+      '2020-01-01T00:00:00.000Z',
+      id,
+    ]);
 
     await request(app.getHttpServer()).get('/permissions').set('X-Api-Key', key).expect(401);
   });

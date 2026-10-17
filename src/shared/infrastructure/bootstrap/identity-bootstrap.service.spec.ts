@@ -1,6 +1,7 @@
-import { SqliteDatabase } from '../database/sqlite-database.js';
-import { SqliteRoleRepository } from '../../../modules/roles/infrastructure/adapters/persistence/sqlite-role.repository.js';
-import { SqliteUserRepository } from '../../../modules/users/infrastructure/adapters/persistence/sqlite-user.repository.js';
+import { PostgresDatabase } from '../database/postgres-database.js';
+import { closePostgresTestDatabase, createPostgresTestDatabase } from '../../../../test/helpers/postgres-test-database.js';
+import { PostgresRoleRepository } from '../../../modules/roles/infrastructure/adapters/persistence/postgres-role.repository.js';
+import { PostgresUserRepository } from '../../../modules/users/infrastructure/adapters/persistence/postgres-user.repository.js';
 import { User } from '../../../modules/users/domain/user.entity.js';
 import { allPermissionKeys } from '../../security/permissions.js';
 import { PasswordHasher } from '../../security/password-hasher.js';
@@ -11,26 +12,26 @@ import {
 } from './identity-bootstrap.service.js';
 
 describe('IdentityBootstrapService', () => {
-  let database: SqliteDatabase;
-  let users: SqliteUserRepository;
-  let roles: SqliteRoleRepository;
+  let database: PostgresDatabase;
+  let users: PostgresUserRepository;
+  let roles: PostgresRoleRepository;
   let service: IdentityBootstrapService;
 
   const previousAdminEmail = process.env[ADMIN_EMAIL_ENV];
   const previousAdminPassword = process.env[ADMIN_PASSWORD_ENV];
 
-  beforeEach(() => {
-    database = new SqliteDatabase(':memory:');
-    users = new SqliteUserRepository(database);
-    roles = new SqliteRoleRepository(database);
+  beforeEach(async () => {
+    database = await createPostgresTestDatabase();
+    users = new PostgresUserRepository(database);
+    roles = new PostgresRoleRepository(database);
     service = new IdentityBootstrapService(database, users, roles, new PasswordHasher());
 
     process.env[ADMIN_EMAIL_ENV] = 'chief@test.local';
     process.env[ADMIN_PASSWORD_ENV] = 'Adm1n-Secret!';
   });
 
-  afterEach(() => {
-    database.onModuleDestroy();
+  afterEach(async () => {
+    await closePostgresTestDatabase(database);
 
     if (previousAdminEmail === undefined) {
       delete process.env[ADMIN_EMAIL_ENV];

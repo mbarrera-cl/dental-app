@@ -1,26 +1,27 @@
-import { SqliteDatabase } from '../../../../shared/infrastructure/database/sqlite-database.js';
+import { PostgresDatabase } from '../../../../shared/infrastructure/database/postgres-database.js';
+import { closePostgresTestDatabase, createPostgresTestDatabase } from '../../../../../test/helpers/postgres-test-database.js';
 import { JwtService } from '../../../../shared/security/jwt.js';
 import { PasswordHasher } from '../../../../shared/security/password-hasher.js';
 import { PermissionResolver } from '../../../../shared/security/permission-resolver.js';
 import { SettingsService } from '../../../settings/application/settings.service.js';
-import { SqliteSettingsRepository } from '../../../settings/infrastructure/adapters/persistence/sqlite-settings.repository.js';
+import { PostgresSettingsRepository } from '../../../settings/infrastructure/adapters/persistence/postgres-settings.repository.js';
 import { User } from '../../../users/domain/user.entity.js';
-import { SqliteUserAccessReader } from '../../../users/infrastructure/adapters/persistence/sqlite-user-access.reader.js';
-import { SqliteUserRepository } from '../../../users/infrastructure/adapters/persistence/sqlite-user.repository.js';
+import { PostgresUserAccessReader } from '../../../users/infrastructure/adapters/persistence/postgres-user-access.reader.js';
+import { PostgresUserRepository } from '../../../users/infrastructure/adapters/persistence/postgres-user.repository.js';
 import {
   AccountDisabledError,
   AccountLockedError,
   InvalidCredentialsError,
   PasswordChangeRequiredError,
 } from '../../domain/auth.errors.js';
-import { SqliteRefreshTokenRepository } from '../../infrastructure/adapters/persistence/sqlite-refresh-token.repository.js';
+import { PostgresRefreshTokenRepository } from '../../infrastructure/adapters/persistence/postgres-refresh-token.repository.js';
 import { LoginAttemptsService } from '../login-attempts.service.js';
 import { SessionService } from '../session.service.js';
 import { LoginUseCase } from './login.use-case.js';
 
 describe('LoginUseCase', () => {
-  let database: SqliteDatabase;
-  let users: SqliteUserRepository;
+  let database: PostgresDatabase;
+  let users: PostgresUserRepository;
   let hasher: PasswordHasher;
   let jwt: JwtService;
   let useCase: LoginUseCase;
@@ -29,26 +30,27 @@ describe('LoginUseCase', () => {
   const email = 'ada@example.com';
   const password = 'Valid-123!';
 
-  const activeSessions = (): number => {
-    const row = database.connection
-      .prepare('SELECT COUNT(*) AS count FROM refresh_tokens WHERE user_id = ? AND revoked_at IS NULL')
-      .get(userId) as unknown as { count: number };
+  const activeSessions = async (): Promise<number> => {
+    const row = await database.queryOne<{ count: string | number }>(
+      'SELECT COUNT(*) AS count FROM refresh_tokens WHERE user_id = $1 AND revoked_at IS NULL',
+      [userId],
+    );
 
-    return row.count;
+    return Number(row?.count ?? 0);
   };
 
   beforeEach(async () => {
-    database = new SqliteDatabase(':memory:');
-    users = new SqliteUserRepository(database);
+    database = await createPostgresTestDatabase();
+    users = new PostgresUserRepository(database);
     hasher = new PasswordHasher();
     jwt = new JwtService();
 
-    const settings = new SettingsService(new SqliteSettingsRepository(database));
-    const resolver = new PermissionResolver(new SqliteUserAccessReader(database));
+    const settings = new SettingsService(new PostgresSettingsRepository(database));
+    const resolver = new PermissionResolver(new PostgresUserAccessReader(database));
     const session = new SessionService(
       jwt,
       settings,
-      new SqliteRefreshTokenRepository(database),
+      new PostgresRefreshTokenRepository(database),
       resolver,
     );
     const attempts = new LoginAttemptsService(users, settings);
@@ -60,8 +62,8 @@ describe('LoginUseCase', () => {
     await users.save(user);
   });
 
-  afterEach(() => {
-    database.onModuleDestroy();
+  afterEach(async () => {
+    await closePostgresTestDatabase(database);
   });
 
   it('signs in with valid credentials, records the login and stores a refresh token', async () => {
@@ -73,7 +75,7 @@ describe('LoginUseCase', () => {
     const stored = await users.findById(userId);
     expect(stored?.lastLoginAt).not.toBeNull();
     expect(stored?.failedLoginAttempts).toBe(0);
-    expect(activeSessions()).toBe(1);
+    await expect(activeSessions()).resolves.toBe(1);
   });
 
   it('rejects unknown emails and users without a password with the same error', async () => {
@@ -103,7 +105,7 @@ describe('LoginUseCase', () => {
 
     // Even the right password is rejected while locked.
     await expect(useCase.execute({ email, password })).rejects.toThrow(AccountLockedError);
-    expect(activeSessions()).toBe(0);
+    await expect(activeSessions()).resolves.toBe(0);
   });
 
   it('rejects disabled accounts', async () => {

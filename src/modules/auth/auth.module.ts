@@ -14,7 +14,7 @@ import { GetProfileUseCase } from './application/use-cases/get-profile.use-case.
 import { LoginUseCase } from './application/use-cases/login.use-case.js';
 import { LogoutUseCase } from './application/use-cases/logout.use-case.js';
 import { RefreshUseCase } from './application/use-cases/refresh.use-case.js';
-import { SqliteRefreshTokenRepository } from './infrastructure/adapters/persistence/sqlite-refresh-token.repository.js';
+import { PostgresRefreshTokenRepository } from './infrastructure/adapters/persistence/postgres-refresh-token.repository.js';
 import { AuthController } from './infrastructure/http/auth.controller.js';
 
 /**
@@ -35,7 +35,7 @@ import { AuthController } from './infrastructure/http/auth.controller.js';
     GetProfileUseCase,
     ChangePasswordUseCase,
     ChangeExpiredPasswordUseCase,
-    { provide: RefreshTokenRepositoryPort, useClass: SqliteRefreshTokenRepository },
+    { provide: RefreshTokenRepositoryPort, useClass: PostgresRefreshTokenRepository },
   ],
 })
 export class AuthModule {}

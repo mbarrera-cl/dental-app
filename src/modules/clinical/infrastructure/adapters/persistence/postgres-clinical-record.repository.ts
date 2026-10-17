@@ -1,5 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import { SqliteDatabase } from '../../../../../shared/infrastructure/database/sqlite-database.js';
+import {
+  PostgresDatabase,
+  isUniqueViolation,
+  isUuid,
+} from '../../../../../shared/infrastructure/database/postgres-database.js';
 import { ClinicalRecordRepositoryPort } from '../../../application/ports/clinical-record-repository.port.js';
 import { Antecedentes } from '../../../domain/antecedentes.vo.js';
 import { createCategoriaEtaria } from '../../../domain/categoria-etaria.js';
@@ -23,26 +27,23 @@ import {
 import { IndicadoresSaludBucal } from '../../../domain/indicadores.vo.js';
 import { SignosVitales } from '../../../domain/signos-vitales.vo.js';
 
-/** SQLite status code for a violated UNIQUE constraint (SQLITE_CONSTRAINT_UNIQUE). */
-const SQLITE_CONSTRAINT_UNIQUE = 2067;
-
 interface ClinicalRecordRow {
   id: string;
   patient_id: string;
   categoria: string;
-  embarazada: number;
+  embarazada: boolean;
   motivo_consulta: string | null;
   enfermedad_actual: string | null;
-  antecedentes: string;
-  signos_vitales: string;
-  examen_estomatognatico: string;
-  indicadores: string;
+  antecedentes: Record<string, unknown>;
+  signos_vitales: Record<string, unknown>;
+  examen_estomatognatico: Record<string, unknown>;
+  indicadores: Record<string, unknown>;
   status: string;
   created_by: string | null;
   updated_by: string | null;
-  created_at: string;
-  updated_at: string;
-  finalized_at: string | null;
+  created_at: Date;
+  updated_at: Date;
+  finalized_at: Date | null;
   finalized_by: string | null;
 }
 
@@ -50,15 +51,15 @@ interface FindingRow {
   id: string;
   record_id: string;
   tooth: number;
-  surfaces: string;
+  surfaces: Surface[];
   symbol: string;
   state: string;
   recesion: number | null;
   movilidad: number | null;
   note: string | null;
   created_by: string | null;
-  created_at: string;
-  voided_at: string | null;
+  created_at: Date;
+  voided_at: Date | null;
   voided_by: string | null;
 }
 
@@ -69,39 +70,32 @@ interface ClinicalEventRow {
   actor_id: string | null;
   action: string;
   summary: string | null;
-  payload: string | null;
-  created_at: string;
+  payload: Record<string, unknown> | null;
+  created_at: Date;
 }
 
-/**
- * Driven adapter: ficha sections as columns (JSON for the composite value
- * objects), the odontogram as an append-only findings log and the timeline as
- * `clinical_events`. `one record per patient` is enforced by a UNIQUE
- * constraint, which is the durable guard the use case relies on.
- */
 @Injectable()
-export class SqliteClinicalRecordRepository extends ClinicalRecordRepositoryPort {
-  constructor(private readonly db: SqliteDatabase) {
+export class PostgresClinicalRecordRepository extends ClinicalRecordRepositoryPort {
+  constructor(private readonly db: PostgresDatabase) {
     super();
   }
 
   async save(record: FichaClinica): Promise<void> {
     try {
-      this.db.connection
-        .prepare(
-          `INSERT INTO clinical_records (
-             id, patient_id, categoria, embarazada,
-             motivo_consulta, enfermedad_actual,
-             antecedentes, signos_vitales, examen_estomatognatico, indicadores,
-             status, created_by, updated_by, created_at, updated_at,
-             finalized_at, finalized_by
-           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        )
-        .run(
+      await this.db.execute(
+        `INSERT INTO clinical_records (
+           id, patient_id, categoria, embarazada,
+           motivo_consulta, enfermedad_actual,
+           antecedentes, signos_vitales, examen_estomatognatico, indicadores,
+           status, created_by, updated_by, created_at, updated_at,
+           finalized_at, finalized_by
+         ) VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8::jsonb, $9::jsonb, $10::jsonb,
+                   $11, $12, $13, $14, $15, $16, $17)`,
+        [
           record.id,
           record.patientId,
           record.categoria,
-          record.embarazada ? 1 : 0,
+          record.embarazada,
           record.motivoConsulta,
           record.enfermedadActual,
           JSON.stringify(record.antecedentes.toJSON()),
@@ -111,11 +105,12 @@ export class SqliteClinicalRecordRepository extends ClinicalRecordRepositoryPort
           record.status,
           record.createdBy,
           record.updatedBy,
-          record.createdAt.toISOString(),
-          record.updatedAt.toISOString(),
-          record.finalizedAt?.toISOString() ?? null,
+          record.createdAt,
+          record.updatedAt,
+          record.finalizedAt,
           record.finalizedBy,
-        );
+        ],
+      );
     } catch (error) {
       if (isUniqueViolation(error)) {
         throw new ClinicalRecordAlreadyExistsError(record.patientId);
@@ -126,20 +121,18 @@ export class SqliteClinicalRecordRepository extends ClinicalRecordRepositoryPort
   }
 
   async update(record: FichaClinica): Promise<void> {
-    const result = this.db.connection
-      .prepare(
-        `UPDATE clinical_records SET
-           categoria = ?, embarazada = ?,
-           motivo_consulta = ?, enfermedad_actual = ?,
-           antecedentes = ?, signos_vitales = ?,
-           examen_estomatognatico = ?, indicadores = ?,
-           status = ?, updated_by = ?, updated_at = ?,
-           finalized_at = ?, finalized_by = ?
-         WHERE id = ?`,
-      )
-      .run(
+    const changed = await this.db.execute(
+      `UPDATE clinical_records SET
+         categoria = $1, embarazada = $2,
+         motivo_consulta = $3, enfermedad_actual = $4,
+         antecedentes = $5::jsonb, signos_vitales = $6::jsonb,
+         examen_estomatognatico = $7::jsonb, indicadores = $8::jsonb,
+         status = $9, updated_by = $10, updated_at = $11,
+         finalized_at = $12, finalized_by = $13
+       WHERE id = $14`,
+      [
         record.categoria,
-        record.embarazada ? 1 : 0,
+        record.embarazada,
         record.motivoConsulta,
         record.enfermedadActual,
         JSON.stringify(record.antecedentes.toJSON()),
@@ -148,43 +141,52 @@ export class SqliteClinicalRecordRepository extends ClinicalRecordRepositoryPort
         JSON.stringify(record.indicadores.toJSON()),
         record.status,
         record.updatedBy,
-        record.updatedAt.toISOString(),
-        record.finalizedAt?.toISOString() ?? null,
+        record.updatedAt,
+        record.finalizedAt,
         record.finalizedBy,
         record.id,
-      );
+      ],
+    );
 
-    if (result.changes === 0) {
+    if (changed === 0) {
       throw new ClinicalRecordNotFoundError(record.id);
     }
   }
 
   async findById(id: string): Promise<FichaClinica | null> {
-    const row = this.db.connection
-      .prepare('SELECT * FROM clinical_records WHERE id = ?')
-      .get(id) as unknown as ClinicalRecordRow | undefined;
+    if (!isUuid(id)) {
+      return null;
+    }
 
-    return row === undefined ? null : this.toDomainRecord(row);
+    const row = await this.db.queryOne<ClinicalRecordRow>(
+      'SELECT * FROM clinical_records WHERE id = $1',
+      [id],
+    );
+
+    return row === null ? null : this.toDomainRecord(row);
   }
 
   async findByPatientId(patientId: string): Promise<FichaClinica | null> {
-    const row = this.db.connection
-      .prepare('SELECT * FROM clinical_records WHERE patient_id = ?')
-      .get(patientId) as unknown as ClinicalRecordRow | undefined;
+    if (!isUuid(patientId)) {
+      return null;
+    }
 
-    return row === undefined ? null : this.toDomainRecord(row);
+    const row = await this.db.queryOne<ClinicalRecordRow>(
+      'SELECT * FROM clinical_records WHERE patient_id = $1',
+      [patientId],
+    );
+
+    return row === null ? null : this.toDomainRecord(row);
   }
 
   async saveFinding(finding: Finding): Promise<void> {
-    this.db.connection
-      .prepare(
-        `INSERT INTO clinical_findings (
-           id, record_id, tooth, surfaces, symbol, state,
-           recesion, movilidad, note, created_by, created_at,
-           voided_at, voided_by
-         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      )
-      .run(
+    await this.db.execute(
+      `INSERT INTO clinical_findings (
+         id, record_id, tooth, surfaces, symbol, state,
+         recesion, movilidad, note, created_by, created_at,
+         voided_at, voided_by
+       ) VALUES ($1, $2, $3, $4::jsonb, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+      [
         finding.id,
         finding.recordId,
         finding.tooth,
@@ -195,64 +197,71 @@ export class SqliteClinicalRecordRepository extends ClinicalRecordRepositoryPort
         finding.movilidad,
         finding.note,
         finding.createdBy,
-        finding.createdAt.toISOString(),
-        finding.voidedAt?.toISOString() ?? null,
+        finding.createdAt,
+        finding.voidedAt,
         finding.voidedBy,
-      );
+      ],
+    );
   }
 
   async updateFinding(finding: Finding): Promise<void> {
-    const result = this.db.connection
-      .prepare(
-        `UPDATE clinical_findings SET
-           surfaces = ?, symbol = ?, state = ?,
-           recesion = ?, movilidad = ?, note = ?,
-           voided_at = ?, voided_by = ?
-         WHERE id = ?`,
-      )
-      .run(
+    const changed = await this.db.execute(
+      `UPDATE clinical_findings SET
+         surfaces = $1::jsonb, symbol = $2, state = $3,
+         recesion = $4, movilidad = $5, note = $6,
+         voided_at = $7, voided_by = $8
+       WHERE id = $9`,
+      [
         JSON.stringify(finding.surfaces),
         finding.symbol,
         finding.state,
         finding.recesion,
         finding.movilidad,
         finding.note,
-        finding.voidedAt?.toISOString() ?? null,
+        finding.voidedAt,
         finding.voidedBy,
         finding.id,
-      );
+      ],
+    );
 
-    if (result.changes === 0) {
+    if (changed === 0) {
       throw new ClinicalFindingNotFoundError(finding.id);
     }
   }
 
   async findFinding(id: string): Promise<Finding | null> {
-    const row = this.db.connection
-      .prepare('SELECT * FROM clinical_findings WHERE id = ?')
-      .get(id) as unknown as FindingRow | undefined;
+    if (!isUuid(id)) {
+      return null;
+    }
 
-    return row === undefined ? null : toDomainFinding(row);
+    const row = await this.db.queryOne<FindingRow>(
+      'SELECT * FROM clinical_findings WHERE id = $1',
+      [id],
+    );
+
+    return row === null ? null : toDomainFinding(row);
   }
 
   async listFindings(recordId: string): Promise<Finding[]> {
-    // `rowid` keeps insertion order even when two findings share a millisecond.
-    const rows = this.db.connection
-      .prepare('SELECT * FROM clinical_findings WHERE record_id = ? ORDER BY rowid ASC')
-      .all(recordId) as unknown as FindingRow[];
+    if (!isUuid(recordId)) {
+      return [];
+    }
+
+    const rows = await this.db.query<FindingRow>(
+      'SELECT * FROM clinical_findings WHERE record_id = $1 ORDER BY created_at ASC, id ASC',
+      [recordId],
+    );
 
     return rows.map((row) => toDomainFinding(row));
   }
 
   async appendEvent(event: ClinicalEvent): Promise<void> {
-    this.db.connection
-      .prepare(
-        `INSERT INTO clinical_events (
-           id, patient_id, record_id, actor_id,
-           action, summary, payload, created_at
-         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      )
-      .run(
+    await this.db.execute(
+      `INSERT INTO clinical_events (
+         id, patient_id, record_id, actor_id,
+         action, summary, payload, created_at
+       ) VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8)`,
+      [
         event.id,
         event.patientId,
         event.recordId,
@@ -260,27 +269,35 @@ export class SqliteClinicalRecordRepository extends ClinicalRecordRepositoryPort
         event.action,
         event.summary,
         event.payload === null ? null : JSON.stringify(event.payload),
-        event.createdAt.toISOString(),
-      );
+        event.createdAt,
+      ],
+    );
   }
 
   async listEvents(recordId: string): Promise<ClinicalEvent[]> {
-    const rows = this.db.connection
-      .prepare('SELECT * FROM clinical_events WHERE record_id = ? ORDER BY rowid DESC')
-      .all(recordId) as unknown as ClinicalEventRow[];
+    if (!isUuid(recordId)) {
+      return [];
+    }
 
-    return rows.map((row) => ClinicalEvent.reconstitute(
-      {
-        patientId: row.patient_id,
-        recordId: row.record_id,
-        actorId: row.actor_id,
-        action: row.action as ClinicalEventAction,
-        summary: row.summary,
-        payload: row.payload === null ? null : (JSON.parse(row.payload) as Record<string, unknown>),
-        createdAt: new Date(row.created_at),
-      },
-      row.id,
-    ));
+    const rows = await this.db.query<ClinicalEventRow>(
+      'SELECT * FROM clinical_events WHERE record_id = $1 ORDER BY created_at DESC, id DESC',
+      [recordId],
+    );
+
+    return rows.map((row) =>
+      ClinicalEvent.reconstitute(
+        {
+          patientId: row.patient_id,
+          recordId: row.record_id,
+          actorId: row.actor_id,
+          action: row.action as ClinicalEventAction,
+          summary: row.summary,
+          payload: row.payload,
+          createdAt: new Date(row.created_at),
+        },
+        row.id,
+      ),
+    );
   }
 
   private toDomainRecord(row: ClinicalRecordRow): FichaClinica {
@@ -288,22 +305,20 @@ export class SqliteClinicalRecordRepository extends ClinicalRecordRepositoryPort
       {
         patientId: row.patient_id,
         categoria: createCategoriaEtaria(row.categoria),
-        embarazada: row.embarazada === 1,
+        embarazada: row.embarazada,
         motivoConsulta: row.motivo_consulta,
         enfermedadActual: row.enfermedad_actual,
         antecedentes: Antecedentes.create(
-          JSON.parse(row.antecedentes) as Parameters<typeof Antecedentes.create>[0],
+          row.antecedentes as Parameters<typeof Antecedentes.create>[0],
         ),
         signosVitales: SignosVitales.create(
-          JSON.parse(row.signos_vitales) as Parameters<typeof SignosVitales.create>[0],
+          row.signos_vitales as Parameters<typeof SignosVitales.create>[0],
         ),
         examenEstomatognatico: ExamenEstomatognatico.create(
-          JSON.parse(row.examen_estomatognatico) as Parameters<
-            typeof ExamenEstomatognatico.create
-          >[0],
+          row.examen_estomatognatico as Parameters<typeof ExamenEstomatognatico.create>[0],
         ),
         indicadores: IndicadoresSaludBucal.create(
-          JSON.parse(row.indicadores) as Parameters<typeof IndicadoresSaludBucal.create>[0],
+          row.indicadores as Parameters<typeof IndicadoresSaludBucal.create>[0],
         ),
         status: row.status as ClinicalRecordStatus,
         createdBy: row.created_by,
@@ -323,7 +338,7 @@ function toDomainFinding(row: FindingRow): Finding {
     {
       recordId: row.record_id,
       tooth: row.tooth,
-      surfaces: (JSON.parse(row.surfaces) as Surface[]),
+      surfaces: Array.isArray(row.surfaces) ? row.surfaces : [],
       symbol: row.symbol as FindingSymbol,
       state: row.state as FindingState,
       recesion: row.recesion,
@@ -335,13 +350,5 @@ function toDomainFinding(row: FindingRow): Finding {
       voidedBy: row.voided_by,
     },
     row.id,
-  );
-}
-
-function isUniqueViolation(error: unknown): boolean {
-  return (
-    error instanceof Error &&
-    'errcode' in error &&
-    (error as { errcode?: number }).errcode === SQLITE_CONSTRAINT_UNIQUE
   );
 }

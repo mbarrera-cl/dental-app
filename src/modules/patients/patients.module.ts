@@ -7,7 +7,7 @@ import { GetPatientByRutUseCase } from './application/use-cases/get-patient-by-r
 import { GetPatientUseCase } from './application/use-cases/get-patient.use-case.js';
 import { ListPatientsUseCase } from './application/use-cases/list-patients.use-case.js';
 import { UpdatePatientUseCase } from './application/use-cases/update-patient.use-case.js';
-import { SqlitePatientRepository } from './infrastructure/adapters/persistence/sqlite-patient.repository.js';
+import { PostgresPatientRepository } from './infrastructure/adapters/persistence/postgres-patient.repository.js';
 import { PatientNumberBootstrapService } from './infrastructure/bootstrap/patient-number-bootstrap.service.js';
 import { PatientsController } from './infrastructure/http/patients.controller.js';
 
@@ -28,7 +28,7 @@ import { PatientsController } from './infrastructure/http/patients.controller.js
     DeletePatientUseCase,
     PatientNumberBootstrapService,
     // Swap this binding for another database adapter (Postgres, MongoDB, ...).
-    { provide: PatientRepositoryPort, useClass: SqlitePatientRepository },
+    { provide: PatientRepositoryPort, useClass: PostgresPatientRepository },
   ],
   exports: [
     PatientRepositoryPort,

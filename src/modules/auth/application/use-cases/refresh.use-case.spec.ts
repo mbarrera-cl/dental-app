@@ -1,41 +1,43 @@
 import { randomUUID } from 'node:crypto';
-import { SqliteDatabase } from '../../../../shared/infrastructure/database/sqlite-database.js';
+import { PostgresDatabase } from '../../../../shared/infrastructure/database/postgres-database.js';
+import { closePostgresTestDatabase, createPostgresTestDatabase } from '../../../../../test/helpers/postgres-test-database.js';
 import { JwtService } from '../../../../shared/security/jwt.js';
 import { PasswordHasher } from '../../../../shared/security/password-hasher.js';
 import { PermissionResolver } from '../../../../shared/security/permission-resolver.js';
 import { SettingsService } from '../../../settings/application/settings.service.js';
-import { SqliteSettingsRepository } from '../../../settings/infrastructure/adapters/persistence/sqlite-settings.repository.js';
+import { PostgresSettingsRepository } from '../../../settings/infrastructure/adapters/persistence/postgres-settings.repository.js';
 import { User } from '../../../users/domain/user.entity.js';
-import { SqliteUserAccessReader } from '../../../users/infrastructure/adapters/persistence/sqlite-user-access.reader.js';
-import { SqliteUserRepository } from '../../../users/infrastructure/adapters/persistence/sqlite-user.repository.js';
+import { PostgresUserAccessReader } from '../../../users/infrastructure/adapters/persistence/postgres-user-access.reader.js';
+import { PostgresUserRepository } from '../../../users/infrastructure/adapters/persistence/postgres-user.repository.js';
 import { InvalidRefreshTokenError } from '../../domain/auth.errors.js';
-import { SqliteRefreshTokenRepository } from '../../infrastructure/adapters/persistence/sqlite-refresh-token.repository.js';
+import { PostgresRefreshTokenRepository } from '../../infrastructure/adapters/persistence/postgres-refresh-token.repository.js';
 import { SessionService, hashRefreshToken, type IssuedSession } from '../session.service.js';
 import { REFRESH_GRACE_WINDOW_MS, RefreshUseCase } from './refresh.use-case.js';
 
 describe('RefreshUseCase', () => {
-  let database: SqliteDatabase;
-  let users: SqliteUserRepository;
-  let refreshTokens: SqliteRefreshTokenRepository;
+  let database: PostgresDatabase;
+  let users: PostgresUserRepository;
+  let refreshTokens: PostgresRefreshTokenRepository;
   let session: SessionService;
   let useCase: RefreshUseCase;
   let userId: string;
 
-  const activeSessions = (): number => {
-    const row = database.connection
-      .prepare('SELECT COUNT(*) AS count FROM refresh_tokens WHERE user_id = ? AND revoked_at IS NULL')
-      .get(userId) as unknown as { count: number };
+  const activeSessions = async (): Promise<number> => {
+    const row = await database.queryOne<{ count: string | number }>(
+      'SELECT COUNT(*) AS count FROM refresh_tokens WHERE user_id = $1 AND revoked_at IS NULL',
+      [userId],
+    );
 
-    return row.count;
+    return Number(row?.count ?? 0);
   };
 
   beforeEach(async () => {
-    database = new SqliteDatabase(':memory:');
-    users = new SqliteUserRepository(database);
-    refreshTokens = new SqliteRefreshTokenRepository(database);
+    database = await createPostgresTestDatabase();
+    users = new PostgresUserRepository(database);
+    refreshTokens = new PostgresRefreshTokenRepository(database);
 
-    const settings = new SettingsService(new SqliteSettingsRepository(database));
-    const resolver = new PermissionResolver(new SqliteUserAccessReader(database));
+    const settings = new SettingsService(new PostgresSettingsRepository(database));
+    const resolver = new PermissionResolver(new PostgresUserAccessReader(database));
     session = new SessionService(new JwtService(), settings, refreshTokens, resolver);
     useCase = new RefreshUseCase(refreshTokens, users, session);
 
@@ -48,8 +50,8 @@ describe('RefreshUseCase', () => {
     await users.save(user);
   });
 
-  afterEach(() => {
-    database.onModuleDestroy();
+  afterEach(async () => {
+    await closePostgresTestDatabase(database);
   });
 
   it('rotates: revokes the presented token and issues a fresh pair', async () => {
@@ -60,10 +62,11 @@ describe('RefreshUseCase', () => {
 
     expect(rotated.session.refreshToken).not.toBe(first.refreshToken);
 
-    const row = database.connection
-      .prepare('SELECT revoked_at FROM refresh_tokens WHERE token_hash = ?')
-      .get(hashRefreshToken(first.refreshToken)) as unknown as { revoked_at: string | null };
-    expect(row.revoked_at).not.toBeNull();
+    const row = await database.queryOne<{ revoked_at: Date | null }>(
+      'SELECT revoked_at FROM refresh_tokens WHERE token_hash = $1',
+      [hashRefreshToken(first.refreshToken)],
+    );
+    expect(row?.revoked_at).not.toBeNull();
 
     // The freshly issued token keeps working.
     await expect(
@@ -85,20 +88,21 @@ describe('RefreshUseCase', () => {
     const first = await session.issueFor(user!);
 
     await useCase.execute({ refreshToken: first.refreshToken });
-    expect(activeSessions()).toBe(1);
+    await expect(activeSessions()).resolves.toBe(1);
 
     // Simulate that the rotation happened long ago.
-    database.connection
-      .prepare('UPDATE refresh_tokens SET revoked_at = ? WHERE token_hash = ?')
-      .run(
-        new Date(Date.now() - REFRESH_GRACE_WINDOW_MS - 1000).toISOString(),
+    await database.execute(
+      'UPDATE refresh_tokens SET revoked_at = $1 WHERE token_hash = $2',
+      [
+        new Date(Date.now() - REFRESH_GRACE_WINDOW_MS - 1000),
         hashRefreshToken(first.refreshToken),
-      );
+      ],
+    );
 
     await expect(useCase.execute({ refreshToken: first.refreshToken })).rejects.toThrow(
       InvalidRefreshTokenError,
     );
-    expect(activeSessions()).toBe(0);
+    await expect(activeSessions()).resolves.toBe(0);
   });
 
   it('rejects missing, unknown and expired tokens', async () => {
@@ -132,6 +136,6 @@ describe('RefreshUseCase', () => {
     await expect(useCase.execute({ refreshToken: issued.refreshToken })).rejects.toThrow(
       InvalidRefreshTokenError,
     );
-    expect(activeSessions()).toBe(0);
+    await expect(activeSessions()).resolves.toBe(0);
   });
 });

@@ -15,7 +15,7 @@ import { ListQuotesUseCase } from './application/use-cases/list-quotes.use-case.
 import { RestoreQuoteUseCase } from './application/use-cases/restore-quote.use-case.js';
 import { SanctionQuoteUseCase } from './application/use-cases/sanction-quote.use-case.js';
 import { UpdateQuoteUseCase } from './application/use-cases/update-quote.use-case.js';
-import { SqliteQuoteRepository } from './infrastructure/adapters/persistence/sqlite-quote.repository.js';
+import { PostgresQuoteRepository } from './infrastructure/adapters/persistence/postgres-quote.repository.js';
 import { QuotesController } from './infrastructure/http/quotes.controller.js';
 
 /**
@@ -39,7 +39,7 @@ import { QuotesController } from './infrastructure/http/quotes.controller.js';
     DuplicateQuoteUseCase,
     ListQuoteVersionsUseCase,
     // Swap this binding for another database adapter (Postgres, MongoDB, ...).
-    { provide: QuoteRepositoryPort, useClass: SqliteQuoteRepository },
+    { provide: QuoteRepositoryPort, useClass: PostgresQuoteRepository },
   ],
   exports: [
     CreateQuoteUseCase,

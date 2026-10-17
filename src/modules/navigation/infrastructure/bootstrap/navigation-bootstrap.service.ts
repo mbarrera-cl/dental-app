@@ -1,6 +1,6 @@
 import { Injectable, Logger, type OnApplicationBootstrap } from '@nestjs/common';
 import { MenuRepositoryPort } from '../../application/ports/menu-repository.port.js';
-import { SqliteDatabase } from '../../../../shared/infrastructure/database/sqlite-database.js';
+import { PostgresDatabase } from '../../../../shared/infrastructure/database/postgres-database.js';
 import { caroIaPermissions } from '../../../caro-ia/permissions.js';
 import { buildDefaultMenuItems } from '../../domain/default-menu.js';
 import { MenuItem } from '../../domain/menu-item.entity.js';
@@ -19,7 +19,7 @@ export class NavigationBootstrapService implements OnApplicationBootstrap {
 
   constructor(
     private readonly menu: MenuRepositoryPort,
-    private readonly database: SqliteDatabase,
+    private readonly database: PostgresDatabase,
   ) {}
 
   async onApplicationBootstrap(): Promise<void> {
@@ -30,7 +30,7 @@ export class NavigationBootstrapService implements OnApplicationBootstrap {
 
     const items = buildDefaultMenuItems();
     await this.menu.replaceAll(items);
-    this.setMarker();
+    await this.setMarker();
 
     this.logger.log(`Seeded the default menu (${items.length} entries)`);
   }
@@ -40,14 +40,14 @@ export class NavigationBootstrapService implements OnApplicationBootstrap {
    * new entry once; an administrator may still delete or reorder it later.
    */
   private async ensureCaroIaEntry(): Promise<void> {
-    if (this.hasMarker()) {
+    if (await this.hasMarker()) {
       return;
     }
 
     const items = await this.menu.findAll();
 
     if (items.some((item) => item.routeKey === 'caroIa')) {
-      this.setMarker();
+      await this.setMarker();
       return;
     }
 
@@ -61,21 +61,24 @@ export class NavigationBootstrapService implements OnApplicationBootstrap {
 
     item.setPosition(lastPosition + 1);
     await this.menu.save(item);
-    this.setMarker();
+    await this.setMarker();
     this.logger.log('Added the CaroIA entry to the existing menu');
   }
 
-  private hasMarker(): boolean {
-    return (
-      this.database.connection
-        .prepare('SELECT value FROM bootstrap_state WHERE key = ?')
-        .get(NavigationBootstrapService.CARO_IA_MARKER) !== undefined
+  private async hasMarker(): Promise<boolean> {
+    const row = await this.database.queryOne<{ value: string }>(
+      'SELECT value FROM bootstrap_state WHERE key = $1',
+      [NavigationBootstrapService.CARO_IA_MARKER],
     );
+
+    return row !== null;
   }
 
-  private setMarker(): void {
-    this.database.connection
-      .prepare('INSERT OR REPLACE INTO bootstrap_state (key, value) VALUES (?, ?)')
-      .run(NavigationBootstrapService.CARO_IA_MARKER, '1');
+  private async setMarker(): Promise<void> {
+    await this.database.execute(
+      `INSERT INTO bootstrap_state (key, value) VALUES ($1, '1')
+       ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`,
+      [NavigationBootstrapService.CARO_IA_MARKER],
+    );
   }
 }

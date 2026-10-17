@@ -9,7 +9,7 @@ import { CaroIaRepositoryPort } from './application/caro-ia.repository.port.js';
 import { CaroIaService } from './application/caro-ia.service.js';
 import { DeepSeekClient, HttpDeepSeekClient } from './application/deepseek.client.js';
 import { DeepgramClient, HttpDeepgramClient } from './application/deepgram.client.js';
-import { SqliteCaroIaRepository } from './infrastructure/adapters/persistence/sqlite-caro-ia.repository.js';
+import { PostgresCaroIaRepository } from './infrastructure/adapters/persistence/postgres-caro-ia.repository.js';
 import { CaroIaController } from './infrastructure/http/caro-ia.controller.js';
 
 /**
@@ -24,7 +24,7 @@ import { CaroIaController } from './infrastructure/http/caro-ia.controller.js';
     CaroIaService,
     CaroIaAnswerVerifier,
     CaroIaRetentionService,
-    { provide: CaroIaRepositoryPort, useClass: SqliteCaroIaRepository },
+    { provide: CaroIaRepositoryPort, useClass: PostgresCaroIaRepository },
     { provide: DeepSeekClient, useClass: HttpDeepSeekClient },
     { provide: DeepgramClient, useClass: HttpDeepgramClient },
   ],

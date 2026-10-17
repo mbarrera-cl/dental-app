@@ -6,6 +6,7 @@ export default defineConfig({
   resolve: { tsconfigPaths: true },
   test: {
     globals: true,
+    fileParallelism: false,
     root: './',
     // Backend unit specs only; the frontend has its own runner (`ng test`).
     include: ['src/**/*.spec.ts'],

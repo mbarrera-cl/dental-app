@@ -40,7 +40,7 @@ digital-signature locking UI. See [Roadmap](#roadmap).
 | ------------------ | -------------------------------------------------- |
 | Backend            | NestJS 12 (Express)                                |
 | Language           | TypeScript 6, strict, native ESM (`nodenext`)      |
-| Database           | SQLite via `node:sqlite` (built into Node 24+)     |
+| Database           | PostgreSQL 18 via `pg` (Docker locally, Railway)    |
 | Auth               | JWT (HS256) + rotating refresh cookie              |
 | Validation         | `class-validator` / `class-transformer` at the edge |
 | API docs           | Swagger / OpenAPI at `/docs`                       |
@@ -134,7 +134,7 @@ src/
    normalizes the address — then checks `UserRepositoryPort.findByEmail`.
 4. `UserAlreadyExistsError` (a `DomainError` with `kind: 'conflict'`) would be thrown
    here; the `DomainExceptionFilter` at the edge turns it into `409 Conflict`.
-5. The bound adapter (`SqliteUserRepository`) inserts the row. If the unique
+5. The bound adapter (`PostgresUserRepository`) inserts the row. If the unique
    constraint fires anyway, the adapter translates the driver error into the same
    `UserAlreadyExistsError`.
 6. The controller maps the `User` to `UserResponseDto` and returns `201`.
@@ -142,12 +142,12 @@ src/
 `POST /patients` walks the same path: the `Rut` value object validates the módulo 11
 check digit and normalizes the RUT to `12345678-5`, the `Prevision` value object
 enforces the FONASA ⇄ ISAPRE invariants, `PatientAlreadyExistsError` becomes a
-`409 Conflict`, and the SQLite adapter translates the `UNIQUE` violation on `rut` the
+`409 Conflict`, and the PostgreSQL adapter translates the `UNIQUE` violation on `rut` the
 same way.
 
 ## Getting started
 
-Requires **Node.js 24+** (native ESM and the stable `node:sqlite` module).
+Requires **Node.js 24+** and **Docker** (local PostgreSQL/pgAdmin).
 
 ```bash
 npm install
@@ -333,7 +333,8 @@ contract and what is pending.
 | `COOKIE_SAMESITE`                 | `lax`                          | Refresh cookie SameSite; cross-site prod → `none`                      |
 | `COOKIE_SECURE`                   | `true` in production           | Force `Secure` on the refresh cookie                                   |
 | `CORS_ORIGIN`                     | the dev servers `:4200`–`:4204` | Comma-separated allow-list (credentials enabled: no `*`)              |
-| `DATABASE_PATH`                   | `data/hexa.sqlite`             | SQLite file                                                            |
+| `DATABASE_URL`                    | — (required)                   | PostgreSQL connection string (`postgresql://user:pass@host:port/db`)   |
+| `DATABASE_SSL`                    | `false`                        | Set to `true` for managed PostgreSQL with self-signed TLS              |
 | `MCP_ENABLED`                     | `false`                        | Mounts the MCP Streamable HTTP endpoint at `/mcp`                      |
 | `MCP_SERVER_NAME` / `MCP_SERVER_VERSION` | `hexa-dental` / `1.0.0` | MCP metadata advertised to clients                                   |
 | `HEXA_MCP_API_KEY`                | —                              | Required by the STDIO MCP process (`npm run mcp:stdio`)                |
@@ -479,7 +480,7 @@ curl -s -X PATCH http://localhost:3000/patients/<id> \
 curl -s -X DELETE http://localhost:3000/patients/<id> -H "Authorization: Bearer $TOKEN"
 ```
 
-A full curl walkthrough (happy paths + 400/404/409 cases + a direct SQLite check)
+A full curl walkthrough (happy paths + 400/404/409 cases + a direct PostgreSQL check)
 lives in `scripts/crud-demo.sh` — run it against a live server:
 
 ```bash
@@ -539,26 +540,55 @@ curl -s http://localhost:3000/clinical-records/<recordId>/indices \
 
 ## Database
 
-- **Driver:** `node:sqlite` (built into Node — nothing to install). The single
-  connection lives in `SqliteDatabase` (`src/shared/infrastructure/database`) and is
-  provided to adapters by `DatabaseModule`.
-- **Location:** `DATABASE_PATH` env var, default `data/hexa.sqlite` (git-ignored).
-  The directory is created on first boot; WAL mode is enabled.
-- **Schema:** `SqliteDatabase.ensureSchema` creates all tables with
-  `CREATE TABLE IF NOT EXISTS` — `users`, `roles`, `user_roles`, `user_permissions`,
-  `refresh_tokens`, `password_history`, `api_keys`, `patients`,
-  `clinical_records`, `clinical_findings`, `clinical_events`, `uco_procedures`,
-  `quotes`, `quote_items`, `quote_versions`, `quote_counters`, `settings` and
-  `bootstrap_state` — replace with real migrations when the schema grows.
-- **Error translation:** SQLite's `UNIQUE constraint failed` (errcode `2067`) is
-  translated into the matching domain error *in the adapter*
-  (`UserAlreadyExistsError`, `PatientAlreadyExistsError`), so the use case and the
-  domain only speak domain errors.
+PostgreSQL is the only runtime database. SQLite is used **exclusively** by the
+one-time migration script that imports an old `data/hexa.sqlite` file; the API
+never opens it.
+
+### Local PostgreSQL and pgAdmin
+
+```bash
+cp .env.postgres.example .env.postgres
+# edit .env.postgres and set strong passwords
+npm run db:pg:up
+```
+
+- PostgreSQL: `localhost:5433`, databases `hexa` and `hexa_test`.
+- pgAdmin: <http://localhost:5050> (credentials from `.env.postgres`).
+- Data lives in the dedicated Docker volumes `hexa_pg_data` / `hexa_pgadmin_data`.
+  Unrelated volumes (for example `posgres_postgres_data`) are never touched.
+- Add `DATABASE_URL` to `.env`, using the same credentials as `.env.postgres`.
+
+```bash
+npm run db:pg:up       # start PostgreSQL + pgAdmin
+npm run db:pg:down     # stop them (volumes are preserved)
+```
+
+The schema is created idempotently by `PostgresDatabase.onModuleInit` and lives in
+`src/shared/infrastructure/database/postgres-schema.ts`. It uses native types:
+`UUID`, `TIMESTAMPTZ`, `DATE`, `JSONB`, `BOOLEAN`, `BYTEA`, `INTEGER` and
+`DOUBLE PRECISION`.
+
+### Importing a legacy SQLite database
+
+```bash
+npm run build
+npm run db:pg:migrate                  # reads data/hexa.sqlite
+SQLITE_PATH=backups/hexa.sqlite npm run db:pg:migrate
+```
+
+The script creates the schema, copies all tables in one transaction with deferred
+foreign keys, verifies row counts and writes the `migration.sqlite.completed`
+marker. It refuses to overwrite a database that already has users.
+
+- **Error translation:** PostgreSQL unique violations (`23505`) and foreign-key
+  restrict violations (`23001`) are translated into domain errors inside the
+  adapters, so use cases never depend on driver error codes.
 - **Inspect it:**
   ```bash
-  sqlite3 data/hexa.sqlite 'SELECT id, email, name FROM users;'
-  sqlite3 data/hexa.sqlite 'SELECT rut, nombres, apellido_paterno FROM patients;'
-  sqlite3 data/hexa.sqlite 'SELECT name FROM roles;'
+  docker exec -it hexa-postgres psql -U hexa -d hexa
+  # \dt
+  # SELECT id, email, name FROM users;
+  # SELECT rut, nombres, apellido_paterno FROM patients;
   ```
 
 ## Frontend — Angular 22 microfrontends
@@ -718,19 +748,26 @@ Guidelines when writing adapters:
 - **Domain & use cases** (`src/**/*.spec.ts`) — plain classes, no Nest container, no
   HTTP, no database. Fast and deterministic; the in-memory adapter doubles as a test
   double.
-- **Adapter integration** (`sqlite-user.repository.spec.ts`,
-  `sqlite-patient.repository.spec.ts`) — runs the real SQLite adapters against a
-  `:memory:` database, including error translation.
+- **Adapter integration** — auth, identity, repository and bootstrap specs run
+  against the real PostgreSQL adapters on the `hexa_test` database, including
+  error translation and JSONB round-trips.
 - **REST e2e** (`test/**/*.e2e-spec.ts` — auth, users, patients, identity,
-  API keys and the clinical record) — boots the real `AppModule` through
-  `configureApp` and swaps the `SqliteDatabase` provider for a fresh `:memory:`
-  instance per test (`overrideProvider`), so pipes, filters, routing, guards and
-  SQL are all exercised over HTTP without touching the file database. The auth
-  spec covers login → refresh rotation → replay rejection, lockout, password
-  policy and `must_change_password`; the API keys spec covers the `X-Api-Key`
-  lifecycle (create → use → rotate → revoke), scope intersection and cross-user
-  rules; the clinical spec covers the record lifecycle, the append-only
-  odontogram with void + lock (`423`) and the derived indices.
+  API keys, quotes, clinical record, CaroIA and MCP) — boots the real `AppModule`
+  through `configureApp` and overrides the `PostgresDatabase` provider with a
+  fresh schema per test, so pipes, filters, routing, guards and SQL are all
+  exercised over HTTP. Tests are serialized (`fileParallelism: false`) because
+  they share `hexa_test`; Docker must be running. The auth spec covers login →
+  refresh rotation → replay rejection, lockout, password policy and
+  `must_change_password`; the API keys spec covers the `X-Api-Key` lifecycle
+  (create → use → rotate → revoke), scope intersection and cross-user rules; the
+  clinical spec covers the record lifecycle, the append-only odontogram with void
+  + lock (`423`) and the derived indices.
+
+```bash
+npm run db:pg:up
+npm test
+npm run test:e2e
+```
 
 ## Conventions & decisions
 

@@ -7,7 +7,7 @@ import { GetUcoProcedureUseCase } from './application/use-cases/get-uco-procedur
 import { ListUcoProceduresUseCase } from './application/use-cases/list-uco-procedures.use-case.js';
 import { UpdateUcoProcedureUseCase } from './application/use-cases/update-uco-procedure.use-case.js';
 import { UcoBootstrapService } from './infrastructure/bootstrap/uco-bootstrap.service.js';
-import { SqliteUcoProcedureRepository } from './infrastructure/adapters/persistence/sqlite-uco-procedure.repository.js';
+import { PostgresUcoProcedureRepository } from './infrastructure/adapters/persistence/postgres-uco-procedure.repository.js';
 import { UcoController } from './infrastructure/http/uco.controller.js';
 
 /**
@@ -24,7 +24,7 @@ import { UcoController } from './infrastructure/http/uco.controller.js';
     DeleteUcoProcedureUseCase,
     UcoBootstrapService,
     // Swap this binding for another database adapter (Postgres, MongoDB, ...).
-    { provide: UcoProcedureRepositoryPort, useClass: SqliteUcoProcedureRepository },
+    { provide: UcoProcedureRepositoryPort, useClass: PostgresUcoProcedureRepository },
   ],
   exports: [UcoProcedureRepositoryPort, ListUcoProceduresUseCase],
 })

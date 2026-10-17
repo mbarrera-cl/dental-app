@@ -9,7 +9,7 @@ import { activityCategory } from '../../../modules/activity/permissions.js';
 import { usersCategory } from '../../../modules/users/permissions.js';
 import { allPermissionKeys, dashboardCategory } from '../../security/permissions.js';
 import { PasswordHasher } from '../../security/password-hasher.js';
-import { SqliteDatabase } from '../database/sqlite-database.js';
+import { PostgresDatabase } from '../database/postgres-database.js';
 
 export const ADMIN_EMAIL_ENV = 'ADMIN_EMAIL';
 export const ADMIN_PASSWORD_ENV = 'ADMIN_PASSWORD';
@@ -48,7 +48,7 @@ export class IdentityBootstrapService implements OnApplicationBootstrap {
   private readonly logger = new Logger(IdentityBootstrapService.name);
 
   constructor(
-    private readonly db: SqliteDatabase,
+    private readonly db: PostgresDatabase,
     private readonly users: UserRepositoryPort,
     private readonly roles: RoleRepositoryPort,
     private readonly hasher: PasswordHasher,
@@ -92,7 +92,7 @@ export class IdentityBootstrapService implements OnApplicationBootstrap {
   }
 
   private async seedDefaultRolesOnce(): Promise<void> {
-    if (this.hasState(DEFAULT_ROLES_SEEDED_MARKER)) {
+    if (await this.hasState(DEFAULT_ROLES_SEEDED_MARKER)) {
       return;
     }
 
@@ -116,7 +116,7 @@ export class IdentityBootstrapService implements OnApplicationBootstrap {
       await this.users.assignRoleToUsers(viewer.id, usersWithoutRoles);
     }
 
-    this.setState(DEFAULT_ROLES_SEEDED_MARKER);
+    await this.setState(DEFAULT_ROLES_SEEDED_MARKER);
 
     this.logger.log(
       `Seeded default roles "editor" and "viewer"` +
@@ -169,17 +169,20 @@ export class IdentityBootstrapService implements OnApplicationBootstrap {
     }
   }
 
-  private hasState(key: string): boolean {
-    const row = this.db.connection
-      .prepare('SELECT 1 AS found FROM bootstrap_state WHERE key = ?')
-      .get(key);
+  private async hasState(key: string): Promise<boolean> {
+    const row = await this.db.queryOne<{ found: number }>(
+      'SELECT 1 AS found FROM bootstrap_state WHERE key = $1',
+      [key],
+    );
 
-    return row !== undefined;
+    return row !== null;
   }
 
-  private setState(key: string): void {
-    this.db.connection
-      .prepare('INSERT OR REPLACE INTO bootstrap_state (key, value) VALUES (?, ?)')
-      .run(key, new Date().toISOString());
+  private async setState(key: string): Promise<void> {
+    await this.db.execute(
+      `INSERT INTO bootstrap_state (key, value) VALUES ($1, $2)
+       ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`,
+      [key, new Date().toISOString()],
+    );
   }
 }

@@ -9,7 +9,7 @@ import { GetBrandingUseCase } from './application/use-cases/get-branding.use-cas
 import { RemoveLogoUseCase } from './application/use-cases/remove-logo.use-case.js';
 import { UploadLogoUseCase } from './application/use-cases/upload-logo.use-case.js';
 import { SharpImageProcessor } from './infrastructure/adapters/images/sharp-image-processor.js';
-import { SqliteClinicAssetsRepository } from './infrastructure/adapters/persistence/sqlite-clinic-assets.repository.js';
+import { PostgresClinicAssetsRepository } from './infrastructure/adapters/persistence/postgres-clinic-assets.repository.js';
 import { ClinicContextInterceptor } from './infrastructure/http/clinic-context.interceptor.js';
 import { ClinicController } from './infrastructure/http/clinic.controller.js';
 
@@ -28,7 +28,7 @@ import { ClinicController } from './infrastructure/http/clinic.controller.js';
     UploadLogoUseCase,
     RemoveLogoUseCase,
     { provide: ImageProcessorPort, useClass: SharpImageProcessor },
-    { provide: ClinicAssetsRepositoryPort, useClass: SqliteClinicAssetsRepository },
+    { provide: ClinicAssetsRepositoryPort, useClass: PostgresClinicAssetsRepository },
     // Global on purpose: memoizes `req.clinic` for every request (one
     // projection per request, whatever route it is).
     { provide: APP_INTERCEPTOR, useClass: ClinicContextInterceptor },

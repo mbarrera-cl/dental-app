@@ -10,7 +10,7 @@ import { ListApiKeysUseCase } from './application/use-cases/list-api-keys.use-ca
 import { RevokeApiKeyUseCase } from './application/use-cases/revoke-api-key.use-case.js';
 import { RotateApiKeyUseCase } from './application/use-cases/rotate-api-key.use-case.js';
 import { ApiKeyAuthenticatorService } from './infrastructure/adapters/api-key-authenticator.service.js';
-import { SqliteApiKeyRepository } from './infrastructure/adapters/persistence/sqlite-api-key.repository.js';
+import { PostgresApiKeyRepository } from './infrastructure/adapters/persistence/postgres-api-key.repository.js';
 import { ApiKeysController } from './infrastructure/http/api-keys.controller.js';
 
 /**
@@ -29,7 +29,7 @@ import { ApiKeysController } from './infrastructure/http/api-keys.controller.js'
     RotateApiKeyUseCase,
     RevokeApiKeyUseCase,
     // Swap these bindings for other database adapters (Postgres, MongoDB, ...).
-    { provide: ApiKeyRepositoryPort, useClass: SqliteApiKeyRepository },
+    { provide: ApiKeyRepositoryPort, useClass: PostgresApiKeyRepository },
     { provide: ApiKeyAuthenticatorPort, useClass: ApiKeyAuthenticatorService },
   ],
   exports: [ApiKeyAuthenticatorPort],

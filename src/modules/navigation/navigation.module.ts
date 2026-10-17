@@ -8,7 +8,7 @@ import { ListMenuItemsUseCase } from './application/use-cases/list-menu-items.us
 import { ReorderMenuItemsUseCase } from './application/use-cases/reorder-menu-items.use-case.js';
 import { ResetMenuUseCase } from './application/use-cases/reset-menu.use-case.js';
 import { UpdateMenuItemUseCase } from './application/use-cases/update-menu-item.use-case.js';
-import { SqliteMenuRepository } from './infrastructure/adapters/persistence/sqlite-menu.repository.js';
+import { PostgresMenuRepository } from './infrastructure/adapters/persistence/postgres-menu.repository.js';
 import { NavigationBootstrapService } from './infrastructure/bootstrap/navigation-bootstrap.service.js';
 import { NavigationController } from './infrastructure/http/navigation.controller.js';
 
@@ -28,7 +28,7 @@ import { NavigationController } from './infrastructure/http/navigation.controlle
     ReorderMenuItemsUseCase,
     ResetMenuUseCase,
     NavigationBootstrapService,
-    { provide: MenuRepositoryPort, useClass: SqliteMenuRepository },
+    { provide: MenuRepositoryPort, useClass: PostgresMenuRepository },
   ],
 })
 export class NavigationModule {}

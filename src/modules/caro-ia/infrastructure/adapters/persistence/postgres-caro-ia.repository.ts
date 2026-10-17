@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
-import { SqliteDatabase } from '../../../../../shared/infrastructure/database/sqlite-database.js';
+import { PostgresDatabase, isUuid } from '../../../../../shared/infrastructure/database/postgres-database.js';
 import type {
   CaroApprovalRecord,
   CaroApprovalStatus,
@@ -24,9 +24,9 @@ import {
 interface ConversationRow {
   id: string;
   title: string;
-  created_at: string;
-  updated_at: string;
-  message_count: number;
+  created_at: Date;
+  updated_at: Date;
+  message_count: string | number;
   preview: string | null;
 }
 
@@ -35,9 +35,9 @@ interface MessageRow {
   conversation_id: string;
   role: string;
   content: string;
-  tool_calls: string;
-  citations: string;
-  created_at: string;
+  tool_calls: CaroToolCall[];
+  citations: CaroCitation[];
+  created_at: Date;
 }
 
 interface ApprovalRow {
@@ -47,13 +47,13 @@ interface ApprovalRow {
   tool: string;
   title: string;
   summary: string;
-  parameters: string;
-  arguments: string;
+  parameters: Array<{ label: string; value: string }>;
+  arguments: Record<string, unknown>;
   status: string;
-  expires_at: string;
-  decided_at: string | null;
+  expires_at: Date;
+  decided_at: Date | null;
   decided_by: string | null;
-  created_at: string;
+  created_at: Date;
 }
 
 const CONVERSATION_COLUMNS = `
@@ -61,39 +61,40 @@ const CONVERSATION_COLUMNS = `
   (SELECT COUNT(*) FROM caro_messages m WHERE m.conversation_id = c.id) AS message_count,
   (SELECT m.content FROM caro_messages m
     WHERE m.conversation_id = c.id
-    ORDER BY m.created_at DESC, m.rowid DESC LIMIT 1) AS preview
+    ORDER BY m.created_at DESC, m.id DESC LIMIT 1) AS preview
 `;
 
-/** SQLite adapter for CaroIA conversations, messages and approvals. */
 @Injectable()
-export class SqliteCaroIaRepository extends CaroIaRepositoryPort {
-  constructor(private readonly database: SqliteDatabase) {
+export class PostgresCaroIaRepository extends CaroIaRepositoryPort {
+  constructor(private readonly db: PostgresDatabase) {
     super();
   }
 
   async listConversations(userId: string): Promise<CaroConversation[]> {
-    const rows = this.database.connection
-      .prepare(
-        `SELECT ${CONVERSATION_COLUMNS}
-         FROM caro_conversations c
-         WHERE c.user_id = ? AND c.deleted_at IS NULL
-         ORDER BY c.updated_at DESC, c.created_at DESC`,
-      )
-      .all(userId) as unknown as ConversationRow[];
+    const rows = await this.db.query<ConversationRow>(
+      `SELECT ${CONVERSATION_COLUMNS}
+       FROM caro_conversations c
+       WHERE c.user_id = $1 AND c.deleted_at IS NULL
+       ORDER BY c.updated_at DESC, c.created_at DESC`,
+      [userId],
+    );
 
     return rows.map(toConversation);
   }
 
   async findConversation(userId: string, id: string): Promise<CaroConversation | null> {
-    const row = this.database.connection
-      .prepare(
-        `SELECT ${CONVERSATION_COLUMNS}
-         FROM caro_conversations c
-         WHERE c.id = ? AND c.user_id = ? AND c.deleted_at IS NULL`,
-      )
-      .get(id, userId) as unknown as ConversationRow | undefined;
+    if (!isUuid(id)) {
+      return null;
+    }
 
-    return row === undefined ? null : toConversation(row);
+    const row = await this.db.queryOne<ConversationRow>(
+      `SELECT ${CONVERSATION_COLUMNS}
+       FROM caro_conversations c
+       WHERE c.id = $1 AND c.user_id = $2 AND c.deleted_at IS NULL`,
+      [id, userId],
+    );
+
+    return row === null ? null : toConversation(row);
   }
 
   async getDetail(userId: string, id: string): Promise<CaroConversationDetail | null> {
@@ -108,14 +109,13 @@ export class SqliteCaroIaRepository extends CaroIaRepositoryPort {
 
   async createConversation(userId: string, title: string): Promise<CaroConversation> {
     const id = randomUUID();
-    const now = new Date().toISOString();
+    const now = new Date();
 
-    this.database.connection
-      .prepare(
-        `INSERT INTO caro_conversations (id, user_id, title, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?)`,
-      )
-      .run(id, userId, title, now, now);
+    await this.db.execute(
+      `INSERT INTO caro_conversations (id, user_id, title, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $4)`,
+      [id, userId, title, now],
+    );
 
     const conversation = await this.findConversation(userId, id);
 
@@ -137,13 +137,12 @@ export class SqliteCaroIaRepository extends CaroIaRepositoryPort {
       return null;
     }
 
-    this.database.connection
-      .prepare(
-        `UPDATE caro_conversations
-         SET title = ?, updated_at = ?
-         WHERE id = ? AND user_id = ? AND deleted_at IS NULL`,
-      )
-      .run(title, new Date().toISOString(), id, userId);
+    await this.db.execute(
+      `UPDATE caro_conversations
+       SET title = $1, updated_at = NOW()
+       WHERE id = $2 AND user_id = $3 AND deleted_at IS NULL`,
+      [title, id, userId],
+    );
 
     return this.findConversation(userId, id);
   }
@@ -155,28 +154,30 @@ export class SqliteCaroIaRepository extends CaroIaRepositoryPort {
       return false;
     }
 
-    this.database.connection
-      .prepare(
-        `UPDATE caro_conversations
-         SET deleted_at = ?, updated_at = ?
-         WHERE id = ? AND user_id = ? AND deleted_at IS NULL`,
-      )
-      .run(new Date().toISOString(), new Date().toISOString(), id, userId);
+    await this.db.execute(
+      `UPDATE caro_conversations
+       SET deleted_at = NOW(), updated_at = NOW()
+       WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL`,
+      [id, userId],
+    );
 
     return true;
   }
 
   async listMessages(conversationId: string): Promise<CaroMessage[]> {
-    const rows = this.database.connection
-      .prepare(
-        `SELECT id, conversation_id, role, content, tool_calls, citations, created_at
-         FROM caro_messages
-         WHERE conversation_id = ?
-         ORDER BY created_at ASC, rowid ASC`,
-      )
-      .all(conversationId) as unknown as MessageRow[];
+    if (!isUuid(conversationId)) {
+      return [];
+    }
 
-    const approvals = this.approvalsFor(conversationId);
+    const rows = await this.db.query<MessageRow>(
+      `SELECT id, conversation_id, role, content, tool_calls, citations, created_at
+       FROM caro_messages
+       WHERE conversation_id = $1
+       ORDER BY created_at ASC, id ASC`,
+      [conversationId],
+    );
+
+    const approvals = await this.approvalsFor(conversationId);
     const byMessage = new Map<string, CaroPendingApproval[]>();
 
     for (const approval of approvals) {
@@ -190,15 +191,13 @@ export class SqliteCaroIaRepository extends CaroIaRepositoryPort {
 
   async insertMessage(input: CreateMessageInput): Promise<CaroMessage> {
     const id = randomUUID();
-    const createdAt = input.createdAt ?? new Date().toISOString();
+    const createdAt = input.createdAt === undefined ? new Date() : new Date(input.createdAt);
 
-    this.database.connection
-      .prepare(
-        `INSERT INTO caro_messages
-          (id, conversation_id, role, content, tool_calls, citations, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      )
-      .run(
+    await this.db.execute(
+      `INSERT INTO caro_messages
+        (id, conversation_id, role, content, tool_calls, citations, created_at)
+       VALUES ($1, $2, $3, $4, $5::jsonb, $6::jsonb, $7)`,
+      [
         id,
         input.conversationId,
         input.role,
@@ -206,13 +205,14 @@ export class SqliteCaroIaRepository extends CaroIaRepositoryPort {
         JSON.stringify(input.toolCalls ?? []),
         JSON.stringify(input.citations ?? []),
         createdAt,
-      );
+      ],
+    );
 
     return {
       id,
       role: input.role,
       content: input.content,
-      createdAt,
+      createdAt: createdAt.toISOString(),
       attachments: [],
       toolCalls: input.toolCalls ?? [],
       approvals: [],
@@ -221,30 +221,28 @@ export class SqliteCaroIaRepository extends CaroIaRepositoryPort {
   }
 
   async touchConversation(conversationId: string, updatedAt: string): Promise<void> {
-    this.database.connection
-      .prepare('UPDATE caro_conversations SET updated_at = ? WHERE id = ?')
-      .run(updatedAt, conversationId);
+    await this.db.execute('UPDATE caro_conversations SET updated_at = $1 WHERE id = $2', [
+      new Date(updatedAt),
+      conversationId,
+    ]);
   }
 
   async setTitleIfDefault(conversationId: string, title: string): Promise<void> {
-    this.database.connection
-      .prepare(
-        `UPDATE caro_conversations
-         SET title = ?, updated_at = ?
-         WHERE id = ? AND title = ? AND deleted_at IS NULL`,
-      )
-      .run(title, new Date().toISOString(), conversationId, DEFAULT_CONVERSATION_TITLE);
+    await this.db.execute(
+      `UPDATE caro_conversations
+       SET title = $1, updated_at = NOW()
+       WHERE id = $2 AND title = $3 AND deleted_at IS NULL`,
+      [title, conversationId, DEFAULT_CONVERSATION_TITLE],
+    );
   }
 
   async createApproval(input: CreateApprovalInput): Promise<void> {
-    this.database.connection
-      .prepare(
-        `INSERT INTO caro_approvals
-          (id, conversation_id, message_id, tool, title, summary, parameters, arguments,
-           status, expires_at, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      )
-      .run(
+    await this.db.execute(
+      `INSERT INTO caro_approvals
+        (id, conversation_id, message_id, tool, title, summary, parameters, arguments,
+         status, expires_at, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8::jsonb, $9, $10, $11)`,
+      [
         input.approval.id,
         input.conversationId,
         input.messageId,
@@ -254,9 +252,10 @@ export class SqliteCaroIaRepository extends CaroIaRepositoryPort {
         JSON.stringify(input.approval.parameters),
         JSON.stringify(input.arguments),
         input.approval.status,
-        input.approval.expiresAt,
-        input.createdAt,
-      );
+        new Date(input.approval.expiresAt),
+        new Date(input.createdAt),
+      ],
+    );
   }
 
   async findApproval(
@@ -264,16 +263,19 @@ export class SqliteCaroIaRepository extends CaroIaRepositoryPort {
     conversationId: string,
     approvalId: string,
   ): Promise<CaroApprovalRecord | null> {
-    const row = this.database.connection
-      .prepare(
-        `SELECT a.* FROM caro_approvals a
-         JOIN caro_conversations c ON c.id = a.conversation_id
-         WHERE a.id = ? AND a.conversation_id = ?
-           AND c.user_id = ? AND c.deleted_at IS NULL`,
-      )
-      .get(approvalId, conversationId, userId) as unknown as ApprovalRow | undefined;
+    if (!isUuid(approvalId) || !isUuid(conversationId)) {
+      return null;
+    }
 
-    return row === undefined ? null : toApprovalRecord(row);
+    const row = await this.db.queryOne<ApprovalRow>(
+      `SELECT a.* FROM caro_approvals a
+       JOIN caro_conversations c ON c.id = a.conversation_id
+       WHERE a.id = $1 AND a.conversation_id = $2
+         AND c.user_id = $3 AND c.deleted_at IS NULL`,
+      [approvalId, conversationId, userId],
+    );
+
+    return row === null ? null : toApprovalRecord(row);
   }
 
   async decideApproval(
@@ -282,43 +284,38 @@ export class SqliteCaroIaRepository extends CaroIaRepositoryPort {
     decidedBy: string,
     decidedAt: string,
   ): Promise<boolean> {
-    const result = this.database.connection
-      .prepare(
-        `UPDATE caro_approvals
-         SET status = ?, decided_by = ?, decided_at = ?
-         WHERE id = ? AND status = 'pending'`,
-      )
-      .run(status, decidedBy, decidedAt, approvalId);
+    const changed = await this.db.execute(
+      `UPDATE caro_approvals
+       SET status = $1, decided_by = $2, decided_at = $3
+       WHERE id = $4 AND status = 'pending'`,
+      [status, decidedBy, new Date(decidedAt), approvalId],
+    );
 
-    return Number(result.changes) > 0;
+    return changed > 0;
   }
 
   async expireApproval(approvalId: string): Promise<void> {
-    this.database.connection
-      .prepare(
-        `UPDATE caro_approvals
-         SET status = 'expired', decided_at = ?
-         WHERE id = ? AND status = 'pending'`,
-      )
-      .run(new Date().toISOString(), approvalId);
+    await this.db.execute(
+      `UPDATE caro_approvals
+       SET status = 'expired', decided_at = NOW()
+       WHERE id = $1 AND status = 'pending'`,
+      [approvalId],
+    );
   }
 
   async purgeOlderThan(cutoff: string): Promise<number> {
-    const result = this.database.connection
-      .prepare('DELETE FROM caro_conversations WHERE updated_at < ?')
-      .run(cutoff);
-
-    return Number(result.changes);
+    return this.db.execute('DELETE FROM caro_conversations WHERE updated_at < $1', [
+      new Date(cutoff),
+    ]);
   }
 
-  private approvalsFor(conversationId: string): CaroApprovalRecord[] {
-    const rows = this.database.connection
-      .prepare(
-        `SELECT * FROM caro_approvals
-         WHERE conversation_id = ?
-         ORDER BY created_at ASC, rowid ASC`,
-      )
-      .all(conversationId) as unknown as ApprovalRow[];
+  private async approvalsFor(conversationId: string): Promise<CaroApprovalRecord[]> {
+    const rows = await this.db.query<ApprovalRow>(
+      `SELECT * FROM caro_approvals
+       WHERE conversation_id = $1
+       ORDER BY created_at ASC, id ASC`,
+      [conversationId],
+    );
 
     return rows.map(toApprovalRecord);
   }
@@ -329,8 +326,8 @@ function toConversation(row: ConversationRow): CaroConversation {
     id: row.id,
     title: row.title,
     preview: row.preview === null ? null : previewOf(row.preview),
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
+    createdAt: row.created_at.toISOString(),
+    updatedAt: row.updated_at.toISOString(),
     messageCount: Number(row.message_count),
   };
 }
@@ -340,11 +337,11 @@ function toMessage(row: MessageRow, approvals: CaroPendingApproval[]): CaroMessa
     id: row.id,
     role: row.role === 'user' ? 'user' : 'assistant',
     content: row.content,
-    createdAt: row.created_at,
+    createdAt: row.created_at.toISOString(),
     attachments: [],
-    toolCalls: parseJson<CaroToolCall[]>(row.tool_calls, []),
+    toolCalls: Array.isArray(row.tool_calls) ? row.tool_calls : [],
     approvals,
-    citations: parseJson<CaroCitation[]>(row.citations, []),
+    citations: Array.isArray(row.citations) ? row.citations : [],
   };
 }
 
@@ -368,20 +365,12 @@ function toApprovalRecord(row: ApprovalRow): CaroApprovalRecord {
     tool: row.tool,
     title: row.title,
     summary: row.summary,
-    parameters: parseJson<Array<{ label: string; value: string }>>(row.parameters, []),
-    arguments: parseJson<Record<string, unknown>>(row.arguments, {}),
+    parameters: Array.isArray(row.parameters) ? row.parameters : [],
+    arguments: row.arguments && typeof row.arguments === 'object' ? row.arguments : {},
     status: row.status as CaroApprovalStatus,
-    expiresAt: row.expires_at,
-    decidedAt: row.decided_at,
+    expiresAt: row.expires_at.toISOString(),
+    decidedAt: row.decided_at === null ? null : row.decided_at.toISOString(),
     decidedBy: row.decided_by,
-    createdAt: row.created_at,
+    createdAt: row.created_at.toISOString(),
   };
-}
-
-function parseJson<T>(value: string, fallback: T): T {
-  try {
-    return JSON.parse(value) as T;
-  } catch {
-    return fallback;
-  }
 }

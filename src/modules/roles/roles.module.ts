@@ -6,7 +6,7 @@ import { DeleteRoleUseCase } from './application/use-cases/delete-role.use-case.
 import { GetRoleUseCase } from './application/use-cases/get-role.use-case.js';
 import { ListRolesUseCase } from './application/use-cases/list-roles.use-case.js';
 import { UpdateRoleUseCase } from './application/use-cases/update-role.use-case.js';
-import { SqliteRoleRepository } from './infrastructure/adapters/persistence/sqlite-role.repository.js';
+import { PostgresRoleRepository } from './infrastructure/adapters/persistence/postgres-role.repository.js';
 import { PermissionsController } from './infrastructure/http/permissions.controller.js';
 import { RolesController } from './infrastructure/http/roles.controller.js';
 
@@ -23,7 +23,7 @@ import { RolesController } from './infrastructure/http/roles.controller.js';
     ListRolesUseCase,
     UpdateRoleUseCase,
     DeleteRoleUseCase,
-    { provide: RoleRepositoryPort, useClass: SqliteRoleRepository },
+    { provide: RoleRepositoryPort, useClass: PostgresRoleRepository },
   ],
   exports: [RoleRepositoryPort],
 })
