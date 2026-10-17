@@ -133,28 +133,30 @@
             </p>
           } @else {
             <div class="hidden overflow-x-auto md:block">
-              <table class="w-full text-sm">
+              <table class="w-full table-fixed text-sm">
                 <thead class="text-muted-foreground border-b text-left text-xs uppercase tracking-wide">
                   <tr>
-                    <th class="px-4 py-3 font-medium">{{ 'caroIa.table.conversation' | transloco }}</th>
-                    <th class="px-4 py-3 font-medium">{{ 'caroIa.table.preview' | transloco }}</th>
-                    <th class="px-4 py-3 font-medium">{{ 'caroIa.table.updated' | transloco }}</th>
-                    <th class="px-4 py-3 text-end font-medium">{{ 'caroIa.table.messages' | transloco }}</th>
-                    <th class="px-4 py-3 text-end font-medium">{{ 'caroIa.table.actions' | transloco }}</th>
+                    <th class="w-[30%] px-4 py-3 font-medium">{{ 'caroIa.table.conversation' | transloco }}</th>
+                    <th class="w-[38%] px-4 py-3 font-medium">{{ 'caroIa.table.preview' | transloco }}</th>
+                    <th class="w-[14%] px-4 py-3 font-medium">{{ 'caroIa.table.updated' | transloco }}</th>
+                    <th class="w-[8%] px-4 py-3 text-end font-medium">{{ 'caroIa.table.messages' | transloco }}</th>
+                    <th class="w-[10%] px-4 py-3 text-end font-medium">{{ 'caroIa.table.actions' | transloco }}</th>
                   </tr>
                 </thead>
                 <tbody class="divide-y">
                   @for (conversation of filteredConversations(); track conversation.id) {
                     <tr class="hover:bg-muted/40">
-                      <td class="max-w-56 px-4 py-3">
-                        <button type="button" class="truncate text-start font-medium hover:underline" (click)="selectConversation(conversation.id)">
+                      <td class="w-[30%] px-4 py-3">
+                        <button type="button" class="block w-full truncate text-start font-medium hover:underline" (click)="selectConversation(conversation.id)">
                           {{ conversation.title }}
                         </button>
                       </td>
-                      <td class="text-muted-foreground max-w-72 truncate px-4 py-3">{{ conversation.preview ?? '—' }}</td>
-                      <td class="text-muted-foreground whitespace-nowrap px-4 py-3">{{ relative(conversation.updatedAt) }}</td>
-                      <td class="px-4 py-3 text-end tabular-nums">{{ conversation.messageCount }}</td>
-                      <td class="px-4 py-3">
+                      <td class="text-muted-foreground w-[38%] px-4 py-3">
+                        <span class="block truncate">{{ conversation.preview ?? '—' }}</span>
+                      </td>
+                      <td class="text-muted-foreground w-[14%] whitespace-nowrap px-4 py-3">{{ relative(conversation.updatedAt) }}</td>
+                      <td class="w-[8%] px-4 py-3 text-end tabular-nums">{{ conversation.messageCount }}</td>
+                      <td class="w-[10%] px-4 py-3">
                         <div class="flex items-center justify-end gap-1">
                           <button hlmBtn variant="ghost" size="icon-sm" type="button" [attr.aria-label]="'caroIa.table.open' | transloco" (click)="selectConversation(conversation.id)">
                             <ng-icon name="lucideMessageSquare" />

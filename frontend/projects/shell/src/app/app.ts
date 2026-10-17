@@ -1,8 +1,10 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import { RouterLink, RouterOutlet } from '@angular/router';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { lucideHexagon, lucideMenu, lucideSparkles, lucideX } from '@ng-icons/lucide';
 import { TranslocoPipe } from '@jsverse/transloco';
+import { filter, map, startWith } from 'rxjs';
 import { HlmButton } from '@ui/button';
 import { HlmToaster } from '@ui/sonner';
 import { PERMISSION_KEYS, SessionStore } from 'auth';
@@ -40,7 +42,18 @@ export class App {
   protected readonly navigation = inject(NavigationStore);
   protected readonly branding = inject(BrandingStore);
   protected readonly keys = PERMISSION_KEYS;
+  private readonly router = inject(Router);
   private readonly onboardingDismissed = signal(readOnboardingDismissed());
+
+  /** CaroIA usa todo el ancho disponible; el resto de páginas conserva max-w-5xl. */
+  protected readonly isCaroIa = toSignal(
+    this.router.events.pipe(
+      filter((event): event is NavigationEnd => event instanceof NavigationEnd),
+      map((event) => event.urlAfterRedirects.startsWith('/caro-ia')),
+      startWith(this.router.url.startsWith('/caro-ia')),
+    ),
+    { initialValue: this.router.url.startsWith('/caro-ia') },
+  );
 
   /**
    * Shown to users who can edit settings while the branding is untouched:
