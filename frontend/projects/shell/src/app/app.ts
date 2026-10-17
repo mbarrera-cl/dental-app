@@ -6,6 +6,7 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { HlmButton } from '@ui/button';
 import { HlmToaster } from '@ui/sonner';
 import { SessionStore } from 'auth';
+import { BrandingStore } from './branding/branding-store';
 import { LanguageSwitcher } from './language-switcher';
 import { NavigationStore } from './navigation/navigation-store';
 import { Sidebar } from './navigation/sidebar';
@@ -14,7 +15,8 @@ import { UserMenu } from './user-menu';
 /**
  * Shell chrome: brand header (language + user menu) around the configurable
  * sidebar and the routed remote. The navigation links live in the database —
- * see `Sidebar` — so this component only toggles the mobile drawer.
+ * see `Sidebar` — so this component only toggles the mobile drawer. The
+ * clinic branding (logo, name, slogan) comes from `BrandingStore`.
  */
 @Component({
   selector: 'app-root',
@@ -27,4 +29,5 @@ import { UserMenu } from './user-menu';
 export class App {
   protected readonly store = inject(SessionStore);
   protected readonly navigation = inject(NavigationStore);
+  protected readonly branding = inject(BrandingStore);
 }

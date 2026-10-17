@@ -1,9 +1,19 @@
 <section class="mx-auto flex w-full max-w-sm flex-col gap-6 py-10">
   <header class="flex flex-col items-center gap-2 text-center">
-    <span class="bg-primary text-primary-foreground flex size-10 items-center justify-center rounded-lg">
-      <ng-icon name="lucideHexagon" class="text-xl" />
-    </span>
-    <h2 class="text-2xl font-semibold tracking-tight">{{ 'login.title' | transloco }}</h2>
+    @if (branding.logoUrl(); as logo) {
+      <img [src]="logo" alt="" data-testid="login-logo" class="h-12 w-auto max-w-40 object-contain" />
+    } @else {
+      <span class="bg-primary text-primary-foreground flex size-10 items-center justify-center rounded-lg">
+        <ng-icon name="lucideHexagon" class="text-xl" />
+      </span>
+    }
+    <h2 class="text-2xl font-semibold tracking-tight">
+      @if (branding.name(); as name) {
+        {{ name }}
+      } @else {
+        {{ 'login.title' | transloco }}
+      }
+    </h2>
     <p class="text-muted-foreground text-sm">{{ 'login.subtitle' | transloco }}</p>
   </header>
 

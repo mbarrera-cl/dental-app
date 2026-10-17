@@ -8,6 +8,7 @@ import {
 import { provideRouter } from '@angular/router';
 import { authInterceptor, SessionStore } from 'auth';
 import { provideAppTransloco, provideSpartanHlm } from 'ui';
+import { BrandingStore } from './branding/branding-store';
 import { NavigationStore } from './navigation/navigation-store';
 import { routes } from './app.routes';
 
@@ -19,6 +20,10 @@ export const appConfig: ApplicationConfig = {
     // Silent sign-in on reload: with a valid refresh cookie the session is
     // restored before the first route resolves, so there is no login flash.
     provideAppInitializer(() => inject(SessionStore).bootstrap()),
+    // Branding paints synchronously from its localStorage cache when the
+    // store is first injected; this only revalidates it with the stored ETag
+    // (304 ⇒ no repaint). It is a public endpoint, so it needs no session.
+    provideAppInitializer(() => inject(BrandingStore).refresh()),
     // Initializers run in order, so the session is already settled: the
     // sidebar loads its tree once (login/logout transitions reload it later).
     provideAppInitializer(() => inject(NavigationStore).init()),
