@@ -1,5 +1,8 @@
 {
   "componentsPath": "projects/ui/src/lib",
   "style": "vega",
-  "importAlias": "@ui"
+  "importAlias": "@ui",
+  "promptKit": {
+    "componentsPath": "projects/ui/src/lib/prompt-kit"
+  }
 }

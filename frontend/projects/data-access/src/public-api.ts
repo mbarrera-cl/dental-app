@@ -24,6 +24,8 @@ export * from './lib/activity.model';
 export * from './lib/activity-api';
 export * from './lib/navigation.model';
 export * from './lib/navigation-api';
+export * from './lib/caro-ia.model';
+export * from './lib/caro-ia.gateway';
 export * from './lib/branding.model';
 export * from './lib/branding-api';
 export * from './lib/uco.model';

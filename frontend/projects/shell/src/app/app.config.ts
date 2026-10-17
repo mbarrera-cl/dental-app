@@ -7,8 +7,10 @@ import {
 } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { authInterceptor, SessionStore } from 'auth';
+import { CaroIaGateway } from 'data-access';
 import { provideAppTransloco, provideSpartanHlm } from 'ui';
 import { BrandingStore } from './branding/branding-store';
+import { CaroIaMockGateway } from './caro-ia/caro-ia.mock';
 import { NavigationStore } from './navigation/navigation-store';
 import { routes } from './app.routes';
 
@@ -31,5 +33,7 @@ export const appConfig: ApplicationConfig = {
     // language picked in the shell re-renders the remotes as well.
     provideAppTransloco(),
     provideSpartanHlm(),
+    // Rama UI: gateway simulado. La rama backend lo cambia por CaroIaHttpGateway.
+    { provide: CaroIaGateway, useClass: CaroIaMockGateway },
   ],
 };

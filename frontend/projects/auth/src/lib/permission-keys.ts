@@ -22,6 +22,9 @@ export const PERMISSION_KEYS = {
     read: 'settings:read',
     update: 'settings:update',
   },
+  caroIa: {
+    use: 'caroIa:use',
+  },
   activity: {
     read: 'activity:read',
     readAll: 'activity:read-all',

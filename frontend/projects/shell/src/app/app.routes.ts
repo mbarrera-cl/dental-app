@@ -32,6 +32,13 @@ export const routes: Routes = [
     loadComponent: () => import('./activity/activity-page').then((m) => m.ActivityPage),
   },
   {
+    // Rama UI: vista previa con datos simulados. La rama backend añade el
+    // permissionGuard con caroIa:use.
+    path: 'caro-ia',
+    canMatch: [authGuard],
+    loadComponent: () => import('./caro-ia/caro-ia-page').then((m) => m.CaroIaPage),
+  },
+  {
     path: 'settings/menu',
     canMatch: [authGuard, permissionGuard({ allOf: [PERMISSION_KEYS.settings.read] })],
     loadComponent: () => import('./settings/menu/menu-page').then((m) => m.MenuPage),

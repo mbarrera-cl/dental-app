@@ -12,22 +12,66 @@
     "target": "ES2022",
     "module": "preserve",
     "paths": {
-      "data-access": ["./projects/data-access/src/public-api.ts"],
-      "auth": ["./projects/auth/src/public-api.ts"],
-      "ui": ["./projects/ui/src/public-api.ts"],
-      "@ui/button": ["./projects/ui/src/lib/button/src/index.ts"],
-      "@ui/utils": ["./projects/ui/src/lib/utils/src/index.ts"],
-      "@ui/input": ["./projects/ui/src/lib/input/src/index.ts"],
-      "@ui/label": ["./projects/ui/src/lib/label/src/index.ts"],
-      "@ui/dialog": ["./projects/ui/src/lib/dialog/src/index.ts"],
-      "@ui/alert-dialog": ["./projects/ui/src/lib/alert-dialog/src/index.ts"],
-      "@ui/table": ["./projects/ui/src/lib/table/src/index.ts"],
-      "@ui/badge": ["./projects/ui/src/lib/badge/src/index.ts"],
-      "@ui/skeleton": ["./projects/ui/src/lib/skeleton/src/index.ts"],
-      "@ui/spinner": ["./projects/ui/src/lib/spinner/src/index.ts"],
-      "@ui/sonner": ["./projects/ui/src/lib/sonner/src/index.ts"],
-      "@ui/card": ["./projects/ui/src/lib/card/src/index.ts"],
-      "@ui/combobox": ["./projects/ui/src/lib/combobox/src/index.ts"]
+      "data-access": [
+        "./projects/data-access/src/public-api.ts"
+      ],
+      "auth": [
+        "./projects/auth/src/public-api.ts"
+      ],
+      "ui": [
+        "./projects/ui/src/public-api.ts"
+      ],
+      "@ui/button": [
+        "./projects/ui/src/lib/button/src/index.ts"
+      ],
+      "@ui/utils": [
+        "./projects/ui/src/lib/utils/src/index.ts"
+      ],
+      "@ui/input": [
+        "./projects/ui/src/lib/input/src/index.ts"
+      ],
+      "@ui/label": [
+        "./projects/ui/src/lib/label/src/index.ts"
+      ],
+      "@ui/dialog": [
+        "./projects/ui/src/lib/dialog/src/index.ts"
+      ],
+      "@ui/alert-dialog": [
+        "./projects/ui/src/lib/alert-dialog/src/index.ts"
+      ],
+      "@ui/table": [
+        "./projects/ui/src/lib/table/src/index.ts"
+      ],
+      "@ui/badge": [
+        "./projects/ui/src/lib/badge/src/index.ts"
+      ],
+      "@ui/skeleton": [
+        "./projects/ui/src/lib/skeleton/src/index.ts"
+      ],
+      "@ui/spinner": [
+        "./projects/ui/src/lib/spinner/src/index.ts"
+      ],
+      "@ui/sonner": [
+        "./projects/ui/src/lib/sonner/src/index.ts"
+      ],
+      "@ui/card": [
+        "./projects/ui/src/lib/card/src/index.ts"
+      ],
+      "@ui/combobox": [
+        "./projects/ui/src/lib/combobox/src/index.ts"
+      ],
+      "@ui/textarea": [
+        "./projects/ui/src/lib/textarea/src/index.ts"
+      ],
+      "@ui/dropdown-menu": [
+        "./projects/ui/src/lib/dropdown-menu/src/index.ts"
+      ],
+      "@ui/bubble": [
+        "./projects/ui/src/lib/bubble/src/index.ts"
+      ],
+      "@ui/prompt-kit/*": [
+        "./projects/ui/src/lib/prompt-kit/*"
+      ]
     }
   },
   "angularCompilerOptions": {

@@ -18,3 +18,91 @@
 .cdk-drag-placeholder {
   opacity: 0.4;
 }
+
+/* CaroIA: markdown del asistente (el HTML viene de marked + DOMPurify). */
+.pk-markdown {
+  line-height: 1.65;
+}
+.pk-markdown > :first-child {
+  margin-top: 0;
+}
+.pk-markdown > :last-child {
+  margin-bottom: 0;
+}
+.pk-markdown p {
+  margin: 0.5rem 0;
+}
+.pk-markdown h1,
+.pk-markdown h2,
+.pk-markdown h3,
+.pk-markdown h4 {
+  margin: 0.85rem 0 0.35rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+.pk-markdown h1 {
+  font-size: 1.25rem;
+}
+.pk-markdown h2 {
+  font-size: 1.1rem;
+}
+.pk-markdown h3 {
+  font-size: 1rem;
+}
+.pk-markdown table {
+  width: 100%;
+  margin: 0.75rem 0;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+.pk-markdown th,
+.pk-markdown td {
+  border-bottom: 1px solid var(--border);
+  padding: 0.4rem 0.6rem;
+  text-align: left;
+}
+.pk-markdown th {
+  background: var(--muted);
+  font-weight: 600;
+}
+.pk-markdown td:not(:first-child),
+.pk-markdown th:not(:first-child) {
+  text-align: right;
+}
+.pk-markdown tr:last-child td {
+  border-bottom: 0;
+}
+.pk-markdown ul,
+.pk-markdown ol {
+  margin: 0.5rem 0;
+  padding-left: 1.25rem;
+}
+.pk-markdown ul {
+  list-style: disc;
+}
+.pk-markdown ol {
+  list-style: decimal;
+}
+.pk-markdown code {
+  background: var(--muted);
+  border-radius: 0.25rem;
+  padding: 0.1rem 0.3rem;
+  font-size: 0.85em;
+}
+.pk-markdown pre {
+  background: var(--muted);
+  border-radius: 0.5rem;
+  margin: 0.6rem 0;
+  overflow: auto;
+  padding: 0.75rem;
+}
+.pk-markdown pre code {
+  background: transparent;
+  padding: 0;
+}
+.pk-markdown blockquote {
+  border-left: 3px solid var(--border);
+  color: var(--muted-foreground);
+  margin: 0.6rem 0;
+  padding-left: 0.75rem;
+}

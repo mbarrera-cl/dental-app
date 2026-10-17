@@ -311,6 +311,19 @@ See **[`docs/mcp.md`](docs/mcp.md)** for the full tool table, client
 configuration, settings, STDIO, write-safety model, DeepSeek/PHI guidance and
 the extension recipe.
 
+### CaroIA (UI preview)
+
+The shell ships a **CaroIA** chat preview at `/caro-ia`, built with
+[`ngx-prompt-kit`](https://github.com/PianoNic/ngx-prompt-kit) on top of the
+existing Spartan UI: conversation sidebar grouped by date, streaming chat with
+markdown, tool-call chips, write approvals, a responsive conversations table,
+attachments and audio recording. This branch uses a **simulated gateway** and
+fixtures; the real MCP/DeepSeek/Deepgram backend and the sidebar menu entry are
+delivered in `feat/caro-ia-backend`.
+
+See **[`docs/caro-ia.md`](docs/caro-ia.md)** for the preview URL, the gateway
+contract and what is pending.
+
 ### Environment variables
 
 | Variable                          | Default                        | Purpose                                                                |

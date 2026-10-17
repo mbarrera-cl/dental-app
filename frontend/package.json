@@ -35,7 +35,13 @@
     "es-module-shims": "^2.8.0",
     "rxjs": "~7.8.0",
     "tailwind-merge": "^3.5.0",
-    "tslib": "^2.3.0"
+    "tslib": "^2.3.0",
+    "marked": "^18.0.3",
+    "dompurify": "^3.2.4",
+    "katex": "^0.16.11",
+    "@types/katex": "^0.16.8",
+    "mermaid": "^11.4.0",
+    "shiki": "^4.0.2"
   },
   "devDependencies": {
     "@angular-architects/native-federation": "^22.2.2",
@@ -48,6 +54,7 @@
     "concurrently": "^10.0.6",
     "jsdom": "^30.0.0",
     "ng-packagr": "^22.2.0",
+    "ngx-prompt-kit": "^22.4.6",
     "postcss": "^8.5.3",
     "prettier": "^3.8.1",
     "tailwindcss": "^4.1.12",
