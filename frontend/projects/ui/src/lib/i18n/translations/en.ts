@@ -232,6 +232,19 @@ export const EN = {
       lastLogin: 'Last login',
       actions: 'Actions',
     },
+    itemStatus: {
+      generado: 'Generated',
+      aprobado: 'Approved',
+      rechazado: 'Rejected',
+    },
+    decide: {
+      approve: 'Approve item',
+      reject: 'Reject item',
+      reopen: 'Back to generated',
+      saved: 'Item status updated.',
+    },
+    sanctionApproveConfirm: 'Sanction {{folio}} as approved? The quotation will be locked.',
+    sanctionRejectConfirm: 'Mark {{folio}} as rejected? The quotation will be locked.',
     status: {
       active: 'Active',
       disabled: 'Disabled',
@@ -1143,7 +1156,10 @@ export const EN = {
       discount: '% Disc.',
       net: 'Net',
       noItems: 'Add procedures from the catalog or create a manual line.',
+      addManual: 'Manual line',
       saveChanges: 'Save changes',
+      approve: 'Sanction approved',
+      reject: 'Sanction rejected',
     },
     print: {
       title: 'QUOTATION',

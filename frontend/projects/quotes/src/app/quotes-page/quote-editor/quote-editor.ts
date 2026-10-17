@@ -4,6 +4,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
+  lucideBadgeDollarSign,
   lucideCheck,
   lucideFileText,
   lucidePlus,
@@ -14,10 +15,10 @@ import {
   lucideX,
 } from '@ng-icons/lucide';
 import { toast } from '@spartan-ng/brain/sonner';
+import { HlmBadge } from '@ui/badge';
 import { HlmButton } from '@ui/button';
 import { HlmInput } from '@ui/input';
 import { HlmLabel } from '@ui/label';
-import { HlmSkeleton } from '@ui/skeleton';
 import { HasPermissionDirective, PERMISSION_KEYS } from 'auth';
 import {
   mapApiError,
@@ -26,7 +27,7 @@ import {
   UcoApi,
   type Patient,
   type Quote,
-  type QuoteItem,
+  type QuoteItemStatus,
   type UcoProcedure,
 } from 'data-access';
 
@@ -49,13 +50,14 @@ interface DraftItem {
   imports: [
     TranslocoPipe,
     NgIcon,
+    HlmBadge,
     HlmButton,
     HlmInput,
     HlmLabel,
-    HlmSkeleton,
     HasPermissionDirective,
   ],
   providers: provideIcons({
+    lucideBadgeDollarSign,
     lucideCheck,
     lucideFileText,
     lucidePlus,
@@ -71,7 +73,7 @@ interface DraftItem {
       <header class="flex flex-wrap items-end justify-between gap-4">
         <div class="grid gap-1">
           <h2 class="text-2xl font-semibold tracking-tight">
-            {{ editing() ? 'quotes.edit.title' : 'quotes.new.title' | transloco }}
+            {{ (editing() ? 'quotes.edit.title' : 'quotes.new.title') | transloco }}
           </h2>
           <p class="text-muted-foreground text-sm">
             @if (quote(); as quote) {
@@ -125,16 +127,30 @@ interface DraftItem {
       <div class="bg-card rounded-lg border">
         <div class="flex items-center justify-between gap-2 border-b px-4 py-3">
           <h3 class="font-semibold">{{ 'quotes.editor.items' | transloco }}</h3>
-          <div class="relative">
-            <ng-icon name="lucideSearch" class="text-muted-foreground pointer-events-none absolute start-2.5 top-1/2 -translate-y-1/2" />
-            <input
-              hlmInput
-              class="ps-9"
-              [value]="ucoQuery()"
-              (input)="ucoQuery.set($any($event.target).value)"
-              placeholder="{{ 'quotes.editor.searchUco' | transloco }}"
-              data-testid="quote-uco-search"
-            />
+          <div class="flex flex-wrap items-center gap-2">
+            <button
+              hlmBtn
+              variant="outline"
+              size="sm"
+              type="button"
+              [disabled]="locked()"
+              data-testid="quote-item-manual"
+              (click)="addManualItem()"
+            >
+              <ng-icon name="lucidePlus" />
+              {{ 'quotes.editor.addManual' | transloco }}
+            </button>
+            <div class="relative">
+              <ng-icon name="lucideSearch" class="text-muted-foreground pointer-events-none absolute start-2.5 top-1/2 -translate-y-1/2" />
+              <input
+                hlmInput
+                class="ps-9"
+                [value]="ucoQuery()"
+                (input)="ucoQuery.set($any($event.target).value)"
+                placeholder="{{ 'quotes.editor.searchUco' | transloco }}"
+                data-testid="quote-uco-search"
+              />
+            </div>
           </div>
         </div>
 
@@ -157,13 +173,14 @@ interface DraftItem {
           }
 
           @for (item of items(); track itemIndex($index)) {
-            <div class="border-input grid gap-3 rounded-md border p-3 md:grid-cols-[1fr_80px_110px_90px_90px_40px]">
+            <div class="border-input grid gap-3 rounded-md border p-3 md:grid-cols-[1fr_80px_110px_90px_90px_auto]">
               <div class="grid gap-1">
                 <span class="text-muted-foreground text-xs">{{ 'quotes.editor.description' | transloco }}</span>
                 <input
                   hlmInput
                   [value]="item.description"
                   (input)="setDescription($index, $any($event.target).value)"
+                  [disabled]="locked()"
                   data-testid="quote-item-desc"
                 />
               </div>
@@ -175,6 +192,7 @@ interface DraftItem {
                   min="1"
                   [value]="item.quantity"
                   (input)="setQuantity($index, $any($event.target).valueAsNumber)"
+                  [disabled]="locked()"
                 />
               </div>
               <div class="grid gap-1">
@@ -185,6 +203,7 @@ interface DraftItem {
                   min="0"
                   [value]="item.unitPrice"
                   (input)="setUnitPrice($index, $any($event.target).valueAsNumber)"
+                  [disabled]="locked()"
                 />
               </div>
               <div class="grid gap-1">
@@ -196,14 +215,68 @@ interface DraftItem {
                   max="100"
                   [value]="item.discountPercent"
                   (input)="setDiscount($index, $any($event.target).valueAsNumber)"
+                  [disabled]="locked()"
                 />
               </div>
-              <div class="grid gap-1 items-end">
+              <div class="grid items-end gap-1">
                 <span class="text-muted-foreground text-xs">{{ 'quotes.editor.net' | transloco }}</span>
                 <span class="font-medium tabular-nums">{{ formatMoney(netOf(item)) }}</span>
               </div>
-              <div class="flex items-end justify-end">
-                <button hlmBtn variant="ghost" size="icon-sm" type="button" (click)="removeItem($index)">
+              <div class="flex items-end justify-end gap-1">
+                @if (item.id) {
+                  <span hlmBadge [variant]="itemStatusVariant(item.id)">
+                    {{ 'quotes.itemStatus.' + itemStatusOf(item.id) | transloco }}
+                  </span>
+                }
+                @if (item.id && !locked()) {
+                  <button
+                    *hasPermission="permissionKeys.quotes.update"
+                    hlmBtn
+                    variant="ghost"
+                    size="icon-sm"
+                    type="button"
+                    [attr.aria-label]="'quotes.decide.approve' | transloco"
+                    [attr.data-testid]="'quote-item-approve-' + item.id"
+                    (click)="decideItem(item.id, 'aprobado')"
+                  >
+                    <ng-icon name="lucideCheck" />
+                  </button>
+                  <button
+                    *hasPermission="permissionKeys.quotes.update"
+                    hlmBtn
+                    variant="ghost"
+                    size="icon-sm"
+                    type="button"
+                    class="text-destructive"
+                    [attr.aria-label]="'quotes.decide.reject' | transloco"
+                    [attr.data-testid]="'quote-item-reject-' + item.id"
+                    (click)="decideItem(item.id, 'rechazado')"
+                  >
+                    <ng-icon name="lucideX" />
+                  </button>
+                  @if (itemStatusOf(item.id) !== 'generado') {
+                    <button
+                      *hasPermission="permissionKeys.quotes.update"
+                      hlmBtn
+                      variant="ghost"
+                      size="icon-sm"
+                      type="button"
+                      [attr.aria-label]="'quotes.decide.reopen' | transloco"
+                      [attr.data-testid]="'quote-item-reopen-' + item.id"
+                      (click)="decideItem(item.id, 'generado')"
+                    >
+                      <ng-icon name="lucideUndo2" />
+                    </button>
+                  }
+                }
+                <button
+                  hlmBtn
+                  variant="ghost"
+                  size="icon-sm"
+                  type="button"
+                  [disabled]="locked()"
+                  (click)="removeItem($index)"
+                >
                   <ng-icon name="lucideTrash2" />
                 </button>
               </div>
@@ -229,14 +302,38 @@ interface DraftItem {
           </dl>
         </div>
 
-        <div class="flex gap-2">
-          @if (editing()) {
-            <button hlmBtn variant="outline" type="button" (click)="save()">{{ 'common.save' | transloco }}</button>
+        <div class="flex flex-wrap gap-2">
+          @if (editing() && !locked()) {
+            <button
+              *hasPermission="permissionKeys.quotes.approve"
+              hlmBtn
+              variant="outline"
+              type="button"
+              data-testid="quote-sanction-approve"
+              (click)="sanction('aprobada')"
+            >
+              <ng-icon name="lucideBadgeDollarSign" />
+              {{ 'quotes.editor.approve' | transloco }}
+            </button>
+            <button
+              *hasPermission="permissionKeys.quotes.approve"
+              hlmBtn
+              variant="outline"
+              type="button"
+              class="text-destructive"
+              data-testid="quote-sanction-reject"
+              (click)="sanction('rechazada')"
+            >
+              <ng-icon name="lucideX" />
+              {{ 'quotes.editor.reject' | transloco }}
+            </button>
           }
-          <button hlmBtn type="button" (click)="create()" [disabled]="!canCreate()" data-testid="quote-save">
-            <ng-icon name="lucideCheck" />
-            {{ editing() ? ('quotes.editor.saveChanges' | transloco) : ('quotes.new.saveDraft' | transloco) }}
-          </button>
+          @if (!locked()) {
+            <button hlmBtn type="button" (click)="create()" [disabled]="!canCreate()" data-testid="quote-save">
+              <ng-icon name="lucideCheck" />
+              {{ editing() ? ('quotes.editor.saveChanges' | transloco) : ('quotes.new.saveDraft' | transloco) }}
+            </button>
+          }
         </div>
       </div>
     </section>
@@ -282,14 +379,21 @@ export class QuoteEditor {
   });
 
   protected readonly ucoMatches = computed(() => {
-    const needle = this.ucoQuery().toLowerCase();
+    const needle = this.ucoQuery().trim().toLowerCase();
 
-    return this.procedures().filter(
-      (procedure) =>
-        needle.length === 0 ||
-        procedure.code.toLowerCase().includes(needle) ||
-        procedure.name.toLowerCase().includes(needle),
-    );
+    // Predictive search: only after a couple of characters, capped to keep
+    // the picker readable (49 seeded procedures would flood the editor).
+    if (needle.length < 2) {
+      return [];
+    }
+
+    return this.procedures()
+      .filter(
+        (procedure) =>
+          procedure.code.toLowerCase().includes(needle) ||
+          procedure.name.toLowerCase().includes(needle),
+      )
+      .slice(0, 12);
   });
 
   protected readonly subtotal = computed(() => this.items().reduce((sum, item) => sum + item.quantity * item.unitPrice, 0));
@@ -363,6 +467,14 @@ export class QuoteEditor {
         unitPrice: Math.round(procedure.units * 3000),
         discountPercent: 0,
       },
+    ]);
+  }
+
+  /** Manual line: free description, no UCO code (still priced/recalculated server-side). */
+  protected addManualItem(): void {
+    this.items.update((items) => [
+      ...items,
+      { ucoCode: null, description: '', quantity: 1, unitPrice: 0, discountPercent: 0 },
     ]);
   }
 
@@ -440,7 +552,60 @@ export class QuoteEditor {
     });
   }
 
-  protected save(): void {
-    this.create();
+  /** A sanctioned quote is locked: no edits, no item decisions, no sanction. */
+  protected locked(): boolean {
+    const status = this.quote()?.status;
+
+    return status === 'aprobada' || status === 'rechazada';
+  }
+
+  protected itemStatusOf(itemId: string): QuoteItemStatus {
+    return this.quote()?.items.find((item) => item.id === itemId)?.status ?? 'generado';
+  }
+
+  protected itemStatusVariant(itemId: string): 'secondary' | 'outline' | 'destructive' {
+    const status = this.itemStatusOf(itemId);
+
+    return status === 'aprobado' ? 'secondary' : status === 'rechazado' ? 'destructive' : 'outline';
+  }
+
+  /** Records the patient's acceptance for one line (server-audited). */
+  protected decideItem(itemId: string, status: QuoteItemStatus): void {
+    const quote = this.quote();
+
+    if (quote === null) {
+      return;
+    }
+
+    this.api.decideItem(quote.id, itemId, status).subscribe({
+      next: (updated) => {
+        this.quote.set(updated);
+        toast.success(this.transloco.translate('quotes.decide.saved'));
+      },
+      error: (error: unknown) => toast.error(mapApiError(error)),
+    });
+  }
+
+  /** Closes the quote approving or rejecting it (permission-gated in the UI and API). */
+  protected sanction(status: 'aprobada' | 'rechazada'): void {
+    const quote = this.quote();
+
+    if (quote === null) {
+      return;
+    }
+
+    const key = status === 'aprobada' ? 'quotes.sanctionApproveConfirm' : 'quotes.sanctionRejectConfirm';
+
+    if (!window.confirm(this.transloco.translate(key, { folio: quote.folio }))) {
+      return;
+    }
+
+    this.api.sanction(quote.id, status).subscribe({
+      next: (updated) => {
+        this.quote.set(updated);
+        toast.success(this.transloco.translate('quotes.sanctioned', { folio: updated.folio }));
+      },
+      error: (error: unknown) => toast.error(mapApiError(error)),
+    });
   }
 }

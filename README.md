@@ -502,7 +502,8 @@ curl -s http://localhost:3000/clinical-records/<recordId>/indices \
 - **Schema:** `SqliteDatabase.ensureSchema` creates all tables with
   `CREATE TABLE IF NOT EXISTS` — `users`, `roles`, `user_roles`, `user_permissions`,
   `refresh_tokens`, `password_history`, `api_keys`, `patients`,
-  `clinical_records`, `clinical_findings`, `clinical_events`, `settings` and
+  `clinical_records`, `clinical_findings`, `clinical_events`, `uco_procedures`,
+  `quotes`, `quote_items`, `quote_versions`, `quote_counters`, `settings` and
   `bootstrap_state` — replace with real migrations when the schema grows.
 - **Error translation:** SQLite's `UNIQUE constraint failed` (errcode `2067`) is
   translated into the matching domain error *in the adapter*
@@ -528,6 +529,7 @@ is built and served independently:
 | `users`     | 4201 | remote | Account management: roles, status, direct permissions, password resets            |
 | `dashboard` | 4202 | remote | Live summary: total patients + the 5 most recent                                  |
 | `admin`     | 4204 | remote | Admin panel: role editor with the permission matrix, dynamic settings, API keys   |
+| `quotes`    | 4205 | remote | Quotations: list, editor with live totals, per-item acceptance, sanction and A4 print |
 
 Shared code lives in three libraries:
 
@@ -536,7 +538,7 @@ Shared code lives in three libraries:
   `@ui/table`, …), plus the Tailwind v4 theme and the i18n dictionaries.
 - **`projects/data-access`** — typed HTTP clients (`UsersApi`, `PatientsApi`,
   `ClinicalApi`, `AuthApi`, `RolesApi`, `SettingsApi`, `PermissionsApi`,
-  `ApiKeysApi`), the domain models shared by the remotes — including the ficha
+  `ApiKeysApi`, `UcoApi`, `QuotesApi`), the domain models shared by the remotes — including the ficha
   clínica constants and chart projection (`clinical.model.ts`) — the RUT/phone
   helpers that mirror the backend value objects (módulo 11 validation, canonical
   formatting) and `mapApiError`, which translates backend error names
@@ -556,7 +558,7 @@ in the shell re-renders the remotes too. The selection is persisted in
 One command (backend + microfrontends):
 
 ```bash
-./scripts/dev-all.sh           # builds the backend and starts :3000, :4200–:4204
+./scripts/dev-all.sh           # builds the backend and starts :3000, :4200–:4205
 ./scripts/dev-all.sh --skip-build
 ```
 
@@ -592,6 +594,19 @@ ng g @angular-architects/native-federation:init --project <name> --port <port>
 
 Then: expose `./routes` in the new `federation.config.mjs`, register the remote URL
 in `projects/shell/src/main.ts` and add the lazy route in `app.routes.ts`.
+
+## Quotations (cotizaciones) and the UCO fee catalog
+
+The `quotes` module prices dental work over the **Arancel UCO**: a catalog of
+procedures measured in UCO units (`/uco`, seeded with a reference list and
+editable from `/admin/uco`) and **quotations** (`/quotes`) that snapshot the
+patient, compute totals server-side (`cantidad × valor − % línea`, no taxes),
+track the acceptance state **per line** (`generado` / `aprobado` / `rechazado`)
+and record a **sanction** (approve/reject, `quotes:approve`) that locks the
+document. Editing a sanctioned quote requires duplicating it into a new version
+(fresh folio + `replacesQuoteId`), and every save appends to the version trail.
+The A4 document (`/quotes/:id/print`) prints with the clinic identity from the
+settings.
 
 ## Roadmap
 

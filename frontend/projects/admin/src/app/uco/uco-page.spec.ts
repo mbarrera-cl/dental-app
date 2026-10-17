@@ -73,7 +73,16 @@ describe('UcoPage', () => {
         provideHttpClientTesting(),
         provideAppTransloco(),
         provideSpartanHlm(),
-        { provide: SessionStore, useValue: { has: () => true, hasAll: () => true, hasAny: () => true } },
+        {
+          provide: SessionStore,
+          useValue: {
+            // The page only asks the session for `uco:*` (screen) and
+            // `settings:read` (reference rate); keep the rate request out.
+            has: (key: string) => key !== 'settings:read',
+            hasAll: () => true,
+            hasAny: () => true,
+          },
+        },
       ],
     }).compileComponents();
 

@@ -40,8 +40,8 @@ import { HlmInput } from '@ui/input';
 import { HlmLabel } from '@ui/label';
 import { HlmSkeleton } from '@ui/skeleton';
 import { HlmTBody, HlmTable, HlmTableContainer, HlmTd, HlmTh, HlmTHead, HlmTr } from '@ui/table';
-import { HasPermissionDirective, PERMISSION_KEYS } from 'auth';
-import { UcoApi, mapApiError, type UcoProcedure } from 'data-access';
+import { HasPermissionDirective, PERMISSION_KEYS, SessionStore } from 'auth';
+import { SettingsApi, UcoApi, mapApiError, type UcoProcedure } from 'data-access';
 
 /**
  * UCO fee catalog administration: table, search, create/edit dialog and
@@ -305,6 +305,8 @@ import { UcoApi, mapApiError, type UcoProcedure } from 'data-access';
 })
 export class UcoPage {
   private readonly api = inject(UcoApi);
+  private readonly settingsApi = inject(SettingsApi);
+  private readonly session = inject(SessionStore);
   private readonly transloco = inject(TranslocoService);
 
   protected readonly permissionKeys = PERMISSION_KEYS;
@@ -352,6 +354,26 @@ export class UcoPage {
 
   constructor() {
     this.load();
+    this.loadUcoRate();
+  }
+
+  /** Reference value column: uses the configured `quotes.ucoRate` when readable. */
+  private loadUcoRate(): void {
+    if (!this.session.has(PERMISSION_KEYS.settings.read)) {
+      return;
+    }
+
+    this.settingsApi.list().subscribe({
+      next: (settings) => {
+        const rate = settings.find((setting) => setting.key === 'quotes.ucoRate')?.value;
+
+        if (typeof rate === 'number' && rate > 0) {
+          this.ucoRate.set(rate);
+        }
+      },
+      // Settings are a nicety here: keep the default rate when unavailable.
+      error: () => undefined,
+    });
   }
 
   protected load(): void {

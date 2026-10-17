@@ -242,6 +242,19 @@ export const ES = {
       lastLogin: 'Último acceso',
       actions: 'Acciones',
     },
+    itemStatus: {
+      generado: 'Generado',
+      aprobado: 'Aprobado',
+      rechazado: 'Rechazado',
+    },
+    decide: {
+      approve: 'Aprobar ítem',
+      reject: 'Rechazar ítem',
+      reopen: 'Volver a generado',
+      saved: 'Estado del ítem actualizado.',
+    },
+    sanctionApproveConfirm: '¿Sancionar {{folio}} como aprobada? La cotización se bloqueará.',
+    sanctionRejectConfirm: '¿Marcar {{folio}} como rechazada? La cotización se bloqueará.',
     status: {
       active: 'Activo',
       disabled: 'Deshabilitado',
@@ -1156,7 +1169,10 @@ export const ES = {
       discount: '% Desc.',
       net: 'Neto',
       noItems: 'Agrega prestaciones desde el arancel o crea una línea manual.',
+      addManual: 'Línea manual',
       saveChanges: 'Guardar cambios',
+      approve: 'Sancionar aprobada',
+      reject: 'Sancionar rechazada',
     },
     print: {
       title: 'COTIZACIÓN',
