@@ -3,6 +3,7 @@ import { MenuRepositoryPort } from '../../application/ports/menu-repository.port
 import { PostgresDatabase } from '../../../../shared/infrastructure/database/postgres-database.js';
 import { agendaPermissions } from '../../../agenda/permissions.js';
 import { caroIaPermissions } from '../../../caro-ia/permissions.js';
+import { settingsCategory } from '../../../settings/permissions.js';
 import { buildDefaultMenuItems } from '../../domain/default-menu.js';
 import { MenuItem } from '../../domain/menu-item.entity.js';
 
@@ -18,6 +19,7 @@ export class NavigationBootstrapService implements OnApplicationBootstrap {
 
   private static readonly CARO_IA_MARKER = 'navigation.caroIa.seeded';
   private static readonly AGENDA_MARKER = 'navigation.agenda.seeded';
+  private static readonly CLINIC_MARKER = 'navigation.clinic.seeded';
 
   constructor(
     private readonly menu: MenuRepositoryPort,
@@ -28,6 +30,7 @@ export class NavigationBootstrapService implements OnApplicationBootstrap {
     if ((await this.menu.count()) > 0) {
       await this.ensureCaroIaEntry();
       await this.ensureAgendaEntry();
+      await this.ensureClinicEntry();
       return;
     }
 
@@ -93,6 +96,47 @@ export class NavigationBootstrapService implements OnApplicationBootstrap {
     await this.menu.save(item);
     await this.setMarker(NavigationBootstrapService.AGENDA_MARKER);
     this.logger.log('Added the Agenda entry to the existing menu');
+  }
+
+  /** Clinic settings shipped after the initial menu; restore the entry once. */
+  private async ensureClinicEntry(): Promise<void> {
+    if (await this.hasMarker(NavigationBootstrapService.CLINIC_MARKER)) {
+      return;
+    }
+
+    const items = await this.menu.findAll();
+
+    if (items.some((item) => item.routeKey === 'settings.clinic')) {
+      await this.setMarker(NavigationBootstrapService.CLINIC_MARKER);
+      return;
+    }
+
+    const adminGroup = items.find(
+      (item) =>
+        item.kind === 'group' &&
+        items.some(
+          (child) => child.parentId === item.id && child.routeKey === 'settings.menu',
+        ),
+    );
+
+    if (adminGroup === undefined) {
+      this.logger.warn('Cannot restore the Clinic settings menu entry: administration group not found');
+      return;
+    }
+
+    const lastPosition = (await this.menu.maxPosition(adminGroup.id)) ?? -1;
+    const item = MenuItem.create({
+      kind: 'item',
+      icon: 'lucideBuilding2',
+      routeKey: 'settings.clinic',
+      requiredPermission: settingsCategory.keys.read,
+      parentId: adminGroup.id,
+    });
+
+    item.setPosition(lastPosition + 1);
+    await this.menu.save(item);
+    await this.setMarker(NavigationBootstrapService.CLINIC_MARKER);
+    this.logger.log('Restored the Clinic settings entry in the existing menu');
   }
 
   private async hasMarker(key: string = NavigationBootstrapService.CARO_IA_MARKER): Promise<boolean> {
