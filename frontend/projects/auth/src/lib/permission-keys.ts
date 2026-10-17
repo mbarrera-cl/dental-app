@@ -22,6 +22,11 @@ export const PERMISSION_KEYS = {
     read: 'settings:read',
     update: 'settings:update',
   },
+  clinical: {
+    read: 'clinical:read',
+    create: 'clinical:create',
+    update: 'clinical:update',
+  },
   apiKeys: {
     self: 'apikeys:self',
     read: 'apikeys:read',

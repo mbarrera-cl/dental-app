@@ -47,6 +47,27 @@ describe('mapApiError', () => {
     ).toBe('errors.emptyUpdate');
   });
 
+  it('maps clinical domain error names to translation keys', () => {
+    expect(
+      mapApiError(httpError(409, { statusCode: 409, error: 'ClinicalRecordAlreadyExistsError', message: 'dup' })),
+    ).toBe('errors.clinicalRecordExists');
+    expect(
+      mapApiError(httpError(404, { statusCode: 404, error: 'PatientClinicalRecordNotFoundError', message: 'missing' })),
+    ).toBe('errors.clinicalRecordNotFound');
+    expect(
+      mapApiError(httpError(423, { statusCode: 423, error: 'ClinicalRecordLockedError', message: 'locked' })),
+    ).toBe('errors.clinicalRecordLocked');
+    expect(
+      mapApiError(httpError(404, { statusCode: 404, error: 'ClinicalFindingNotFoundError', message: 'missing' })),
+    ).toBe('errors.clinicalFindingNotFound');
+    expect(
+      mapApiError(httpError(409, { statusCode: 409, error: 'ClinicalFindingAlreadyVoidedError', message: 'voided' })),
+    ).toBe('errors.clinicalFindingAlreadyVoided');
+    expect(
+      mapApiError(httpError(400, { statusCode: 400, error: 'EmptyClinicalRecordUpdateError', message: 'empty' })),
+    ).toBe('errors.emptyUpdate');
+  });
+
   it('falls back to generic keys for unnamed 404 and 409 responses', () => {
     expect(
       mapApiError(httpError(404, { statusCode: 404, message: 'Cannot GET /nope', error: 'Not Found' })),

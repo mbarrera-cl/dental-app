@@ -1,6 +1,7 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { provideAppTransloco, provideSpartanHlm } from 'ui';
 import type { Patient } from 'data-access';
@@ -27,6 +28,7 @@ const PATIENTS: Patient[] = [
     prevision: { tipo: 'FONASA', tramo: 'B', plan: null },
     contactoEmergencia: null,
     notas: null,
+    numeroHistoria: 'HC-000001',
     createdAt: '2026-10-01T08:00:00.000Z',
   },
   {
@@ -43,6 +45,7 @@ const PATIENTS: Patient[] = [
     prevision: { tipo: 'ISAPRE', tramo: null, plan: 'Colmena Plus' },
     contactoEmergencia: null,
     notas: null,
+    numeroHistoria: 'HC-000002',
     createdAt: '2026-10-02T08:00:00.000Z',
   },
 ];
@@ -53,7 +56,13 @@ describe('PatientsPage', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [PatientsPage],
-      providers: [provideHttpClient(), provideHttpClientTesting(), provideAppTransloco(), provideSpartanHlm()],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        provideAppTransloco(),
+        provideSpartanHlm(),
+      ],
     }).compileComponents();
 
     http = TestBed.inject(HttpTestingController);
@@ -90,7 +99,18 @@ describe('PatientsPage', () => {
     expect(compiled.textContent).toContain('22.222.222-2');
     expect(compiled.textContent).toContain('FONASA · B');
     expect(compiled.textContent).toContain('Colmena Plus');
+    expect(compiled.textContent).toContain('HC-000001');
+    expect(compiled.textContent).toContain('HC-000002');
     expect(compiled.textContent).toContain('2 de 2 pacientes');
+  });
+
+  it('hides the clinical record shortcut without clinical:read', async () => {
+    const fixture = await render();
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    // The session of this test has no permissions, so the structural
+    // directive must not render the shortcut at all.
+    expect(compiled.querySelector('[data-testid^="patient-clinical-"]')).toBeNull();
   });
 
   it('filters by RUT digits regardless of the spelling', async () => {

@@ -27,6 +27,14 @@ const ERROR_NAME_TO_KEY: Readonly<Record<string, string>> = {
   InvalidDireccionError: 'errors.invalidDireccion',
   InvalidPrevisionError: 'errors.invalidPrevision',
   InvalidContactoEmergenciaError: 'errors.invalidContactoEmergencia',
+  // clinical context (ficha dental)
+  ClinicalRecordAlreadyExistsError: 'errors.clinicalRecordExists',
+  PatientClinicalRecordNotFoundError: 'errors.clinicalRecordNotFound',
+  ClinicalRecordNotFoundError: 'errors.clinicalRecordNotFound',
+  ClinicalRecordLockedError: 'errors.clinicalRecordLocked',
+  EmptyClinicalRecordUpdateError: 'errors.emptyUpdate',
+  ClinicalFindingNotFoundError: 'errors.clinicalFindingNotFound',
+  ClinicalFindingAlreadyVoidedError: 'errors.clinicalFindingAlreadyVoided',
   // accounts / rbac context
   LastAdminError: 'errors.lastAdmin',
   UnknownRoleError: 'errors.unknownRole',

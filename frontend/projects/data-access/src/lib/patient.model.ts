@@ -50,6 +50,8 @@ export interface Patient {
   prevision: Prevision | null;
   contactoEmergencia: ContactoEmergencia | null;
   notas: string | null;
+  /** Sequential clinical record number (`HC-000123`), assigned on creation. */
+  numeroHistoria: string;
   /** ISO-8601 timestamp. */
   createdAt: string;
 }

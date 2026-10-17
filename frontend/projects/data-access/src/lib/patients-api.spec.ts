@@ -28,6 +28,7 @@ const CAMILA: Patient = {
   prevision: { tipo: 'FONASA', tramo: 'B', plan: null },
   contactoEmergencia: null,
   notas: null,
+  numeroHistoria: 'HC-000001',
   createdAt: '2026-10-16T10:00:00.000Z',
 };
 
