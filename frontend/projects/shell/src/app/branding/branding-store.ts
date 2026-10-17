@@ -73,6 +73,7 @@ export class BrandingStore {
       mode: branding.colors.mode,
       name: branding.name,
       faviconUrl: this.absolute(branding.faviconUrl),
+      logoUrl: this.absolute(branding.logoUrl),
     });
   }
 

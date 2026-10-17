@@ -1,3 +1,4 @@
+import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, OnInit, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import {
@@ -12,6 +13,7 @@ import {
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
   lucideCheck,
+  lucideDownload,
   lucideHexagon,
   lucideImagePlus,
   lucideSparkles,
@@ -58,6 +60,7 @@ import {
   SettingsApi,
   type Setting,
   type SettingValue,
+  type SettingsAuditEntry,
   type SettingsValues,
   isValidRut,
   isValidTelefono,
@@ -162,6 +165,9 @@ const websiteValidator: ValidatorFn = (control: AbstractControl): ValidationErro
 const colorValidator: ValidatorFn = (control: AbstractControl): ValidationErrors | null =>
   HEX_PATTERN.test(String(control.value ?? '')) ? null : { color: true };
 
+/** Picked-file reader; `File.text` is available in every supported browser. */
+const readText = (file: File): Promise<string> => file.text();
+
 /**
  * Clinic configuration page (`/settings/clinic`): identity, contact, address
  * and theme of the clinic, persisted through the generic settings API.
@@ -175,6 +181,7 @@ const colorValidator: ValidatorFn = (control: AbstractControl): ValidationErrors
 @Component({
   selector: 'app-clinic-page',
   imports: [
+    DatePipe,
     ReactiveFormsModule,
     TranslocoPipe,
     NgIcon,
@@ -206,6 +213,7 @@ const colorValidator: ValidatorFn = (control: AbstractControl): ValidationErrors
   providers: [
     provideIcons({
       lucideCheck,
+      lucideDownload,
       lucideHexagon,
       lucideImagePlus,
       lucideSparkles,
@@ -317,6 +325,9 @@ export class ClinicPage implements OnInit {
   protected readonly removeOpen = signal(false);
   protected readonly removing = signal(false);
   protected readonly colorSuggestions = signal<readonly ColorSuggestion[]>([]);
+  protected readonly audit = signal<readonly SettingsAuditEntry[]>([]);
+  protected readonly exporting = signal(false);
+  protected readonly importing = signal(false);
 
   // Crop dialog state.
   protected readonly cropOpen = signal(false);
@@ -332,6 +343,7 @@ export class ClinicPage implements OnInit {
 
   ngOnInit(): void {
     this.load();
+    this.loadAudit();
   }
 
   protected load(): void {
@@ -413,6 +425,7 @@ export class ClinicPage implements OnInit {
         this.saving.set(false);
         this.applySettings(settings);
         toast.success(this.transloco.translate('clinic.saved'));
+        this.loadAudit();
         this.branding.refresh().subscribe();
       },
       error: (error: unknown) => {
@@ -431,6 +444,92 @@ export class ClinicPage implements OnInit {
     this.form.patchValue({ primary: preset.primary, accent: preset.accent });
     this.form.controls.primary.markAsDirty();
     this.form.controls.accent.markAsDirty();
+  }
+
+  // ----- Export / import / history -------------------------------------------
+
+  protected exportConfig(): void {
+    if (this.exporting()) {
+      return;
+    }
+
+    this.exporting.set(true);
+    this.settings.export().subscribe({
+      next: (envelope) => {
+        this.exporting.set(false);
+        this.downloadJson(envelope);
+        toast.success(this.transloco.translate('clinic.exportDone'));
+      },
+      error: (error: unknown) => {
+        this.exporting.set(false);
+        toast.error(this.transloco.translate(mapApiError(error)));
+      },
+    });
+  }
+
+  protected onImportPicked(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0] ?? null;
+
+    input.value = '';
+    void this.importConfig(file);
+  }
+
+  /** Parses the picked file and posts its `values` map; failures only toast. */
+  protected async importConfig(file: File | null): Promise<void> {
+    if (file === null || this.importing() || !this.canEdit()) {
+      return;
+    }
+
+    this.importing.set(true);
+
+    try {
+      const parsed = JSON.parse(await readText(file)) as { values?: unknown };
+
+      if (typeof parsed?.values !== 'object' || parsed.values === null) {
+        throw new Error('The file has no values map');
+      }
+
+      this.settings.import({ values: parsed.values as SettingsValues }).subscribe({
+        next: (settings) => {
+          this.importing.set(false);
+          this.applySettings(settings);
+          toast.success(this.transloco.translate('clinic.importDone'));
+          this.loadAudit();
+          this.branding.refresh().subscribe();
+        },
+        error: (error: unknown) => {
+          this.importing.set(false);
+          toast.error(this.transloco.translate(mapApiError(error)));
+        },
+      });
+    } catch {
+      this.importing.set(false);
+      toast.error(this.transloco.translate('clinic.importInvalid'));
+    }
+  }
+
+  private loadAudit(): void {
+    this.settings.audit(5).subscribe({
+      next: (entries) => this.audit.set(entries),
+      // The trail is informational: a failure must not break the form.
+      error: () => this.audit.set([]),
+    });
+  }
+
+  private downloadJson(data: unknown): void {
+    try {
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+
+      anchor.href = url;
+      anchor.download = 'hexa-settings.json';
+      anchor.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      // Constrained environments (tests, old browsers) keep the toast only.
+    }
   }
 
   // ----- Logo pick / crop / upload -------------------------------------------

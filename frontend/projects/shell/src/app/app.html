@@ -60,6 +60,37 @@
     }
 
     <main class="mx-auto w-full max-w-5xl min-w-0 flex-1 px-4 py-8">
+      @if (showOnboarding()) {
+        <div
+          class="border-primary/30 bg-primary/5 mb-6 flex flex-wrap items-center gap-3 rounded-lg border px-4 py-3"
+          data-testid="onboarding-banner"
+        >
+          <span
+            class="bg-primary/10 text-primary flex size-9 shrink-0 items-center justify-center rounded-md"
+          >
+            <ng-icon name="lucideSparkles" />
+          </span>
+          <div class="grid min-w-0 gap-0.5">
+            <p class="text-sm font-medium">{{ 'onboarding.title' | transloco }}</p>
+            <p class="text-muted-foreground text-xs">{{ 'onboarding.message' | transloco }}</p>
+          </div>
+          <div class="ms-auto flex items-center gap-2">
+            <a hlmBtn size="sm" routerLink="/settings/clinic">{{ 'onboarding.cta' | transloco }}</a>
+            <button
+              hlmBtn
+              variant="ghost"
+              size="sm"
+              type="button"
+              [attr.aria-label]="'onboarding.dismiss' | transloco"
+              data-testid="onboarding-dismiss"
+              (click)="dismissOnboarding()"
+            >
+              <ng-icon name="lucideX" />
+            </button>
+          </div>
+        </div>
+      }
+
       <router-outlet />
     </main>
   </div>

@@ -111,6 +111,13 @@ export const EN = {
       signOut: 'Sign out',
     },
   },
+  onboarding: {
+    title: 'Make it yours',
+    message:
+      'You are still using the default identity. Set your name, logo and colors so the app and your printouts carry your brand.',
+    cta: 'Configure clinic',
+    dismiss: 'Dismiss notice',
+  },
   menu: {
     title: 'Side menu',
     subtitle: 'Configure the links users see: order, nesting, icons and permissions.',
@@ -725,6 +732,21 @@ export const EN = {
       subtitle: 'This is how the header and the login look with these values.',
     },
     saved: 'Clinic settings saved.',
+    transfer: {
+      title: 'Export / import',
+      export: 'Export JSON',
+      import: 'Import JSON',
+      hint: 'Back up the editable configuration to replicate it in another installation.',
+    },
+    exportDone: 'Configuration exported.',
+    importDone: 'Configuration imported.',
+    importInvalid: 'The file is not a valid configuration export.',
+    audit: {
+      title: 'Change history',
+      subtitle: 'Latest 5 changes',
+      empty: 'No changes recorded yet.',
+      apiKey: 'API key',
+    },
     dirty: '{{count}} unsaved change(s)',
     clean: 'No pending changes.',
     discard: 'Discard',

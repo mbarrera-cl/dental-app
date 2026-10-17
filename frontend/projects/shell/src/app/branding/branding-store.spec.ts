@@ -59,6 +59,7 @@ describe('BrandingStore', () => {
       mode: 'auto',
       name: 'Mi clínica',
       faviconUrl: `${BASE_URL}/clinic/assets/favicon?v=def`,
+      logoUrl: `${BASE_URL}/clinic/assets/logo?v=abc`,
     });
   });
 

@@ -460,6 +460,38 @@
             </label>
           </div>
         </section>
+        <!-- Historial de cambios -->
+        <section class="bg-card rounded-lg border" data-testid="clinic-audit">
+          <div class="flex flex-wrap items-center justify-between gap-2 border-b px-4 py-3">
+            <h2 class="text-sm font-semibold">{{ 'clinic.audit.title' | transloco }}</h2>
+            <span class="text-muted-foreground text-xs">
+              {{ 'clinic.audit.subtitle' | transloco }}
+            </span>
+          </div>
+          <div class="grid gap-3 p-4">
+            @for (entry of audit(); track entry.id) {
+              <div class="grid gap-1.5" data-testid="clinic-audit-entry">
+                <p class="text-xs">
+                  <span class="font-medium">
+                    {{ entry.actorEmail ?? ('clinic.audit.apiKey' | transloco) }}
+                  </span>
+                  <span class="text-muted-foreground"> · {{ entry.at | date: 'short' }}</span>
+                </p>
+                <div class="flex flex-wrap gap-1.5">
+                  @for (change of entry.changes; track change.key) {
+                    <span hlmBadge variant="outline" class="font-mono text-[10px]">
+                      {{ change.key }}: {{ change.from === null ? '∅' : change.from }} → {{ change.to }}
+                    </span>
+                  }
+                </div>
+              </div>
+            } @empty {
+              <p class="text-muted-foreground text-sm" data-testid="clinic-audit-empty">
+                {{ 'clinic.audit.empty' | transloco }}
+              </p>
+            }
+          </div>
+        </section>
       </div>
 
       <!-- Vista previa + acciones -->
@@ -548,6 +580,48 @@
         </section>
 
         <div class="bg-card grid gap-3 rounded-lg border p-4">
+          <div class="grid gap-2">
+            <span class="text-sm font-medium">{{ 'clinic.transfer.title' | transloco }}</span>
+            <div class="flex gap-2">
+              <button
+                hlmBtn
+                variant="outline"
+                size="sm"
+                type="button"
+                class="flex-1"
+                [disabled]="exporting()"
+                data-testid="clinic-export"
+                (click)="exportConfig()"
+              >
+                <ng-icon name="lucideDownload" />
+                {{ 'clinic.transfer.export' | transloco }}
+              </button>
+              <button
+                *hasPermission="permissionKeys.settings.update"
+                hlmBtn
+                variant="outline"
+                size="sm"
+                type="button"
+                class="flex-1"
+                [disabled]="importing()"
+                data-testid="clinic-import"
+                (click)="importInput.click()"
+              >
+                <ng-icon name="lucideUpload" />
+                {{ 'clinic.transfer.import' | transloco }}
+              </button>
+            </div>
+            <p class="text-muted-foreground text-xs">{{ 'clinic.transfer.hint' | transloco }}</p>
+          </div>
+          <input
+            #importInput
+            type="file"
+            class="hidden"
+            accept="application/json,.json"
+            data-testid="clinic-import-input"
+            (change)="onImportPicked($event)"
+          />
+
           @if (dirtyCount() > 0) {
             <p class="text-sm" data-testid="clinic-dirty">
               {{ 'clinic.dirty' | transloco: { count: dirtyCount() } }}

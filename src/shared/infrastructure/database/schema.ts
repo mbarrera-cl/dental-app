@@ -139,6 +139,20 @@ export function ensureSchema(db: SqliteDatabase): void {
     );
   `);
 
+  // Append-only trail of configuration changes (who/when/what), written by
+  // `SettingsAuditService`. Actor emails are resolved at read time by
+  // joining `users`, so no account data is duplicated here.
+  connection.exec(`
+    CREATE TABLE IF NOT EXISTS settings_audit (
+      id         TEXT PRIMARY KEY,
+      at         TEXT NOT NULL,
+      actor_id   TEXT NOT NULL,
+      actor_type TEXT NOT NULL,
+      changes    TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_settings_audit_at ON settings_audit (at DESC);
+  `);
+
   // Tiny key/value store for one-shot bootstrapping markers (this is *not*
   // part of the configurable settings registry).
   connection.exec(`

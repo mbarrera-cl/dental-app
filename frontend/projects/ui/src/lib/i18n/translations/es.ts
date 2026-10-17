@@ -120,6 +120,13 @@ export const ES = {
       signOut: 'Cerrar sesión',
     },
   },
+  onboarding: {
+    title: 'Personaliza tu clínica',
+    message:
+      'Todavía usas la identidad por defecto. Define nombre, logo y colores para que tus documentos y la aplicación lleven tu marca.',
+    cta: 'Configurar clínica',
+    dismiss: 'Descartar aviso',
+  },
   menu: {
     title: 'Menú lateral',
     subtitle: 'Configura los enlaces que ven los usuarios: orden, anidación, iconos y permisos.',
@@ -737,6 +744,21 @@ export const ES = {
       subtitle: 'Así se ven el encabezado y el login con estos valores.',
     },
     saved: 'Configuración de la clínica guardada.',
+    transfer: {
+      title: 'Exportar / importar',
+      export: 'Exportar JSON',
+      import: 'Importar JSON',
+      hint: 'Respalda la configuración editable para replicarla en otra instalación.',
+    },
+    exportDone: 'Configuración exportada.',
+    importDone: 'Configuración importada.',
+    importInvalid: 'El archivo no es una exportación de configuración válida.',
+    audit: {
+      title: 'Historial de cambios',
+      subtitle: 'Últimos 5 cambios',
+      empty: 'Todavía no hay cambios registrados.',
+      apiKey: 'Clave de API',
+    },
     dirty: '{{count}} cambio(s) sin guardar',
     clean: 'Sin cambios pendientes.',
     discard: 'Descartar',
