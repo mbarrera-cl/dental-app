@@ -22,6 +22,8 @@ export * from './lib/clinical.model';
 export * from './lib/clinical-api';
 export * from './lib/navigation.model';
 export * from './lib/navigation-api';
+export * from './lib/branding.model';
+export * from './lib/branding-api';
 export * from './lib/region';
 export * from './lib/rut';
 export * from './lib/telefono';

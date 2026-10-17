@@ -33,6 +33,11 @@ export const routes: Routes = [
     loadComponent: () => import('./settings/menu/menu-page').then((m) => m.MenuPage),
   },
   {
+    path: 'settings/clinic',
+    canMatch: [authGuard, permissionGuard({ allOf: [PERMISSION_KEYS.settings.read] })],
+    loadComponent: () => import('./settings/clinic/clinic-page').then((m) => m.ClinicPage),
+  },
+  {
     path: 'patients',
     canMatch: [authGuard],
     loadChildren: () =>

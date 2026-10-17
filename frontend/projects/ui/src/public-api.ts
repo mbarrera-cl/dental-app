@@ -7,6 +7,9 @@
  */
 
 export * from './lib/i18n';
+export * from './lib/print/print-header.component';
+export * from './lib/theme/theme-palette';
+export * from './lib/theme/theme.service';
 export * from './lib/utils/src';
 export * from './lib/button/src';
 export * from './lib/input/src';

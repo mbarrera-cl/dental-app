@@ -1,0 +1,779 @@
+<section class="flex flex-col gap-6" data-testid="clinic-page">
+  <header class="flex flex-wrap items-end justify-between gap-4">
+    <div class="grid gap-1">
+      <h1 class="text-xl font-semibold tracking-tight">{{ 'clinic.title' | transloco }}</h1>
+      <p class="text-muted-foreground text-sm">{{ 'clinic.subtitle' | transloco }}</p>
+    </div>
+    @if (!canEdit()) {
+      <span hlmBadge variant="outline" data-testid="clinic-readonly">
+        {{ 'clinic.readOnly' | transloco }}
+      </span>
+    }
+  </header>
+
+  @if (loadError(); as errorKey) {
+    <div
+      class="border-destructive/30 bg-destructive/5 text-destructive flex items-center gap-3 rounded-lg border px-4 py-3 text-sm"
+    >
+      <ng-icon name="lucideTriangleAlert" class="shrink-0" />
+      <p class="flex-1">{{ errorKey | transloco }}</p>
+      <button hlmBtn variant="outline" size="sm" type="button" (click)="load()">
+        {{ 'common.retry' | transloco }}
+      </button>
+    </div>
+  }
+
+  @if (loading()) {
+    <div class="grid gap-4">
+      @for (row of [1, 2, 3]; track row) {
+        <div class="bg-card grid gap-3 rounded-lg border p-4">
+          <div hlmSkeleton class="h-4 w-40"></div>
+          <div hlmSkeleton class="h-9 w-full"></div>
+        </div>
+      }
+    </div>
+  } @else {
+    <form
+      [formGroup]="form"
+      (ngSubmit)="save()"
+      class="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]"
+      novalidate
+    >
+      <div class="flex flex-col gap-6">
+        <!-- Identidad -->
+        <section class="bg-card rounded-lg border" data-testid="clinic-identity">
+          <div class="border-b px-4 py-3">
+            <h2 class="text-sm font-semibold">{{ 'clinic.identity' | transloco }}</h2>
+          </div>
+          <div class="grid gap-4 p-4 sm:grid-cols-2">
+            <div class="grid gap-2">
+              <label hlmLabel for="clinic-name">{{ 'clinic.name' | transloco }}</label>
+              <input
+                hlmInput
+                id="clinic-name"
+                formControlName="name"
+                [placeholder]="'clinic.namePlaceholder' | transloco"
+                data-testid="clinic-name"
+              />
+              @if (errorOf(form.controls.name); as errorKey) {
+                <p class="text-destructive text-xs">{{ errorKey | transloco }}</p>
+              }
+            </div>
+
+            <div class="grid gap-2">
+              <label hlmLabel for="clinic-rut">{{ 'clinic.rut' | transloco }}</label>
+              <input
+                hlmInput
+                id="clinic-rut"
+                formControlName="rut"
+                placeholder="12.345.678-9"
+                spellcheck="false"
+              />
+              @if (errorOf(form.controls.rut); as errorKey) {
+                <p class="text-destructive text-xs">{{ errorKey | transloco }}</p>
+              }
+            </div>
+
+            <div class="grid gap-2">
+              <label hlmLabel for="clinic-legal-name">{{ 'clinic.legalName' | transloco }}</label>
+              <input hlmInput id="clinic-legal-name" formControlName="legalName" />
+            </div>
+
+            <div class="grid gap-2">
+              <label hlmLabel for="clinic-slogan">{{ 'clinic.slogan' | transloco }}</label>
+              <input hlmInput id="clinic-slogan" formControlName="slogan" />
+            </div>
+
+            <!-- Logo -->
+            <div class="grid gap-3 sm:col-span-2">
+              <div class="flex items-center justify-between gap-2">
+                <span class="text-sm font-medium">{{ 'clinic.logo.title' | transloco }}</span>
+                <span class="text-muted-foreground text-xs">
+                  {{ 'clinic.logo.version' | transloco: { version: logoVersion() } }}
+                </span>
+              </div>
+
+              <div class="flex flex-col gap-4 sm:flex-row sm:items-start">
+                <div
+                  class="border-input bg-muted/30 flex size-24 shrink-0 items-center justify-center overflow-hidden rounded-lg border"
+                >
+                  @if (logoUrl(); as logo) {
+                    <img
+                      [src]="logo"
+                      alt=""
+                      data-testid="clinic-logo-current"
+                      class="size-full object-contain"
+                    />
+                  } @else {
+                    <ng-icon name="lucideHexagon" class="text-muted-foreground text-2xl" />
+                  }
+                </div>
+
+                <div class="grid flex-1 gap-3">
+                  @if (uploading()) {
+                    <div class="grid gap-1.5" data-testid="clinic-logo-progress">
+                      <div class="flex items-center justify-between text-xs">
+                        <span>{{ 'upload.uploading' | transloco }}</span>
+                        <span>{{ uploadProgress() }} %</span>
+                      </div>
+                      <div class="bg-muted h-2 overflow-hidden rounded-full">
+                        <div
+                          class="bg-primary h-full rounded-full transition-all"
+                          [style.width.%]="uploadProgress()"
+                        ></div>
+                      </div>
+                    </div>
+                  } @else {
+                    <div
+                      *hasPermission="permissionKeys.settings.update"
+                      class="border-input flex cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border border-dashed px-4 py-4 text-center transition-colors"
+                      [class.border-primary]="dragging()"
+                      [class.bg-primary/5]="dragging()"
+                      role="button"
+                      tabindex="0"
+                      data-testid="clinic-logo-dropzone"
+                      (click)="fileInput.click()"
+                      (keydown.enter)="fileInput.click()"
+                      (dragover)="onDragOver($event)"
+                      (dragleave)="onDragLeave()"
+                      (drop)="onDrop($event)"
+                      (paste)="onPaste($event)"
+                    >
+                      <ng-icon name="lucideImagePlus" class="text-muted-foreground text-xl" />
+                      <p class="text-sm font-medium">{{ 'upload.dropzone' | transloco }}</p>
+                      <p class="text-muted-foreground text-xs">{{ 'upload.hint' | transloco }}</p>
+                    </div>
+                  }
+
+                  <input
+                    #fileInput
+                    type="file"
+                    class="hidden"
+                    accept="image/png,image/jpeg,image/webp"
+                    data-testid="clinic-logo-input"
+                    (change)="onFilePicked($event)"
+                  />
+
+                  <div
+                    *hasPermission="permissionKeys.settings.update"
+                    class="flex flex-wrap items-center gap-2"
+                  >
+                    <button
+                      hlmBtn
+                      variant="outline"
+                      size="sm"
+                      type="button"
+                      [disabled]="uploading()"
+                      data-testid="clinic-logo-replace"
+                      (click)="fileInput.click()"
+                    >
+                      <ng-icon name="lucideImagePlus" />
+                      {{ 'clinic.logo.replace' | transloco }}
+                    </button>
+                    @if (logoUrl() !== null) {
+                      <button
+                        hlmBtn
+                        variant="ghost"
+                        size="sm"
+                        type="button"
+                        class="text-destructive hover:text-destructive"
+                        [disabled]="uploading()"
+                        data-testid="clinic-logo-remove"
+                        (click)="removeOpen.set(true)"
+                      >
+                        <ng-icon name="lucideTrash2" />
+                        {{ 'clinic.logo.remove' | transloco }}
+                      </button>
+                    } @else {
+                      <span class="text-muted-foreground text-xs">
+                        {{ 'clinic.logo.none' | transloco }}
+                      </span>
+                    }
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Contacto -->
+        <section class="bg-card rounded-lg border" data-testid="clinic-contact">
+          <div class="border-b px-4 py-3">
+            <h2 class="text-sm font-semibold">{{ 'clinic.contact' | transloco }}</h2>
+          </div>
+          <div class="grid gap-4 p-4 sm:grid-cols-2">
+            <div class="grid gap-2">
+              <label hlmLabel for="clinic-phone">{{ 'clinic.phone' | transloco }}</label>
+              <input
+                hlmInput
+                id="clinic-phone"
+                formControlName="phone"
+                placeholder="+56 9 1234 5678"
+                spellcheck="false"
+              />
+              @if (errorOf(form.controls.phone); as errorKey) {
+                <p class="text-destructive text-xs">{{ errorKey | transloco }}</p>
+              }
+            </div>
+
+            <div class="grid gap-2">
+              <label hlmLabel for="clinic-email">{{ 'clinic.email' | transloco }}</label>
+              <input
+                hlmInput
+                id="clinic-email"
+                type="email"
+                formControlName="email"
+                placeholder="contacto@clinica.cl"
+                spellcheck="false"
+              />
+              @if (errorOf(form.controls.email); as errorKey) {
+                <p class="text-destructive text-xs">{{ errorKey | transloco }}</p>
+              }
+            </div>
+
+            <div class="grid gap-2 sm:col-span-2">
+              <label hlmLabel for="clinic-website">{{ 'clinic.website' | transloco }}</label>
+              <input
+                hlmInput
+                id="clinic-website"
+                formControlName="website"
+                placeholder="https://clinica.cl"
+                spellcheck="false"
+              />
+              @if (errorOf(form.controls.website); as errorKey) {
+                <p class="text-destructive text-xs">{{ errorKey | transloco }}</p>
+              }
+            </div>
+          </div>
+        </section>
+
+        <!-- Dirección -->
+        <section class="bg-card rounded-lg border" data-testid="clinic-address">
+          <div class="border-b px-4 py-3">
+            <h2 class="text-sm font-semibold">{{ 'clinic.address' | transloco }}</h2>
+          </div>
+          <div class="grid gap-4 p-4 sm:grid-cols-2">
+            <div class="grid gap-2">
+              <label class="text-sm font-medium" for="clinic-region">
+                {{ 'clinic.region' | transloco }}
+              </label>
+              <select
+                id="clinic-region"
+                formControlName="region"
+                class="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-9 w-full rounded-md border px-3 text-sm shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px]"
+              >
+                <option value="">{{ 'clinic.regionPlaceholder' | transloco }}</option>
+                @for (region of regions; track region.code) {
+                  <option [value]="region.code">{{ region.name }}</option>
+                }
+              </select>
+            </div>
+
+            <div class="grid gap-2">
+              <label hlmLabel for="clinic-comuna">{{ 'clinic.comuna' | transloco }}</label>
+              <input
+                hlmInput
+                id="clinic-comuna"
+                formControlName="comuna"
+                placeholder="Providencia"
+              />
+            </div>
+
+            <div class="grid gap-2 sm:col-span-2">
+              <label hlmLabel for="clinic-calle">{{ 'clinic.calle' | transloco }}</label>
+              <input
+                hlmInput
+                id="clinic-calle"
+                formControlName="calle"
+                placeholder="Av. Providencia"
+              />
+            </div>
+
+            <div class="grid gap-2">
+              <label hlmLabel for="clinic-numero">{{ 'clinic.numero' | transloco }}</label>
+              <input hlmInput id="clinic-numero" formControlName="numero" />
+            </div>
+
+            <div class="grid gap-2">
+              <label hlmLabel for="clinic-oficina">{{ 'clinic.oficina' | transloco }}</label>
+              <input hlmInput id="clinic-oficina" formControlName="oficina" placeholder="401" />
+            </div>
+          </div>
+        </section>
+
+        <!-- Tema -->
+        <section class="bg-card rounded-lg border" data-testid="clinic-theme">
+          <div class="border-b px-4 py-3">
+            <h2 class="text-sm font-semibold">{{ 'clinic.theme' | transloco }}</h2>
+            <p class="text-muted-foreground mt-0.5 text-xs">
+              {{ 'theme.subtitle' | transloco }}
+            </p>
+          </div>
+          <div class="grid gap-5 p-4">
+            <div class="grid gap-2 sm:grid-cols-[7rem_minmax(0,1fr)] sm:items-start">
+              <label class="text-sm font-medium sm:pt-2" for="clinic-primary">
+                {{ 'theme.primary' | transloco }}
+              </label>
+              <div class="grid gap-2">
+                <div class="flex flex-wrap items-center gap-2">
+                  <input
+                    id="clinic-primary"
+                    type="color"
+                    [formControl]="form.controls.primary"
+                    class="border-input h-9 w-12 cursor-pointer rounded-md border bg-transparent p-1"
+                    [attr.aria-label]="'theme.primary' | transloco"
+                    data-testid="clinic-primary-picker"
+                  />
+                  <input
+                    hlmInput
+                    formControlName="primary"
+                    class="w-32 font-mono"
+                    spellcheck="false"
+                    data-testid="clinic-primary-hex"
+                  />
+                  @if (primaryChip(); as chip) {
+                    <span
+                      hlmBadge
+                      [variant]="chip.level === 'fail' ? 'destructive' : 'outline'"
+                      [class.border-emerald-500/50]="chip.level !== 'fail'"
+                      [class.text-emerald-600]="chip.level !== 'fail'"
+                      [attr.data-testid]="'clinic-primary-contrast'"
+                    >
+                      <ng-icon name="lucideCheck" />
+                      {{ chip.labelKey | transloco }} · {{ chip.ratio }}:1
+                    </span>
+                  }
+                </div>
+                @if (errorOf(form.controls.primary); as errorKey) {
+                  <p class="text-destructive text-xs">{{ errorKey | transloco }}</p>
+                }
+              </div>
+            </div>
+
+            <div class="grid gap-2 sm:grid-cols-[7rem_minmax(0,1fr)] sm:items-start">
+              <label class="text-sm font-medium sm:pt-2" for="clinic-accent">
+                {{ 'theme.accent' | transloco }}
+              </label>
+              <div class="grid gap-2">
+                <div class="flex flex-wrap items-center gap-2">
+                  <input
+                    id="clinic-accent"
+                    type="color"
+                    [formControl]="form.controls.accent"
+                    class="border-input h-9 w-12 cursor-pointer rounded-md border bg-transparent p-1"
+                    [attr.aria-label]="'theme.accent' | transloco"
+                    data-testid="clinic-accent-picker"
+                  />
+                  <input
+                    hlmInput
+                    formControlName="accent"
+                    class="w-32 font-mono"
+                    spellcheck="false"
+                    data-testid="clinic-accent-hex"
+                  />
+                  @if (accentChip(); as chip) {
+                    <span
+                      hlmBadge
+                      [variant]="chip.level === 'fail' ? 'destructive' : 'outline'"
+                      [class.border-emerald-500/50]="chip.level !== 'fail'"
+                      [class.text-emerald-600]="chip.level !== 'fail'"
+                    >
+                      <ng-icon name="lucideCheck" />
+                      {{ chip.labelKey | transloco }} · {{ chip.ratio }}:1
+                    </span>
+                  }
+                </div>
+                @if (errorOf(form.controls.accent); as errorKey) {
+                  <p class="text-destructive text-xs">{{ errorKey | transloco }}</p>
+                }
+              </div>
+            </div>
+
+            <div class="grid gap-2">
+              <span class="text-sm font-medium">{{ 'theme.presetsLabel' | transloco }}</span>
+              <div class="flex flex-wrap gap-2">
+                @for (preset of presets; track preset.id) {
+                  <button
+                    hlmBtn
+                    variant="outline"
+                    size="sm"
+                    type="button"
+                    [attr.data-testid]="'theme-preset-' + preset.id"
+                    (click)="applyPreset(preset)"
+                  >
+                    <span class="size-3 rounded-full border" [style.background]="preset.primary"></span>
+                    <span class="size-3 rounded-full border" [style.background]="preset.accent"></span>
+                    {{ 'theme.presets.' + preset.id | transloco }}
+                  </button>
+                }
+              </div>
+            </div>
+
+            <div class="grid gap-2">
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <span class="text-sm font-medium">{{ 'theme.logoColors' | transloco }}</span>
+                <button
+                  hlmBtn
+                  variant="outline"
+                  size="sm"
+                  type="button"
+                  [disabled]="uploading()"
+                  data-testid="theme-logo-colors"
+                  (click)="suggestColors()"
+                >
+                  <ng-icon name="lucideSparkles" />
+                  {{ 'theme.extractColors' | transloco }}
+                </button>
+              </div>
+              <div class="flex flex-wrap items-center gap-2">
+                @for (suggestion of colorSuggestions(); track suggestion.color) {
+                  <button
+                    type="button"
+                    class="border-input bg-background flex items-center gap-1.5 rounded-full border px-2 py-1 text-xs shadow-xs"
+                    [attr.title]="'theme.useAsPrimary' | transloco"
+                    [attr.data-testid]="'theme-suggestion-' + suggestion.color"
+                    (click)="applySuggestion(suggestion)"
+                  >
+                    <span
+                      class="size-3.5 rounded-full border"
+                      [style.background]="suggestion.color"
+                    ></span>
+                    <span class="font-mono">{{ suggestion.color }}</span>
+                  </button>
+                } @empty {
+                  <p class="text-muted-foreground text-xs">{{ 'theme.logoColorsHint' | transloco }}</p>
+                }
+              </div>
+            </div>
+
+            <label class="flex items-start gap-2 text-sm">
+              <input
+                type="checkbox"
+                formControlName="autoDark"
+                class="accent-primary mt-0.5 size-4"
+                data-testid="clinic-auto-dark"
+              />
+              <span class="grid gap-0.5">
+                <span class="font-medium">{{ 'theme.autoDark' | transloco }}</span>
+                <span class="text-muted-foreground text-xs">{{ 'theme.autoDarkHint' | transloco }}</span>
+              </span>
+            </label>
+          </div>
+        </section>
+        <!-- Historial de cambios -->
+        <section class="bg-card rounded-lg border" data-testid="clinic-audit">
+          <div class="flex flex-wrap items-center justify-between gap-2 border-b px-4 py-3">
+            <h2 class="text-sm font-semibold">{{ 'clinic.audit.title' | transloco }}</h2>
+            <span class="text-muted-foreground text-xs">
+              {{ 'clinic.audit.subtitle' | transloco }}
+            </span>
+          </div>
+          <div class="grid gap-3 p-4">
+            @for (entry of audit(); track entry.id) {
+              <div class="grid gap-1.5" data-testid="clinic-audit-entry">
+                <p class="text-xs">
+                  <span class="font-medium">
+                    {{ entry.actorEmail ?? ('clinic.audit.apiKey' | transloco) }}
+                  </span>
+                  <span class="text-muted-foreground"> · {{ entry.at | date: 'short' }}</span>
+                </p>
+                <div class="flex flex-wrap gap-1.5">
+                  @for (change of entry.changes; track change.key) {
+                    <span hlmBadge variant="outline" class="font-mono text-[10px]">
+                      {{ change.key }}: {{ change.from === null ? '∅' : change.from }} → {{ change.to }}
+                    </span>
+                  }
+                </div>
+              </div>
+            } @empty {
+              <p class="text-muted-foreground text-sm" data-testid="clinic-audit-empty">
+                {{ 'clinic.audit.empty' | transloco }}
+              </p>
+            }
+          </div>
+        </section>
+      </div>
+
+      <!-- Vista previa + acciones -->
+      <aside class="flex flex-col gap-4 lg:sticky lg:top-20">
+        <section class="bg-card rounded-lg border" data-testid="clinic-preview">
+          <div class="border-b px-4 py-3">
+            <h2 class="text-sm font-semibold">{{ 'clinic.preview.title' | transloco }}</h2>
+            <p class="text-muted-foreground mt-0.5 text-xs">
+              {{ 'clinic.preview.subtitle' | transloco }}
+            </p>
+          </div>
+          <div class="grid gap-4 p-4">
+            <!-- Encabezado simulado -->
+            <div class="overflow-hidden rounded-lg border" data-testid="preview-header">
+              <div class="flex items-center gap-2 border-b px-3 py-2">
+                @if (logoUrl(); as logo) {
+                  <img [src]="logo" alt="" class="h-6 w-auto max-w-16 rounded object-contain" />
+                } @else {
+                  <span
+                    class="flex size-6 shrink-0 items-center justify-center rounded-md"
+                    [style.background]="palette().light['--primary']"
+                    [style.color]="primaryForeground()"
+                  >
+                    <ng-icon name="lucideHexagon" class="text-xs" />
+                  </span>
+                }
+                <span class="flex min-w-0 flex-col leading-none">
+                  <span class="truncate text-xs font-semibold">
+                    {{ formValue().name || ('shell.title' | transloco) }}
+                  </span>
+                  <span class="text-muted-foreground truncate text-[10px]">
+                    {{ formValue().slogan || ('shell.subtitle' | transloco) }}
+                  </span>
+                </span>
+                <span class="bg-muted ms-auto rounded-full px-2 py-0.5 text-[10px]">ES</span>
+              </div>
+              <div class="flex items-center gap-1.5 px-3 py-2">
+                <span
+                  class="rounded-md px-2 py-1 text-[10px] font-medium"
+                  [style.background]="palette().light['--primary']"
+                  [style.color]="primaryForeground()"
+                >
+                  {{ 'shell.navPatients' | transloco }}
+                </span>
+                <span class="text-muted-foreground rounded-md px-2 py-1 text-[10px]">
+                  {{ 'shell.navDashboard' | transloco }}
+                </span>
+                <span
+                  class="ms-auto rounded-md px-2 py-1 text-[10px] font-medium"
+                  [style.background]="palette().light['--accent']"
+                  [style.color]="accentForeground()"
+                >
+                  Aa
+                </span>
+              </div>
+            </div>
+
+            <!-- Login simulado -->
+            <div class="rounded-lg border px-3 py-4" data-testid="preview-login">
+              <div class="mx-auto flex w-full max-w-36 flex-col items-center gap-1.5 text-center">
+                @if (logoUrl(); as logo) {
+                  <img [src]="logo" alt="" class="h-8 w-auto max-w-28 object-contain" />
+                } @else {
+                  <span
+                    class="flex size-8 items-center justify-center rounded-md"
+                    [style.background]="palette().light['--primary']"
+                    [style.color]="primaryForeground()"
+                  >
+                    <ng-icon name="lucideHexagon" class="text-sm" />
+                  </span>
+                }
+                <span class="w-full truncate text-xs font-semibold">
+                  {{ formValue().name || ('login.title' | transloco) }}
+                </span>
+                <span class="bg-muted h-6 w-full rounded-md"></span>
+                <span
+                  class="w-full rounded-md px-2 py-1 text-[10px] font-medium"
+                  [style.background]="palette().light['--primary']"
+                  [style.color]="primaryForeground()"
+                >
+                  {{ 'login.submit' | transloco }}
+                </span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <div class="bg-card grid gap-3 rounded-lg border p-4">
+          <div class="grid gap-2">
+            <span class="text-sm font-medium">{{ 'clinic.transfer.title' | transloco }}</span>
+            <div class="flex gap-2">
+              <button
+                hlmBtn
+                variant="outline"
+                size="sm"
+                type="button"
+                class="flex-1"
+                [disabled]="exporting()"
+                data-testid="clinic-export"
+                (click)="exportConfig()"
+              >
+                <ng-icon name="lucideDownload" />
+                {{ 'clinic.transfer.export' | transloco }}
+              </button>
+              <button
+                *hasPermission="permissionKeys.settings.update"
+                hlmBtn
+                variant="outline"
+                size="sm"
+                type="button"
+                class="flex-1"
+                [disabled]="importing()"
+                data-testid="clinic-import"
+                (click)="importInput.click()"
+              >
+                <ng-icon name="lucideUpload" />
+                {{ 'clinic.transfer.import' | transloco }}
+              </button>
+            </div>
+            <p class="text-muted-foreground text-xs">{{ 'clinic.transfer.hint' | transloco }}</p>
+          </div>
+          <input
+            #importInput
+            type="file"
+            class="hidden"
+            accept="application/json,.json"
+            data-testid="clinic-import-input"
+            (change)="onImportPicked($event)"
+          />
+
+          @if (dirtyCount() > 0) {
+            <p class="text-sm" data-testid="clinic-dirty">
+              {{ 'clinic.dirty' | transloco: { count: dirtyCount() } }}
+            </p>
+          } @else {
+            <p class="text-muted-foreground text-sm">{{ 'clinic.clean' | transloco }}</p>
+          }
+          <div class="flex gap-2">
+            <button
+              hlmBtn
+              variant="outline"
+              type="button"
+              class="flex-1"
+              [disabled]="saving() || dirtyCount() === 0"
+              data-testid="clinic-discard"
+              (click)="discard()"
+            >
+              <ng-icon name="lucideUndo2" />
+              {{ 'clinic.discard' | transloco }}
+            </button>
+            <button
+              *hasPermission="permissionKeys.settings.update"
+              hlmBtn
+              type="submit"
+              class="flex-1"
+              [disabled]="saving() || dirtyCount() === 0 || form.invalid"
+              data-testid="clinic-save"
+            >
+              @if (saving()) {
+                <hlm-spinner class="me-1.5" [attr.aria-label]="'common.loading' | transloco" />
+              } @else {
+                <ng-icon name="lucideCheck" />
+              }
+              {{ 'clinic.save' | transloco }}
+            </button>
+          </div>
+        </div>
+      </aside>
+    </form>
+  }
+</section>
+
+<!-- Diálogo de recorte -->
+<hlm-dialog [state]="cropOpen() ? 'open' : 'closed'" (stateChanged)="onCropStateChanged($event)">
+  <hlm-dialog-content *hlmDialogPortal="let ctx" class="sm:max-w-lg" data-testid="clinic-crop-dialog">
+    <hlm-dialog-header>
+      <h3 hlmDialogTitle>{{ 'crop.title' | transloco }}</h3>
+      <p hlmDialogDescription>{{ 'crop.description' | transloco }}</p>
+    </hlm-dialog-header>
+
+    <div class="grid justify-items-center gap-4">
+      <div
+        class="bg-muted relative cursor-grab touch-none overflow-hidden rounded-lg border"
+        [style.width.px]="frame().width"
+        [style.height.px]="frame().height"
+        data-testid="crop-viewport"
+        (pointerdown)="onPointerDown($event)"
+        (pointermove)="onPointerMove($event)"
+        (pointerup)="onPointerUp()"
+        (pointercancel)="onPointerUp()"
+      >
+        @if (prepared(); as image) {
+          <img
+            [src]="image.objectUrl"
+            alt=""
+            draggable="false"
+            class="pointer-events-none absolute max-w-none select-none"
+            [style]="imageStyle()"
+          />
+        }
+        <span class="bg-white/60 pointer-events-none absolute inset-y-0 left-1/3 w-px"></span>
+        <span class="bg-white/60 pointer-events-none absolute inset-y-0 left-2/3 w-px"></span>
+        <span class="bg-white/60 pointer-events-none absolute inset-x-0 top-1/3 h-px"></span>
+        <span class="bg-white/60 pointer-events-none absolute inset-x-0 top-2/3 h-px"></span>
+      </div>
+
+      <div class="flex w-full flex-wrap items-center gap-2">
+        <button
+          hlmBtn
+          [variant]="preset() === 'square' ? 'default' : 'outline'"
+          size="sm"
+          type="button"
+          data-testid="crop-preset-square"
+          (click)="setPreset('square')"
+        >
+          {{ 'crop.square' | transloco }}
+        </button>
+        <button
+          hlmBtn
+          [variant]="preset() === 'wide' ? 'default' : 'outline'"
+          size="sm"
+          type="button"
+          data-testid="crop-preset-wide"
+          (click)="setPreset('wide')"
+        >
+          {{ 'crop.wide' | transloco }}
+        </button>
+        <label class="ms-auto flex items-center gap-2 text-xs">
+          {{ 'crop.zoom' | transloco }}
+          <input
+            type="range"
+            min="1"
+            max="4"
+            step="0.05"
+            class="accent-primary w-32"
+            [value]="zoom()"
+            data-testid="crop-zoom"
+            (input)="onZoom($event)"
+          />
+        </label>
+      </div>
+    </div>
+
+    <hlm-dialog-footer>
+      <button hlmBtn variant="outline" type="button" hlmDialogClose>
+        {{ 'common.cancel' | transloco }}
+      </button>
+      <button
+        hlmBtn
+        type="button"
+        [disabled]="prepared() === null"
+        data-testid="crop-apply"
+        (click)="applyCrop()"
+      >
+        <ng-icon name="lucideUpload" />
+        {{ 'crop.apply' | transloco }}
+      </button>
+    </hlm-dialog-footer>
+  </hlm-dialog-content>
+</hlm-dialog>
+
+<!-- Confirmación de quitar logo -->
+<hlm-alert-dialog [state]="removeOpen() ? 'open' : 'closed'" (stateChanged)="onRemoveStateChanged($event)">
+  <hlm-alert-dialog-content *hlmAlertDialogPortal="let ctx">
+    <hlm-alert-dialog-header>
+      <h2 hlmAlertDialogTitle>{{ 'clinic.logo.removeTitle' | transloco }}</h2>
+      <p hlmAlertDialogDescription>{{ 'clinic.logo.removeDescription' | transloco }}</p>
+    </hlm-alert-dialog-header>
+    <hlm-alert-dialog-footer>
+      <button hlmAlertDialogCancel [disabled]="removing()">{{ 'common.cancel' | transloco }}</button>
+      <button
+        hlmAlertDialogAction
+        variant="destructive"
+        [disabled]="removing()"
+        data-testid="clinic-logo-remove-confirm"
+        (click)="confirmRemove()"
+      >
+        @if (removing()) {
+          <hlm-spinner class="me-1.5" [attr.aria-label]="'common.loading' | transloco" />
+        }
+        {{ 'clinic.logo.remove' | transloco }}
+      </button>
+    </hlm-alert-dialog-footer>
+  </hlm-alert-dialog-content>
+</hlm-alert-dialog>

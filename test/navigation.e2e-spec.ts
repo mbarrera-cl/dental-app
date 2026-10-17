@@ -152,8 +152,9 @@ describe('Navigation (e2e)', () => {
       'admin.settings',
       'admin.apiKeys',
       'settings.menu',
+      'settings.clinic',
     ]);
-    expect(adminGroup.children.map((child) => child.position)).toEqual([0, 1, 2, 3]);
+    expect(adminGroup.children.map((child) => child.position)).toEqual([0, 1, 2, 3, 4]);
 
     // Editors see exactly the same tree the sidebar would render.
     const full = (await getItems().expect(200)).body as MenuNode[];
@@ -207,7 +208,7 @@ describe('Navigation (e2e)', () => {
       requiredPermission: 'apikeys:self',
     }).expect(201);
 
-    expect((menuChild.body as MenuNode).position).toBe(4);
+    expect((menuChild.body as MenuNode).position).toBe(5);
 
     // Dividers are plain separators.
     const divider = await createItem({ kind: 'divider' }).expect(201);
@@ -282,9 +283,10 @@ describe('Navigation (e2e)', () => {
       'admin.settings',
       'admin.apiKeys',
       'settings.menu',
+      'settings.clinic',
       'users',
     ]);
-    expect(admins.children.map((child) => child.position)).toEqual([0, 1, 2, 3, 4]);
+    expect(admins.children.map((child) => child.position)).toEqual([0, 1, 2, 3, 4, 5]);
     expect(flatten(afterMove).some((node) => node.routeKey === 'users' && node.parentId === null)).toBe(false);
 
     // Invalid payloads.

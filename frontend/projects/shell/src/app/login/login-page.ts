@@ -12,6 +12,7 @@ import { HlmSpinner } from '@ui/spinner';
 import { SessionStore } from 'auth';
 import { mapApiError } from 'data-access';
 import { formatDateTime } from 'ui';
+import { BrandingStore } from '../branding/branding-store';
 import {
   errorDetailsOf,
   errorNameOf,
@@ -41,6 +42,9 @@ export class LoginPage {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly transloco = inject(TranslocoService);
+
+  /** Public branding: the login screen wears the clinic's face. */
+  protected readonly branding = inject(BrandingStore);
 
   protected readonly mode = signal<'credentials' | 'expired'>('credentials');
   protected readonly reason = signal<'expired' | 'reset' | null>(null);

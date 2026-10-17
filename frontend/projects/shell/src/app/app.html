@@ -12,13 +12,34 @@
         </button>
       }
 
-      <a routerLink="/" class="flex items-center gap-2">
-        <span class="bg-primary text-primary-foreground flex size-7 shrink-0 items-center justify-center rounded-md">
-          <ng-icon name="lucideHexagon" class="text-sm" />
-        </span>
-        <span class="flex flex-col leading-none">
-          <span class="text-sm font-semibold">{{ 'shell.title' | transloco }}</span>
-          <span class="text-muted-foreground hidden text-[11px] sm:block">{{ 'shell.subtitle' | transloco }}</span>
+      <a routerLink="/" class="flex min-w-0 items-center gap-2">
+        @if (branding.logoUrl(); as logo) {
+          <img
+            [src]="logo"
+            alt=""
+            data-testid="brand-logo"
+            class="h-8 w-auto max-w-24 shrink-0 rounded-md object-contain"
+          />
+        } @else {
+          <span class="bg-primary text-primary-foreground flex size-7 shrink-0 items-center justify-center rounded-md">
+            <ng-icon name="lucideHexagon" class="text-sm" />
+          </span>
+        }
+        <span class="flex min-w-0 flex-col leading-none">
+          <span class="truncate text-sm font-semibold">
+            @if (branding.name(); as name) {
+              {{ name }}
+            } @else {
+              {{ 'shell.title' | transloco }}
+            }
+          </span>
+          <span class="text-muted-foreground hidden truncate text-[11px] sm:block">
+            @if (branding.slogan(); as slogan) {
+              {{ slogan }}
+            } @else {
+              {{ 'shell.subtitle' | transloco }}
+            }
+          </span>
         </span>
       </a>
 
@@ -39,12 +60,48 @@
     }
 
     <main class="mx-auto w-full max-w-5xl min-w-0 flex-1 px-4 py-8">
+      @if (showOnboarding()) {
+        <div
+          class="border-primary/30 bg-primary/5 mb-6 flex flex-wrap items-center gap-3 rounded-lg border px-4 py-3"
+          data-testid="onboarding-banner"
+        >
+          <span
+            class="bg-primary/10 text-primary flex size-9 shrink-0 items-center justify-center rounded-md"
+          >
+            <ng-icon name="lucideSparkles" />
+          </span>
+          <div class="grid min-w-0 gap-0.5">
+            <p class="text-sm font-medium">{{ 'onboarding.title' | transloco }}</p>
+            <p class="text-muted-foreground text-xs">{{ 'onboarding.message' | transloco }}</p>
+          </div>
+          <div class="ms-auto flex items-center gap-2">
+            <a hlmBtn size="sm" routerLink="/settings/clinic">{{ 'onboarding.cta' | transloco }}</a>
+            <button
+              hlmBtn
+              variant="ghost"
+              size="sm"
+              type="button"
+              [attr.aria-label]="'onboarding.dismiss' | transloco"
+              data-testid="onboarding-dismiss"
+              (click)="dismissOnboarding()"
+            >
+              <ng-icon name="lucideX" />
+            </button>
+          </div>
+        </div>
+      }
+
       <router-outlet />
     </main>
   </div>
 
   <footer class="text-muted-foreground border-t px-4 py-4 text-center text-xs">
-    {{ 'shell.title' | transloco }} · NestJS + Angular + Native Federation
+    @if (branding.name(); as name) {
+      {{ name }}
+    } @else {
+      {{ 'shell.title' | transloco }}
+    }
+    · NestJS + Angular + Native Federation
   </footer>
 
   <hlm-toaster [richColors]="true" />
