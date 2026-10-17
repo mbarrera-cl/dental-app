@@ -167,6 +167,16 @@ const METHODS: Readonly<Record<string, string>> = {
   hexa_activity_list: 'list',
 };
 
+const APPROVAL_TITLES: Readonly<Record<string, string>> = {
+  hexa_quotes_create: 'Crear presupuesto',
+  hexa_quotes_update: 'Actualizar presupuesto',
+  hexa_quotes_duplicate: 'Duplicar presupuesto',
+  hexa_quotes_decide_item: 'Decidir línea de presupuesto',
+  hexa_quotes_sanction: 'Aprobar o rechazar presupuesto',
+  hexa_quotes_delete: 'Enviar presupuesto a la papelera',
+  hexa_quotes_restore: 'Restaurar presupuesto',
+};
+
 const NO_ANSWER_TOOL: DeepSeekToolDefinition = {
   type: 'function',
   function: {
@@ -282,9 +292,8 @@ export class McpToolCatalog {
   }
 
   describeApproval(name: string, arguments_: Record<string, unknown>): ApprovalDescription {
-    const label = this.labelOf(name);
     const parameters = approvalParameters(arguments_);
-    const title = name === 'hexa_quotes_create' ? 'Crear presupuesto' : label;
+    const title = APPROVAL_TITLES[name] ?? this.labelOf(name);
     const summary =
       name === 'hexa_quotes_create'
         ? 'Se creará un presupuesto en borrador. Revisa los datos antes de aprobar.'

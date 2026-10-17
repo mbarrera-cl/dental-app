@@ -191,17 +191,7 @@ export class CaroIaStore {
     this.streamingIdSignal.set(null);
 
     if (streamingId !== null) {
-      this.messagesSignal.update((messages) =>
-        messages.filter(
-          (message) =>
-            !(
-              message.id === streamingId &&
-              message.content === '' &&
-              message.approvals.length === 0 &&
-              message.toolCalls.length === 0
-            ),
-        ),
-      );
+      this.removeEmptyPlaceholder(streamingId);
     }
   }
 
@@ -270,11 +260,10 @@ export class CaroIaStore {
     this.gateway.decideApproval(activeId, approvalId, decision).subscribe({
       next: (event) => this.handleEvent(placeholderId, event),
       error: () => {
+        this.stop();
         this.errorSignal.set('No se pudo procesar la aprobación.');
         this.updateApprovalStatus(approvalId, 'pending');
-        this.sendingSignal.set(false);
         this.approvingSignal.set(false);
-        this.streamingIdSignal.set(null);
       },
       complete: () => {
         this.sendingSignal.set(false);
@@ -333,9 +322,8 @@ export class CaroIaStore {
       .subscribe({
         next: (event) => this.handleEvent(placeholder.id, event),
         error: () => {
+          this.stop();
           this.errorSignal.set('No se pudo enviar el mensaje.');
-          this.sendingSignal.set(false);
-          this.streamingIdSignal.set(null);
         },
         complete: () => {
           this.sendingSignal.set(false);
@@ -449,8 +437,23 @@ export class CaroIaStore {
         break;
       case 'error':
         this.errorSignal.set(event.message);
+        this.removeEmptyPlaceholder(placeholderId);
         break;
     }
+  }
+
+  private removeEmptyPlaceholder(messageId: string): void {
+    this.messagesSignal.update((messages) =>
+      messages.filter(
+        (message) =>
+          !(
+            message.id === messageId &&
+            message.content === '' &&
+            message.approvals.length === 0 &&
+            message.toolCalls.length === 0
+          ),
+      ),
+    );
   }
 
   private updateApprovalStatus(
