@@ -74,6 +74,12 @@ export const ADMIN_ROUTES: Routes = [
         canMatch: [permissionGuard({ allOf: [PERMISSION_KEYS.uco.read] })],
         loadComponent: () => import('./uco/uco-page').then((m) => m.UcoPage),
       },
+      {
+        path: 'agenda',
+        canMatch: [permissionGuard({ allOf: [PERMISSION_KEYS.settings.read] })],
+        loadComponent: () =>
+          import('./agenda-settings/agenda-settings-page').then((m) => m.AgendaSettingsPage),
+      },
     ],
   },
 ];

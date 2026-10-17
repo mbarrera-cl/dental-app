@@ -32,6 +32,12 @@ export const NAVIGATION_ROUTES: readonly NavigationRoute[] = [
     icon: 'lucideLayoutDashboard',
   },
   {
+    key: 'agenda',
+    path: '/agenda',
+    label: 'shell.navAgenda',
+    icon: 'lucideCalendar',
+  },
+  {
     key: 'users',
     path: '/users',
     label: 'shell.navUsers',

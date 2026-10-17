@@ -4,8 +4,10 @@ import { ADMIN_ROLE_NAME, Role } from '../../../modules/roles/domain/role.entity
 import { UserRepositoryPort } from '../../../modules/users/application/ports/user-repository.port.js';
 import { Email } from '../../../modules/users/domain/email.vo.js';
 import { User } from '../../../modules/users/domain/user.entity.js';
+import { agendaCategory } from '../../../modules/agenda/permissions.js';
 import { apiKeysCategory } from '../../../modules/apikeys/permissions.js';
 import { activityCategory } from '../../../modules/activity/permissions.js';
+import { patientsCategory } from '../../../modules/patients/permissions.js';
 import { usersCategory } from '../../../modules/users/permissions.js';
 import { allPermissionKeys, dashboardCategory } from '../../security/permissions.js';
 import { PasswordHasher } from '../../security/password-hasher.js';
@@ -17,10 +19,22 @@ export const ADMIN_PASSWORD_ENV = 'ADMIN_PASSWORD';
 const DEFAULT_ADMIN_EMAIL = 'admin@hexa.local';
 const DEFAULT_ADMIN_PASSWORD = 'Admin123!';
 const DEFAULT_ROLES_SEEDED_MARKER = 'default-roles-seeded';
+const DENTIST_ROLE_NAME = 'dentista';
+
+/** Permissions of the built-in dentist role. */
+const DENTIST_PERMISSIONS = [
+  agendaCategory.keys.read,
+  agendaCategory.keys.create,
+  agendaCategory.keys.update,
+  agendaCategory.keys.cancel,
+  agendaCategory.keys.professional,
+  patientsCategory.keys.read,
+];
 
 /** Permissions of the seeded `viewer` role (read-only demo role). */
 const VIEWER_PERMISSIONS = [
   dashboardCategory.keys.read,
+  agendaCategory.keys.read,
   usersCategory.keys.read,
   apiKeysCategory.keys.self,
   activityCategory.keys.read,
@@ -29,6 +43,9 @@ const VIEWER_PERMISSIONS = [
 /** Permissions of the seeded `editor` role (manages users, not roles/settings). */
 const EDITOR_PERMISSIONS = [
   ...VIEWER_PERMISSIONS,
+  agendaCategory.keys.create,
+  agendaCategory.keys.update,
+  agendaCategory.keys.cancel,
   usersCategory.keys.create,
   usersCategory.keys.update,
 ];
@@ -56,6 +73,7 @@ export class IdentityBootstrapService implements OnApplicationBootstrap {
 
   async onApplicationBootstrap(): Promise<void> {
     await this.syncAdminRole();
+    await this.ensureDentistRole();
     await this.seedDefaultRolesOnce();
     await this.ensureAdminUser();
   }
@@ -87,6 +105,34 @@ export class IdentityBootstrapService implements OnApplicationBootstrap {
       await this.roles.update(existing);
       this.logger.log(
         `Synced the "${ADMIN_ROLE_NAME}" role with the permission catalog (${catalogKeys.length} permissions)`,
+      );
+    }
+  }
+
+  private async ensureDentistRole(): Promise<void> {
+    const existing = await this.roles.findByName(DENTIST_ROLE_NAME);
+
+    if (existing === null) {
+      await this.roles.save(
+        Role.create({
+          name: DENTIST_ROLE_NAME,
+          description: 'Dentist: appointment calendar and patient access.',
+          permissions: DENTIST_PERMISSIONS,
+          builtIn: true,
+        }),
+      );
+
+      this.logger.log(`Created the built-in "${DENTIST_ROLE_NAME}" role`);
+      return;
+    }
+
+    const missing = DENTIST_PERMISSIONS.filter((key) => !existing.hasPermission(key));
+
+    if (missing.length > 0) {
+      existing.changePermissions([...existing.permissions, ...missing]);
+      await this.roles.update(existing);
+      this.logger.log(
+        `Added agenda permissions to the existing "${DENTIST_ROLE_NAME}" role (${missing.length})`,
       );
     }
   }

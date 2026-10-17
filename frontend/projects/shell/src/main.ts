@@ -8,6 +8,7 @@ const remotes = isLocalShell
       dashboard: 'http://localhost:4202/remoteEntry.json',
       admin: 'http://localhost:4204/remoteEntry.json',
       quotes: 'http://localhost:4205/remoteEntry.json',
+      agenda: 'http://localhost:4206/remoteEntry.json',
     }
   : {
       patients: `${location.origin}/remotes/patients/remoteEntry.json`,
@@ -15,6 +16,7 @@ const remotes = isLocalShell
       dashboard: `${location.origin}/remotes/dashboard/remoteEntry.json`,
       admin: `${location.origin}/remotes/admin/remoteEntry.json`,
       quotes: `${location.origin}/remotes/quotes/remoteEntry.json`,
+      agenda: `${location.origin}/remotes/agenda/remoteEntry.json`,
     };
 
 initFederation(

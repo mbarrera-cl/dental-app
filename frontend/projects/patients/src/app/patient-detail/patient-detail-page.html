@@ -13,11 +13,27 @@
         {{ 'clinical.backToList' | transloco }}
       </a>
 
-      @if (store.record(); as record) {
-        <span hlmBadge [variant]="record.status === 'finalizada' ? 'secondary' : 'outline'">
-          {{ 'clinical.status.' + record.status | transloco }}
-        </span>
-      }
+      <div class="flex items-center gap-2">
+        @if (store.patient(); as patient) {
+          <a
+            hlmBtn
+            variant="outline"
+            size="sm"
+            *hasPermission="permissionKeys.agenda.create"
+            [routerLink]="['/agenda']"
+            [queryParams]="{ patientId: patient.id }"
+            data-testid="patient-agenda"
+          >
+            <ng-icon name="lucideCalendar" />
+            {{ 'clinical.agenda' | transloco }}
+          </a>
+        }
+        @if (store.record(); as record) {
+          <span hlmBadge [variant]="record.status === 'finalizada' ? 'secondary' : 'outline'">
+            {{ 'clinical.status.' + record.status | transloco }}
+          </span>
+        }
+      </div>
     </div>
 
     <div class="grid gap-1">

@@ -84,6 +84,20 @@
               <input hlmInput id="clinic-slogan" formControlName="slogan" />
             </div>
 
+            <div class="grid gap-2">
+              <label hlmLabel for="clinic-time-zone">{{ 'clinic.timeZone' | transloco }}</label>
+              <input
+                hlmInput
+                id="clinic-time-zone"
+                formControlName="timeZone"
+                placeholder="America/Santiago"
+                spellcheck="false"
+              />
+              @if (errorOf(form.controls.timeZone); as errorKey) {
+                <p class="text-destructive text-xs">{{ errorKey | transloco }}</p>
+              }
+            </div>
+
             <!-- Logo -->
             <div class="grid gap-3 sm:col-span-2">
               <div class="flex items-center justify-between gap-2">

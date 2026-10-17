@@ -689,6 +689,110 @@
           }
         }
       }
+    },
+    "agenda": {
+      "projectType": "application",
+      "schematics": {},
+      "root": "projects/agenda",
+      "sourceRoot": "projects/agenda/src",
+      "prefix": "app",
+      "architect": {
+        "build": {
+          "builder": "@angular-architects/native-federation:build",
+          "options": {
+            "cacheExternalArtifacts": true,
+            "tsConfig": "projects/agenda/tsconfig.federation.json"
+          },
+          "configurations": {
+            "production": {
+              "target": "agenda:esbuild:production"
+            },
+            "development": {
+              "target": "agenda:esbuild:development",
+              "dev": true
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "serve": {
+          "builder": "@angular-architects/native-federation:build",
+          "options": {
+            "target": "agenda:serve-original:development",
+            "tsConfig": "projects/agenda/tsconfig.federation.json",
+            "rebuildDelay": 500,
+            "cacheExternalArtifacts": true,
+            "dev": true,
+            "devServer": true,
+            "port": 0
+          }
+        },
+        "test": {
+          "builder": "@angular/build:unit-test",
+          "options": {
+            "buildTarget": "agenda:esbuild:development"
+          }
+        },
+        "esbuild": {
+          "builder": "@angular/build:application",
+          "options": {
+            "browser": "projects/agenda/src/main.ts",
+            "tsConfig": "projects/agenda/tsconfig.app.json",
+            "assets": [
+              {
+                "glob": "**/*",
+                "input": "projects/agenda/public"
+              }
+            ],
+            "styles": [
+              "@fullcalendar/angular/themes/classic/palette.css",
+              "@fullcalendar/angular/themes/classic/theme.css",
+              "@fullcalendar/angular/skeleton.css",
+              "projects/agenda/src/styles.css"
+            ],
+            "polyfills": [
+              "es-module-shims"
+            ]
+          },
+          "configurations": {
+            "production": {
+              "budgets": [
+                {
+                  "type": "initial",
+                  "maximumWarning": "500kB",
+                  "maximumError": "1MB"
+                },
+                {
+                  "type": "anyComponentStyle",
+                  "maximumWarning": "4kB",
+                  "maximumError": "8kB"
+                }
+              ],
+              "outputHashing": "all"
+            },
+            "development": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "serve-original": {
+          "builder": "@angular/build:dev-server",
+          "configurations": {
+            "production": {
+              "buildTarget": "agenda:esbuild:production"
+            },
+            "development": {
+              "buildTarget": "agenda:esbuild:development"
+            }
+          },
+          "defaultConfiguration": "development",
+          "options": {
+            "port": 4206
+          }
+        }
+      }
     }
   }
 }

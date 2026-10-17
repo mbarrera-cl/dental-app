@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { ActivityModule } from './modules/activity/activity.module.js';
+import { AgendaModule } from './modules/agenda/agenda.module.js';
 import { ApiKeysModule } from './modules/apikeys/apikeys.module.js';
 import { AuthModule } from './modules/auth/auth.module.js';
 import { CaroIaModule } from './modules/caro-ia/caro-ia.module.js';
@@ -36,6 +37,7 @@ import { HealthController } from './shared/infrastructure/http/health.controller
     SecurityModule,
     SettingsModule,
     ActivityModule,
+    AgendaModule,
     RolesModule,
     UsersModule,
     AuthModule,

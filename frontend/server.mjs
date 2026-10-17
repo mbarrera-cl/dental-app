@@ -6,7 +6,7 @@ const distRoot = resolve(process.env.DIST_ROOT ?? 'dist');
 const shellRoot = join(distRoot, 'shell', 'browser');
 const port = Number(process.env.PORT ?? 8080);
 const apiUrl = process.env.API_URL?.trim() ?? '';
-const remoteNames = new Set(['patients', 'users', 'dashboard', 'admin', 'quotes']);
+const remoteNames = new Set(['patients', 'users', 'dashboard', 'admin', 'quotes', 'agenda']);
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',

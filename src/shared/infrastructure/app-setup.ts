@@ -11,6 +11,7 @@ const DEFAULT_CORS_ORIGINS = [
   'http://localhost:4203', // patients remote
   'http://localhost:4204', // admin remote
   'http://localhost:4205', // quotes remote
+  'http://localhost:4206', // agenda remote
 ];
 
 function resolveCorsOrigins(): string[] {

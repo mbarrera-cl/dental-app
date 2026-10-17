@@ -13,7 +13,8 @@ export type SettingType =
   | 'url'
   | 'rut'
   | 'phone'
-  | 'enum';
+  | 'enum'
+  | 'html';
 
 export type SettingValue = number | boolean | string;
 

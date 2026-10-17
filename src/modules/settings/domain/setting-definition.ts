@@ -13,7 +13,8 @@ export type SettingType =
   | 'url'
   | 'rut'
   | 'phone'
-  | 'enum';
+  | 'enum'
+  | 'html';
 
 export type SettingValue = number | boolean | string;
 
@@ -26,7 +27,8 @@ export type SettingGroupId =
   | 'quotes'
   | 'activity'
   | 'mcp'
-  | 'caroIa';
+  | 'caroIa'
+  | 'agenda';
 
 export interface SettingGroup {
   readonly id: SettingGroupId;

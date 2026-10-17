@@ -1,4 +1,5 @@
 import { activityCategory } from '../../modules/activity/permissions.js';
+import { agendaCategory } from '../../modules/agenda/permissions.js';
 import { apiKeysCategory } from '../../modules/apikeys/permissions.js';
 import { caroIaCategory } from '../../modules/caro-ia/permissions.js';
 import { clinicalCategory } from '../../modules/clinical/permissions.js';
@@ -22,6 +23,7 @@ export const dashboardCategory = defineCategory('dashboard', 'Dashboard', {
 export const PERMISSION_CATEGORIES: readonly PermissionCategory[] = [
   usersCategory,
   patientsCategory,
+  agendaCategory,
   clinicalCategory,
   caroIaCategory,
   rolesCategory,

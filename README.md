@@ -332,13 +332,17 @@ contract and what is pending.
 | `ADMIN_EMAIL` / `ADMIN_PASSWORD`  | `admin@hexa.local` / `Admin123!` | Bootstrap admin (created only when no active admin exists)           |
 | `COOKIE_SAMESITE`                 | `lax`                          | Refresh cookie SameSite; cross-site prod → `none`                      |
 | `COOKIE_SECURE`                   | `true` in production           | Force `Secure` on the refresh cookie                                   |
-| `CORS_ORIGIN`                     | the dev servers `:4200`–`:4204` | Comma-separated allow-list (credentials enabled: no `*`)              |
+| `CORS_ORIGIN`                     | the dev servers `:4200`–`:4206` | Comma-separated allow-list (credentials enabled: no `*`)              |
 | `DATABASE_URL`                    | — (required)                   | PostgreSQL connection string (`postgresql://user:pass@host:port/db`)   |
 | `DATABASE_SSL`                    | `false`                        | Set to `true` for managed PostgreSQL with self-signed TLS              |
 | `MCP_ENABLED`                     | `false`                        | Mounts the MCP Streamable HTTP endpoint at `/mcp`                      |
 | `MCP_SERVER_NAME` / `MCP_SERVER_VERSION` | `hexa-dental` / `1.0.0` | MCP metadata advertised to clients                                   |
 | `HEXA_MCP_API_KEY`                | —                              | Required by the STDIO MCP process (`npm run mcp:stdio`)                |
 | `PORT`                            | `3000`                         | API port                                                               |
+| `RESEND_API_KEY`                  | —                              | Resend API key for appointment confirmation emails                     |
+| `MAIL_FROM`                       | —                              | Verified Resend sender, e.g. `Hexa <no-reply@clinica.cl>`              |
+| `MAIL_REPLY_TO`                   | —                              | Optional Reply-To address                                              |
+| `AGENDA_EMAIL_WORKER`             | `true`                         | Set to `false` to disable the outbox worker (tests/dev)                |
 
 ### Security notes & trade-offs
 
@@ -605,6 +609,7 @@ is built and served independently:
 | `dashboard` | 4202 | remote | Live summary: total patients + the 5 most recent                                  |
 | `admin`     | 4204 | remote | Admin panel: role editor with the permission matrix, dynamic settings, API keys   |
 | `quotes`    | 4205 | remote | Quotations: list, editor with live totals, per-item acceptance, sanction and A4 print |
+| `agenda`    | 4206 | remote | Appointment calendar, conflicts warning, patient/professional assignment and confirmation emails |
 
 Shared code lives in three libraries:
 
@@ -633,7 +638,7 @@ in the shell re-renders the remotes too. The selection is persisted in
 One command (backend + microfrontends):
 
 ```bash
-./scripts/dev-all.sh           # builds the backend and starts :3000, :4200–:4205
+./scripts/dev-all.sh           # builds the backend and starts :3000, :4200–:4206
 ./scripts/dev-all.sh --skip-build
 ```
 
@@ -682,6 +687,49 @@ document. Editing a sanctioned quote requires duplicating it into a new version
 (fresh folio + `replacesQuoteId`), and every save appends to the version trail.
 The A4 document (`/quotes/:id/print`) prints with the clinic identity from the
 settings.
+
+## Agenda de horas
+
+Detalle técnico: [`docs/agenda.md`](docs/agenda.md).
+
+The `agenda` module adds a calendar for appointments and optional confirmation
+emails with an ICS attachment. It is intentionally **not** a scheduling/slot
+engine: users can book overlapping ranges and the UI only warns about the
+overlap.
+
+- **Permissions:** `agenda:read`, `agenda:create`, `agenda:update`,
+  `agenda:cancel`; `agenda:professional` marks an active user as selectable
+  professional. The built-in `dentista` role is seeded/updated on boot.
+- **Endpoints:** `GET /agenda/config`, `GET /agenda/professionals`,
+  `GET /agenda/appointments?from&to`, `GET /agenda/appointments/:id`,
+  `GET /agenda/conflicts`, `POST /agenda/appointments`,
+  `PATCH /agenda/appointments/:id`, `POST /agenda/appointments/:id/cancel`.
+- **Frontend:** the `agenda` remote at `/agenda` uses FullCalendar (open-source
+  plugins), with a side form for patient, professional, date/time and duration.
+- **Email:** Resend sends an HTML + text confirmation to the patient and/or
+  professional according to `agenda.notifyPatient` and
+  `agenda.notifyProfessional`. Every message includes an `invitacion.ics`
+  generated with the clinic timezone and `METHOD:REQUEST`, `UPDATE` or
+  `CANCEL`.
+- **Template:** `agenda.confirmationSubject` and `agenda.confirmationHtml` are
+  edited from **Administración → Agenda** with a small WYSIWYG editor. The
+  HTML is sanitized before sending.
+- **Outbox:** emails are queued in `agenda_email_outbox` after the appointment
+  is committed, with retries. A failed email never rolls back the appointment.
+- **Timezone:** `clinic.timeZone` (default `America/Santiago`) is configured in
+  **Configuración → Clínica** and used by the calendar, emails and ICS.
+- **No Resend key:** appointments still work; queued emails are marked
+  `skipped` with `email_not_configured`.
+
+### Agenda settings
+
+| Key | Default | Purpose |
+|---|---:|---|
+| `agenda.notifyPatient` | `true` | Send confirmation to the patient |
+| `agenda.notifyProfessional` | `true` | Send confirmation to the professional |
+| `agenda.defaultDurationMinutes` | `30` | Default appointment duration |
+| `agenda.confirmationSubject` | `Hora {{estado}} · {{fecha}} {{hora}}` | Email subject |
+| `agenda.confirmationHtml` | default template | Sanitized HTML body |
 
 ## Roadmap
 

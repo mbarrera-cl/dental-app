@@ -13,6 +13,7 @@ export const SETTING_GROUPS: readonly SettingGroup[] = [
   { id: 'activity', description: 'Activity trail: capture, privacy, retention and panel' },
   { id: 'mcp', description: 'Model Context Protocol server (tools and safety limits)' },
   { id: 'caroIa', description: 'CaroIA assistant (chat, audio and write approvals)' },
+  { id: 'agenda', description: 'Appointment calendar and confirmation emails' },
 ];
 
 /** The source of truth for every configurable value in the system. */
@@ -150,6 +151,14 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
     default: '',
     maxLength: 120,
     description: 'Short tagline shown next to the name',
+  },
+  {
+    key: 'clinic.timeZone',
+    group: 'clinic',
+    type: 'string',
+    default: 'America/Santiago',
+    maxLength: 64,
+    description: 'IANA time zone used by the agenda and confirmation emails',
   },
   {
     key: 'clinic.legalName',
@@ -531,6 +540,45 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
     max: 26_214_400,
     description: 'Maximum audio file size accepted for transcription (bytes)',
   },
+  {
+    key: 'agenda.notifyPatient',
+    group: 'agenda',
+    type: 'boolean',
+    default: true,
+    description: 'Send the confirmation email and ICS to the patient',
+  },
+  {
+    key: 'agenda.notifyProfessional',
+    group: 'agenda',
+    type: 'boolean',
+    default: true,
+    description: 'Send the confirmation email and ICS to the professional',
+  },
+  {
+    key: 'agenda.defaultDurationMinutes',
+    group: 'agenda',
+    type: 'number',
+    default: 30,
+    min: 5,
+    max: 480,
+    description: 'Default appointment duration in minutes',
+  },
+  {
+    key: 'agenda.confirmationSubject',
+    group: 'agenda',
+    type: 'string',
+    default: 'Hora {{estado}} · {{fecha}} {{hora}}',
+    maxLength: 180,
+    description: 'Subject of the appointment confirmation email',
+  },
+  {
+    key: 'agenda.confirmationHtml',
+    group: 'agenda',
+    type: 'html',
+    default: '<p>Hola {{destinatario}},</p><p>Tu hora con {{profesional}} quedó {{estado}} para el {{fecha}} a las {{hora}}.</p><p>Motivo: {{motivo}}<br>Lugar: {{direccion}}</p><p>— {{clinica}}</p>',
+    maxLength: 100000,
+    description: 'HTML body of the appointment confirmation email',
+  },
 ];
 
 const DEFINITIONS_BY_KEY = new Map(SETTING_DEFINITIONS.map((definition) => [definition.key, definition]));
@@ -654,6 +702,17 @@ export function coerceSettingValue(
       } catch {
         return invalid('must be a valid Chilean phone number');
       }
+    }
+    case 'html': {
+      if (typeof value !== 'string') {
+        return invalid('must be a string');
+      }
+
+      if (definition.maxLength !== undefined && value.length > definition.maxLength) {
+        return invalid(`must have at most ${definition.maxLength} characters`);
+      }
+
+      return { ok: true, value };
     }
     case 'enum': {
       const allowed = definition.values ?? [];

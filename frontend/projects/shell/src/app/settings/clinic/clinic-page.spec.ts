@@ -37,6 +37,7 @@ const setting = (
 const CLINIC_SETTINGS: Setting[] = [
   setting('clinic.name', 'Mi clínica', { maxLength: 60, default: 'Mi clínica' }),
   setting('clinic.slogan', 'Odontología familiar', { maxLength: 120 }),
+  setting('clinic.timeZone', 'America/Santiago'),
   setting('clinic.legalName', ''),
   setting('clinic.rut', ''),
   setting('clinic.address.region', 'RM', {

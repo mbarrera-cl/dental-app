@@ -81,6 +81,7 @@ import type { ColorSuggestion } from './logo-colors';
 /** Raw shape of the form (all controls non-nullable). */
 interface ClinicFormValue {
   name: string;
+  timeZone: string;
   slogan: string;
   legalName: string;
   rut: string;
@@ -100,6 +101,7 @@ interface ClinicFormValue {
 /** Setting key behind each text control (`autoDark` maps to `clinic.theme.mode`). */
 const KEY: Record<Exclude<keyof ClinicFormValue, 'autoDark'>, string> = {
   name: 'clinic.name',
+  timeZone: 'clinic.timeZone',
   slogan: 'clinic.slogan',
   legalName: 'clinic.legalName',
   rut: 'clinic.rut',
@@ -154,6 +156,21 @@ const phoneValidator: ValidatorFn = (control: AbstractControl): ValidationErrors
   const value = String(control.value ?? '').trim();
 
   return value === '' || isValidTelefono(value) ? null : { phone: true };
+};
+
+const timeZoneValidator: ValidatorFn = (control: AbstractControl): ValidationErrors | null => {
+  const value = String(control.value ?? '').trim();
+
+  if (value === '') {
+    return { timeZone: true };
+  }
+
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone: value }).format(new Date());
+    return null;
+  } catch {
+    return { timeZone: true };
+  }
 };
 
 const websiteValidator: ValidatorFn = (control: AbstractControl): ValidationErrors | null => {
@@ -249,6 +266,10 @@ export class ClinicPage implements OnInit {
     name: new FormControl('', {
       nonNullable: true,
       validators: [Validators.required, Validators.maxLength(60)],
+    }),
+    timeZone: new FormControl('America/Santiago', {
+      nonNullable: true,
+      validators: [timeZoneValidator],
     }),
     slogan: new FormControl('', { nonNullable: true, validators: [Validators.maxLength(120)] }),
     legalName: new FormControl('', { nonNullable: true, validators: [Validators.maxLength(120)] }),
@@ -392,6 +413,10 @@ export class ClinicPage implements OnInit {
 
     if ('website' in errors) {
       return 'clinic.form.invalidWebsite';
+    }
+
+    if ('timeZone' in errors) {
+      return 'clinic.form.invalidTimeZone';
     }
 
     return 'clinic.form.invalidColor';
@@ -824,6 +849,7 @@ export class ClinicPage implements OnInit {
 
     return {
       name: text(KEY.name),
+      timeZone: text(KEY.timeZone) || 'America/Santiago',
       slogan: text(KEY.slogan),
       legalName: text(KEY.legalName),
       rut: text(KEY.rut),

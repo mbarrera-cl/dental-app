@@ -75,6 +75,12 @@ export const routes: Routes = [
       loadRemoteModule<{ QUOTES_ROUTES: Routes }>('quotes', './routes').then((m) => m.QUOTES_ROUTES),
   },
   {
+    path: 'agenda',
+    canMatch: [authGuard, permissionGuard({ allOf: [PERMISSION_KEYS.agenda.read] })],
+    loadChildren: () =>
+      loadRemoteModule<{ AGENDA_ROUTES: Routes }>('agenda', './routes').then((m) => m.AGENDA_ROUTES),
+  },
+  {
     path: 'admin',
     canMatch: [
       authGuard,

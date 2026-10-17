@@ -100,6 +100,7 @@ CREATE TABLE IF NOT EXISTS patients (
   created_at             TIMESTAMPTZ NOT NULL
 );
 CREATE UNIQUE INDEX IF NOT EXISTS patients_numero_historia_idx ON patients (numero_historia) WHERE numero_historia IS NOT NULL;
+ALTER TABLE patients ADD COLUMN IF NOT EXISTS prevision_convenio TEXT;
 
 CREATE TABLE IF NOT EXISTS settings (
   key        TEXT PRIMARY KEY,
@@ -352,6 +353,48 @@ CREATE INDEX IF NOT EXISTS idx_activity_at ON activity_log (at DESC);
 CREATE INDEX IF NOT EXISTS idx_activity_actor ON activity_log (actor_id, at DESC);
 CREATE INDEX IF NOT EXISTS idx_activity_action ON activity_log (action, at DESC);
 CREATE INDEX IF NOT EXISTS idx_activity_subject ON activity_log (subject_type, subject_id, at DESC);
+
+CREATE TABLE IF NOT EXISTS appointments (
+  id                  UUID PRIMARY KEY,
+  patient_id          UUID NOT NULL REFERENCES patients(id) ON DELETE RESTRICT DEFERRABLE INITIALLY IMMEDIATE,
+  professional_id     UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT DEFERRABLE INITIALLY IMMEDIATE,
+  starts_at           TIMESTAMPTZ NOT NULL,
+  ends_at             TIMESTAMPTZ NOT NULL,
+  status              TEXT NOT NULL DEFAULT 'scheduled',
+  reason              TEXT,
+  notes               TEXT,
+  location            TEXT,
+  ics_sequence        INTEGER NOT NULL DEFAULT 0,
+  created_by          UUID REFERENCES users(id) ON DELETE SET NULL DEFERRABLE INITIALLY IMMEDIATE,
+  updated_by          UUID REFERENCES users(id) ON DELETE SET NULL DEFERRABLE INITIALLY IMMEDIATE,
+  created_at          TIMESTAMPTZ NOT NULL,
+  updated_at          TIMESTAMPTZ NOT NULL,
+  cancelled_at        TIMESTAMPTZ,
+  cancelled_by        UUID REFERENCES users(id) ON DELETE SET NULL DEFERRABLE INITIALLY IMMEDIATE
+);
+CREATE INDEX IF NOT EXISTS idx_appointments_starts ON appointments (starts_at);
+CREATE INDEX IF NOT EXISTS idx_appointments_professional ON appointments (professional_id, starts_at);
+CREATE INDEX IF NOT EXISTS idx_appointments_patient ON appointments (patient_id, starts_at);
+CREATE INDEX IF NOT EXISTS idx_appointments_status ON appointments (status, starts_at);
+
+CREATE TABLE IF NOT EXISTS agenda_email_outbox (
+  id                  UUID PRIMARY KEY,
+  appointment_id      UUID NOT NULL REFERENCES appointments(id) ON DELETE CASCADE DEFERRABLE INITIALLY IMMEDIATE,
+  event_type          TEXT NOT NULL,
+  recipient_kind      TEXT NOT NULL,
+  recipient_email     TEXT NOT NULL,
+  subject             TEXT NOT NULL,
+  html                TEXT NOT NULL,
+  text                TEXT NOT NULL,
+  ics                 TEXT NOT NULL,
+  status              TEXT NOT NULL DEFAULT 'pending',
+  attempts            INTEGER NOT NULL DEFAULT 0,
+  next_attempt_at     TIMESTAMPTZ NOT NULL,
+  last_error          TEXT,
+  created_at          TIMESTAMPTZ NOT NULL,
+  sent_at             TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS idx_agenda_email_pending ON agenda_email_outbox (status, next_attempt_at);
 
 CREATE TABLE IF NOT EXISTS schema_migrations (
   version    TEXT PRIMARY KEY,

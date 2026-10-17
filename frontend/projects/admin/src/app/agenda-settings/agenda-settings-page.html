@@ -1,0 +1,157 @@
+<section class="flex flex-col gap-6" data-testid="agenda-settings-page">
+  <header class="flex flex-wrap items-end justify-between gap-4">
+    <div class="grid gap-1">
+      <h2 class="text-2xl font-semibold tracking-tight">Agenda y correo</h2>
+      <p class="text-muted-foreground text-sm">
+        Configura las confirmaciones que se envían al crear, reprogramar o cancelar una hora.
+      </p>
+    </div>
+    @if (!canEdit()) {
+      <span class="text-muted-foreground text-sm">Solo lectura</span>
+    }
+  </header>
+
+  @if (error(); as text) {
+    <div class="border-destructive/30 bg-destructive/5 text-destructive rounded-lg border px-4 py-3 text-sm">
+      {{ text }}
+    </div>
+  }
+
+  @if (loading()) {
+    <p class="text-muted-foreground text-sm">Cargando configuración…</p>
+  } @else {
+    <div class="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
+      <form class="flex flex-col gap-5" (submit)="$event.preventDefault()">
+        <section class="bg-card rounded-lg border">
+          <div class="border-b px-4 py-3">
+            <h3 class="text-sm font-semibold">Destinatarios</h3>
+          </div>
+          <div class="grid gap-4 p-4">
+            <label class="flex items-center justify-between gap-4 text-sm">
+              <span>
+                <span class="font-medium">Enviar copia al paciente</span>
+                <span class="text-muted-foreground block text-xs">Incluye el archivo ICS adjunto.</span>
+              </span>
+              <input
+                type="checkbox"
+                class="accent-primary size-4"
+                [checked]="form().notifyPatient"
+                (change)="set('notifyPatient', $any($event.target).checked)"
+              />
+            </label>
+            <label class="flex items-center justify-between gap-4 text-sm">
+              <span>
+                <span class="font-medium">Enviar copia al profesional</span>
+                <span class="text-muted-foreground block text-xs">Se envía al correo del usuario asignado.</span>
+              </span>
+              <input
+                type="checkbox"
+                class="accent-primary size-4"
+                [checked]="form().notifyProfessional"
+                (change)="set('notifyProfessional', $any($event.target).checked)"
+              />
+            </label>
+            <label class="grid gap-1 text-sm">
+              <span class="font-medium">Duración por defecto (minutos)</span>
+              <input
+                hlmInput
+                type="number"
+                min="5"
+                max="480"
+                [value]="form().defaultDurationMinutes"
+                (input)="set('defaultDurationMinutes', +$any($event.target).value)"
+              />
+            </label>
+          </div>
+        </section>
+
+        <section class="bg-card rounded-lg border">
+          <div class="border-b px-4 py-3">
+            <h3 class="text-sm font-semibold">Correo de confirmación</h3>
+            <p class="text-muted-foreground mt-1 text-xs">
+              La zona horaria se configura en Clínica. Los placeholders se reemplazan al enviar.
+            </p>
+          </div>
+
+          <div class="grid gap-4 p-4">
+            <label class="grid gap-1 text-sm">
+              <span class="font-medium">Asunto</span>
+              <input
+                hlmInput
+                type="text"
+                maxlength="180"
+                [value]="form().confirmationSubject"
+                (input)="set('confirmationSubject', $any($event.target).value)"
+              />
+            </label>
+
+            <div class="grid gap-2">
+              <span class="text-sm font-medium">Cuerpo</span>
+              <div class="flex flex-wrap gap-1 rounded-t-md border border-b-0 p-2">
+                <button hlmBtn type="button" variant="ghost" size="sm" (click)="command('bold')"><b>B</b></button>
+                <button hlmBtn type="button" variant="ghost" size="sm" (click)="command('italic')"><i>I</i></button>
+                <button hlmBtn type="button" variant="ghost" size="sm" (click)="command('underline')"><u>U</u></button>
+                <button hlmBtn type="button" variant="ghost" size="sm" (click)="command('insertUnorderedList')">• Lista</button>
+                <button hlmBtn type="button" variant="ghost" size="sm" (click)="command('insertOrderedList')">1. Lista</button>
+                <button hlmBtn type="button" variant="ghost" size="sm" (click)="setLink()">Enlace</button>
+              </div>
+              <div
+                #editor
+                class="border-input bg-background min-h-64 rounded-b-md border px-3 py-2 text-sm focus:outline-none"
+                contenteditable="true"
+                data-testid="agenda-email-editor"
+                [innerHTML]="editorHtml()"
+                (input)="syncEditor()"
+              ></div>
+            </div>
+
+            <div class="grid gap-2">
+              <span class="text-xs font-medium">Insertar placeholder</span>
+              <div class="flex flex-wrap gap-1">
+                @for (placeholder of placeholders; track placeholder) {
+                  <button
+                    hlmBtn
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    (click)="insertPlaceholder(placeholder)"
+                  >
+                    {{ placeholder }}
+                  </button>
+                }
+              </div>
+            </div>
+
+            <button hlmBtn type="button" variant="outline" (click)="previewOpen.set(!previewOpen())">
+              {{ previewOpen() ? 'Ocultar vista previa' : 'Vista previa' }}
+            </button>
+
+            @if (previewOpen()) {
+              <div class="bg-muted/30 rounded-lg border p-4">
+                <p class="text-muted-foreground mb-2 text-xs">Vista previa (datos de ejemplo)</p>
+                <div class="prose prose-sm max-w-none" [innerHTML]="previewHtml()"></div>
+              </div>
+            }
+          </div>
+        </section>
+
+        <div class="flex justify-end">
+          <button hlmBtn type="button" [disabled]="saving() || !canEdit()" (click)="save()">
+            {{ saving() ? 'Guardando…' : 'Guardar configuración' }}
+          </button>
+        </div>
+      </form>
+
+      <aside class="bg-card rounded-lg border p-4 text-sm">
+        <h3 class="font-semibold">Cómo funciona</h3>
+        <ul class="text-muted-foreground mt-2 grid list-disc gap-1 pl-4 text-xs">
+          <li>El correo se envía al crear, reprogramar y cancelar.</li>
+          <li>El ICS se adjunta en todos los casos.</li>
+          <li>Si un destinatario no tiene correo, se omite.</li>
+          <li>Los cambios aplican a las próximas horas y envíos.</li>
+          <li>Las citas se guardan aunque el correo falle.</li>
+        </ul>
+      </aside>
+    </div>
+  }
+</section>

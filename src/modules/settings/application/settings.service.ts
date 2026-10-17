@@ -137,6 +137,17 @@ export class SettingsService {
         },
       ]);
     }
+    const timeZone = effective['clinic.timeZone'];
+
+    if (typeof timeZone === 'string') {
+      try {
+        new Intl.DateTimeFormat('en-US', { timeZone }).format(new Date());
+      } catch {
+        throw new SettingsValueInvalidError([
+          { key: 'clinic.timeZone', reason: 'must be a valid IANA time zone' },
+        ]);
+      }
+    }
   }
 
   private async storedValues(): Promise<Record<string, SettingValue>> {

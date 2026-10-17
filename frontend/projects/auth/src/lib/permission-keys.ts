@@ -22,6 +22,13 @@ export const PERMISSION_KEYS = {
     read: 'settings:read',
     update: 'settings:update',
   },
+  agenda: {
+    read: 'agenda:read',
+    create: 'agenda:create',
+    update: 'agenda:update',
+    cancel: 'agenda:cancel',
+    professional: 'agenda:professional',
+  },
   caroIa: {
     use: 'caroIa:use',
   },

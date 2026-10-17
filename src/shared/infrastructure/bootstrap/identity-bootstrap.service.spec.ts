@@ -129,7 +129,7 @@ describe('IdentityBootstrapService', () => {
     await service.onApplicationBootstrap();
     await service.onApplicationBootstrap();
 
-    await expect(roles.findAll()).resolves.toHaveLength(3);
+    await expect(roles.findAll()).resolves.toHaveLength(4);
     await expect(users.findAll()).resolves.toHaveLength(1);
   });
 });

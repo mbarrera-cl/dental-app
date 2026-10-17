@@ -18,6 +18,8 @@ export * from './lib/api-key.model';
 export * from './lib/api-keys-api';
 export * from './lib/patient.model';
 export * from './lib/patients-api';
+export * from './lib/agenda.model';
+export * from './lib/agenda-api';
 export * from './lib/clinical.model';
 export * from './lib/clinical-api';
 export * from './lib/activity.model';

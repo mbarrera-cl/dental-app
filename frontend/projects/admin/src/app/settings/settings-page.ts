@@ -72,7 +72,7 @@ export class SettingsPage {
     const groups = new Map<string, Setting[]>();
 
     for (const setting of this.settings()) {
-      if (setting.group === 'clinic') {
+      if (setting.group === 'clinic' || setting.group === 'agenda') {
         continue;
       }
 

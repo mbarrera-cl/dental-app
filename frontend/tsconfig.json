@@ -106,6 +106,12 @@
       "path": "./projects/dashboard/tsconfig.spec.json"
     },
     {
+      "path": "./projects/agenda/tsconfig.app.json"
+    },
+    {
+      "path": "./projects/agenda/tsconfig.spec.json"
+    },
+    {
       "path": "./projects/ui/tsconfig.lib.json"
     },
     {

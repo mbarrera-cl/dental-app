@@ -1,4 +1,5 @@
 import { dashboardCategory } from '../../../shared/security/permissions.js';
+import { agendaPermissions } from '../../agenda/permissions.js';
 import { apiKeysPermissions } from '../../apikeys/permissions.js';
 import { caroIaPermissions } from '../../caro-ia/permissions.js';
 import { patientsPermissions } from '../../patients/permissions.js';
@@ -36,6 +37,12 @@ export const DEFAULT_MENU: readonly DefaultMenuEntry[] = [
     icon: 'lucideLayoutDashboard',
     routeKey: 'dashboard',
     requiredPermission: dashboardCategory.keys.read,
+  },
+  {
+    kind: 'item',
+    icon: 'lucideCalendar',
+    routeKey: 'agenda',
+    requiredPermission: agendaPermissions.read,
   },
   {
     kind: 'item',

@@ -7,6 +7,7 @@ import {
   isPermissionKey,
 } from './permissions.js';
 import { activityCategory } from '../../modules/activity/permissions.js';
+import { agendaCategory } from '../../modules/agenda/permissions.js';
 import { apiKeysCategory } from '../../modules/apikeys/permissions.js';
 import { caroIaCategory } from '../../modules/caro-ia/permissions.js';
 import { clinicalCategory } from '../../modules/clinical/permissions.js';
@@ -67,6 +68,7 @@ describe('permission catalog', () => {
     expect(PERMISSION_CATEGORIES).toEqual([
       usersCategory,
       patientsCategory,
+      agendaCategory,
       clinicalCategory,
       caroIaCategory,
       rolesCategory,

@@ -2,7 +2,7 @@
 #
 # Starts the hexagonal backend (:3000) and the Angular microfrontends
 # (shell :4200, patients :4203, users :4201, dashboard :4202, admin :4204,
-# quotes :4205) for local development.
+# quotes :4205, agenda :4206) for local development.
 #
 # Usage:
 #   ./scripts/dev-all.sh              # builds the backend, then starts everything
@@ -36,6 +36,7 @@ echo "Users remote     → http://localhost:4201"
 echo "Dashboard remote → http://localhost:4202"
 echo "Admin remote     → http://localhost:4204"
 echo "Quotes remote    → http://localhost:4205"
+echo "Agenda remote    → http://localhost:4206"
 echo
 
 # Never leak the backend's PORT into the frontends (see above).
