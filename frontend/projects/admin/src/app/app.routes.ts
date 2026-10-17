@@ -1,28 +1,31 @@
 import { inject } from '@angular/core';
-import { Router, type CanMatchFn, type Routes } from '@angular/router';
+import type { RedirectFunction, Routes } from '@angular/router';
 import { SessionStore, authGuard, permissionGuard, PERMISSION_KEYS } from 'auth';
 
 /**
- * Sends `/admin` to the first section the user may open. The parent guard
- * already guarantees at least one of the three administration permissions.
+ * Sends `/admin` to the first section the user may open. It is a `redirectTo`
+ * function because a route whose only configuration is a `canMatch` guard is
+ * rejected by the router (NG04014) and `redirectTo` cannot be combined with
+ * guards on the same route. Redirect functions run inside an injection
+ * context, so the store resolves here. The parent guard already guarantees
+ * at least one of the three administration permissions.
  */
-const adminHome: CanMatchFn = () => {
+export const adminHome: RedirectFunction = () => {
   const store = inject(SessionStore);
-  const router = inject(Router);
 
   if (store.has(PERMISSION_KEYS.roles.read)) {
-    return router.parseUrl('roles');
+    return 'roles';
   }
 
   if (store.has(PERMISSION_KEYS.settings.read)) {
-    return router.parseUrl('settings');
+    return 'settings';
   }
 
   if (store.has(PERMISSION_KEYS.apiKeys.read)) {
-    return router.parseUrl('api-keys');
+    return 'api-keys';
   }
 
-  return router.parseUrl('/forbidden');
+  return '/forbidden';
 };
 
 /**
@@ -41,7 +44,7 @@ export const ADMIN_ROUTES: Routes = [
     ],
     loadComponent: () => import('./admin-layout/admin-layout').then((m) => m.AdminLayout),
     children: [
-      { path: '', pathMatch: 'full', canMatch: [adminHome] },
+      { path: '', pathMatch: 'full', redirectTo: adminHome },
       {
         path: 'roles',
         canMatch: [permissionGuard({ allOf: [PERMISSION_KEYS.roles.read] })],
