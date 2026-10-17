@@ -6,6 +6,7 @@ initFederation(
     users: 'http://localhost:4201/remoteEntry.json',
     dashboard: 'http://localhost:4202/remoteEntry.json',
     admin: 'http://localhost:4204/remoteEntry.json',
+    quotes: 'http://localhost:4205/remoteEntry.json',
   },
   {
     hostRemoteEntry: { url: './remoteEntry.json' },

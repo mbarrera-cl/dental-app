@@ -32,6 +32,18 @@ export const PERMISSION_KEYS = {
     read: 'apikeys:read',
     manage: 'apikeys:manage',
   },
+  quotes: {
+    read: 'quotes:read',
+    create: 'quotes:create',
+    update: 'quotes:update',
+    delete: 'quotes:delete',
+    send: 'quotes:send',
+    approve: 'quotes:approve',
+  },
+  uco: {
+    read: 'uco:read',
+    manage: 'uco:manage',
+  },
   dashboard: {
     read: 'dashboard:read',
   },

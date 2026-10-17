@@ -73,6 +73,18 @@ export const NAVIGATION_ROUTES: readonly NavigationRoute[] = [
     label: 'shell.navClinic',
     icon: 'lucideBuilding2',
   },
+  {
+    key: 'quotes',
+    path: '/quotes',
+    label: 'shell.navQuotes',
+    icon: 'lucideFileText',
+  },
+  {
+    key: 'admin.uco',
+    path: '/admin/uco',
+    label: 'shell.navAdminUco',
+    icon: 'lucideBadgeDollarSign',
+  },
 ];
 
 const ROUTES_BY_KEY = new Map(NAVIGATION_ROUTES.map((route) => [route.key, route]));

@@ -1,0 +1,33 @@
+import {
+  withNativeFederation,
+  fromPackageJson,
+} from '@angular-architects/native-federation/config';
+
+export default withNativeFederation({
+  name: 'quotes',
+
+  exposes: {
+    './routes': './projects/quotes/src/app/app.routes.ts',
+  },
+
+  shared: fromPackageJson({
+    singleton: true,
+    strictVersion: true,
+    requiredVersion: 'auto',
+    build: 'package',
+  })
+    // includeSecondaries is an opt-out of ignoreUnusedDeps, so all of
+    // @angular/core is shared to prevent mismatches.
+    .patch(['@angular/core'], { includeSecondaries: { keepAll: true } }),
+
+  skip: [
+    'rxjs/ajax',
+    'rxjs/fetch',
+    'rxjs/testing',
+    'rxjs/webSocket',
+  ],
+
+  features: {
+    denseChunking: true,
+  },
+});

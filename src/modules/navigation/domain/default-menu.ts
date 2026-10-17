@@ -1,8 +1,10 @@
 import { dashboardCategory } from '../../../shared/security/permissions.js';
 import { apiKeysPermissions } from '../../apikeys/permissions.js';
 import { patientsPermissions } from '../../patients/permissions.js';
+import { quotesPermissions } from '../../quotes/permissions.js';
 import { rolesPermissions } from '../../roles/permissions.js';
 import { settingsPermissions } from '../../settings/permissions.js';
+import { ucoPermissions } from '../../uco/permissions.js';
 import { usersPermissions } from '../../users/permissions.js';
 import { MenuItem, type MenuKind } from './menu-item.entity.js';
 
@@ -41,6 +43,12 @@ export const DEFAULT_MENU: readonly DefaultMenuEntry[] = [
     requiredPermission: usersPermissions.read,
   },
   {
+    kind: 'item',
+    icon: 'lucideFileText',
+    routeKey: 'quotes',
+    requiredPermission: quotesPermissions.read,
+  },
+  {
     kind: 'group',
     label: 'Administración',
     icon: 'lucideSettings',
@@ -74,6 +82,12 @@ export const DEFAULT_MENU: readonly DefaultMenuEntry[] = [
         icon: 'lucideBuilding2',
         routeKey: 'settings.clinic',
         requiredPermission: settingsPermissions.read,
+      },
+      {
+        kind: 'item',
+        icon: 'lucideBadgeDollarSign',
+        routeKey: 'admin.uco',
+        requiredPermission: ucoPermissions.read,
       },
     ],
   },

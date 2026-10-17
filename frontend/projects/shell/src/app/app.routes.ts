@@ -1,7 +1,6 @@
 import { loadRemoteModule } from '@angular-architects/native-federation';
 import type { Routes } from '@angular/router';
 import { authGuard, permissionGuard, PERMISSION_KEYS } from 'auth';
-
 /**
  * Routes of the shell. Each microfrontend exposes a `./routes` entry
  * (`PATIENTS_ROUTES` / `USERS_ROUTES` / `DASHBOARD_ROUTES` / `ADMIN_ROUTES`)
@@ -58,6 +57,12 @@ export const routes: Routes = [
       loadRemoteModule<{ DASHBOARD_ROUTES: Routes }>('dashboard', './routes').then(
         (m) => m.DASHBOARD_ROUTES,
       ),
+  },
+  {
+    path: 'quotes',
+    canMatch: [authGuard, permissionGuard({ allOf: [PERMISSION_KEYS.quotes.read] })],
+    loadChildren: () =>
+      loadRemoteModule<{ QUOTES_ROUTES: Routes }>('quotes', './routes').then((m) => m.QUOTES_ROUTES),
   },
   {
     path: 'admin',

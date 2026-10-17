@@ -25,6 +25,10 @@ export const adminHome: RedirectFunction = () => {
     return 'api-keys';
   }
 
+  if (store.has(PERMISSION_KEYS.uco.read)) {
+    return 'uco';
+  }
+
   return '/forbidden';
 };
 
@@ -39,7 +43,12 @@ export const ADMIN_ROUTES: Routes = [
     canMatch: [
       authGuard,
       permissionGuard({
-        anyOf: [PERMISSION_KEYS.roles.read, PERMISSION_KEYS.settings.read, PERMISSION_KEYS.apiKeys.read],
+        anyOf: [
+          PERMISSION_KEYS.roles.read,
+          PERMISSION_KEYS.settings.read,
+          PERMISSION_KEYS.apiKeys.read,
+          PERMISSION_KEYS.uco.read,
+        ],
       }),
     ],
     loadComponent: () => import('./admin-layout/admin-layout').then((m) => m.AdminLayout),
@@ -59,6 +68,11 @@ export const ADMIN_ROUTES: Routes = [
         path: 'api-keys',
         canMatch: [permissionGuard({ allOf: [PERMISSION_KEYS.apiKeys.read] })],
         loadComponent: () => import('./api-keys/api-keys-page').then((m) => m.ApiKeysPage),
+      },
+      {
+        path: 'uco',
+        canMatch: [permissionGuard({ allOf: [PERMISSION_KEYS.uco.read] })],
+        loadComponent: () => import('./uco/uco-page').then((m) => m.UcoPage),
       },
     ],
   },

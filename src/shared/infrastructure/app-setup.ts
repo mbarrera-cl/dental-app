@@ -10,6 +10,7 @@ const DEFAULT_CORS_ORIGINS = [
   'http://localhost:4202', // dashboard remote
   'http://localhost:4203', // patients remote
   'http://localhost:4204', // admin remote
+  'http://localhost:4205', // quotes remote
 ];
 
 function resolveCorsOrigins(): string[] {
