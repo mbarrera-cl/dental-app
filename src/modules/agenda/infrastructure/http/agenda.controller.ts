@@ -33,6 +33,7 @@ import { ListProfessionalsUseCase } from '../../application/use-cases/list-profe
 import { SearchAgendaPatientsUseCase } from '../../application/use-cases/search-agenda-patients.use-case.js';
 import { UpdateAppointmentUseCase } from '../../application/use-cases/update-appointment.use-case.js';
 import { AgendaConfigResponseDto } from './dtos/agenda-config.response.dto.js';
+import { ConflictResponseDto } from './dtos/conflict.response.dto.js';
 import { AppointmentResponseDto } from './dtos/appointment.response.dto.js';
 import { ConflictsQueryDto } from './dtos/conflicts.query.dto.js';
 import { CreateAppointmentRequestDto } from './dtos/create-appointment.request.dto.js';
@@ -100,27 +101,17 @@ export class AgendaController {
   @Get('conflicts')
   @RequirePermissions(agendaPermissions.create)
   @ApiOperation({ summary: 'Check overlapping appointments for a professional' })
-  @ApiOkResponse({ type: [AppointmentResponseDto] })
-  async conflicts(@Query() query: ConflictsQueryDto): Promise<AppointmentResponseDto[]> {
+  @ApiOkResponse({ type: [ConflictResponseDto] })
+  async conflicts(@Query() query: ConflictsQueryDto): Promise<ConflictResponseDto[]> {
     const conflicts = await this.checkConflicts.execute(query);
-    return conflicts.map((conflict) => {
-      const dto = new AppointmentResponseDto();
-      dto.warnings = [];
-      dto.id = conflict.id;
-      dto.startsAt = conflict.startsAt.toISOString();
-      dto.endsAt = conflict.endsAt.toISOString();
-      dto.patient = { id: '', nombreCompleto: conflict.patientName, rut: '', email: null };
-      dto.professional = { id: query.professionalId, name: conflict.professionalName, email: '' };
-      dto.status = 'scheduled';
-      dto.reason = null;
-      dto.notes = null;
-      dto.location = null;
-      dto.icsSequence = 0;
-      dto.createdAt = conflict.startsAt.toISOString();
-      dto.updatedAt = conflict.startsAt.toISOString();
-      dto.cancelledAt = null;
-      return dto;
-    });
+
+    return conflicts.map((conflict) => ({
+      id: conflict.id,
+      startsAt: conflict.startsAt.toISOString(),
+      endsAt: conflict.endsAt.toISOString(),
+      patientName: conflict.patientName,
+      professionalName: conflict.professionalName,
+    }));
   }
 
   @Get('appointments/:id')

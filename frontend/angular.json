@@ -60,6 +60,9 @@
               }
             ],
             "styles": [
+              "@fullcalendar/angular/themes/classic/palette.css",
+              "@fullcalendar/angular/themes/classic/theme.css",
+              "@fullcalendar/angular/skeleton.css",
               "projects/shell/src/styles.css"
             ],
             "polyfills": [
