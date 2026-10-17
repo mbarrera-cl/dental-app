@@ -178,6 +178,25 @@ describe('Agenda (e2e)', () => {
 
     expect((second.body as AppointmentBody).warnings).toHaveLength(1);
     expect((second.body as AppointmentBody).warnings[0]?.id).toBe((first.body as AppointmentBody).id);
+
+    const conflicts = await request(app.getHttpServer())
+      .get('/agenda/conflicts')
+      .query({
+        professionalId,
+        startsAt: range.startsAt,
+        endsAt: range.endsAt,
+      })
+      .set('Authorization', authorization)
+      .expect(200);
+    expect(conflicts.body).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: (first.body as AppointmentBody).id,
+          patientName: 'Agenda Paciente E2E',
+          professionalName: 'Administrator',
+        }),
+      ]),
+    );
   });
 
   it('reschedules and cancels with updated ICS sequences', async () => {
