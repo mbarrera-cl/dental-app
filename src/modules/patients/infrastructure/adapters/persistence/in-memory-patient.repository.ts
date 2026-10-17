@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PatientRepositoryPort } from '../../../application/ports/patient-repository.port.js';
+import { formatNumeroHistoria } from '../../../domain/numero-historia.js';
 import type { Patient } from '../../../domain/patient.entity.js';
 import { PatientNotFoundError } from '../../../domain/patient.errors.js';
 
@@ -11,6 +12,7 @@ import { PatientNotFoundError } from '../../../domain/patient.errors.js';
 @Injectable()
 export class InMemoryPatientRepository extends PatientRepositoryPort {
   private readonly patients = new Map<string, Patient>();
+  private numeroHistoriaSequence = 0;
 
   async save(patient: Patient): Promise<void> {
     this.patients.set(patient.id, patient);
@@ -46,5 +48,16 @@ export class InMemoryPatientRepository extends PatientRepositoryPort {
 
   async findAll(): Promise<Patient[]> {
     return [...this.patients.values()];
+  }
+
+  async nextNumeroHistoria(): Promise<string> {
+    this.numeroHistoriaSequence += 1;
+    return formatNumeroHistoria(this.numeroHistoriaSequence);
+  }
+
+  async findWithoutNumeroHistoria(): Promise<Patient[]> {
+    return [...this.patients.values()].filter(
+      (patient) => patient.numeroHistoria === null,
+    );
   }
 }

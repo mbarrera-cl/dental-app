@@ -102,7 +102,20 @@ describe('Patients API (e2e)', () => {
         notas: null,
       });
       expect(response.body.id).toEqual(expect.any(String));
+      expect(response.body.numeroHistoria).toMatch(/^HC-\d{6}$/);
       expect(response.body.createdAt).toEqual(expect.any(String));
+    });
+
+    it('assigns sequential numeros de historia', async () => {
+      const first = await createPatient().expect(201);
+      const second = await createPatient({
+        ...validPatient,
+        rut: '22.222.222-2',
+        nombres: 'Grace',
+      }).expect(201);
+
+      expect(first.body.numeroHistoria).toBe('HC-000001');
+      expect(second.body.numeroHistoria).toBe('HC-000002');
     });
 
     it('creates a patient with every optional group, normalizing nested values', async () => {

@@ -3,6 +3,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { ApiKeysModule } from './modules/apikeys/apikeys.module.js';
 import { AuthModule } from './modules/auth/auth.module.js';
 import { ClinicModule } from './modules/clinic/clinic.module.js';
+import { ClinicalModule } from './modules/clinical/clinical.module.js';
 import { NavigationModule } from './modules/navigation/navigation.module.js';
 import { PatientsModule } from './modules/patients/patients.module.js';
 import { RolesModule } from './modules/roles/roles.module.js';
@@ -35,6 +36,7 @@ import { SecurityModule } from './shared/security/security.module.js';
     PatientsModule,
     NavigationModule,
     ClinicModule,
+    ClinicalModule,
   ],
   providers: [
     IdentityBootstrapService,

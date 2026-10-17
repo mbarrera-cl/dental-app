@@ -33,6 +33,19 @@ describe('CreatePatientUseCase', () => {
     await expect(patientRepository.findById(patient.id)).resolves.toBe(patient);
   });
 
+  it('assigns sequential clinical record numbers', async () => {
+    const { useCase } = setup();
+
+    const first = await useCase.execute(newPatient);
+    const second = await useCase.execute({
+      ...newPatient,
+      rut: '22222222-2',
+    });
+
+    expect(first.numeroHistoria).toBe('HC-000001');
+    expect(second.numeroHistoria).toBe('HC-000002');
+  });
+
   it('stores the canonical RUT no matter the spelling', async () => {
     const { useCase } = setup();
 

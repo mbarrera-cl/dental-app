@@ -187,6 +187,63 @@ export function ensureSchema(db: SqliteDatabase): void {
     );
   `);
 
+  // Dental clinical record (ficha clínica): the HCU form sections live in
+  // `clinical_records`, the interactive odontogram is an append-only log of
+  // findings (`clinical_findings`) and `clinical_events` doubles as the
+  // clinical timeline and the audit log.
+  connection.exec(`
+    CREATE TABLE IF NOT EXISTS clinical_records (
+      id                     TEXT PRIMARY KEY,
+      patient_id             TEXT NOT NULL UNIQUE REFERENCES patients(id) ON DELETE CASCADE,
+      categoria              TEXT NOT NULL,
+      embarazada             INTEGER NOT NULL DEFAULT 0,
+      motivo_consulta        TEXT,
+      enfermedad_actual      TEXT,
+      antecedentes           TEXT NOT NULL DEFAULT '{}',
+      signos_vitales         TEXT NOT NULL DEFAULT '{}',
+      examen_estomatognatico TEXT NOT NULL DEFAULT '{}',
+      indicadores            TEXT NOT NULL DEFAULT '{}',
+      status                 TEXT NOT NULL DEFAULT 'borrador',
+      created_by             TEXT REFERENCES users(id) ON DELETE SET NULL,
+      updated_by             TEXT REFERENCES users(id) ON DELETE SET NULL,
+      created_at             TEXT NOT NULL,
+      updated_at             TEXT NOT NULL,
+      finalized_at           TEXT,
+      finalized_by           TEXT REFERENCES users(id) ON DELETE SET NULL
+    );
+  `);
+
+  connection.exec(`
+    CREATE TABLE IF NOT EXISTS clinical_findings (
+      id         TEXT PRIMARY KEY,
+      record_id  TEXT NOT NULL REFERENCES clinical_records(id) ON DELETE CASCADE,
+      tooth      INTEGER NOT NULL,
+      surfaces   TEXT NOT NULL DEFAULT '[]',
+      symbol     TEXT NOT NULL,
+      state      TEXT NOT NULL,
+      recesion   INTEGER,
+      movilidad  INTEGER,
+      note       TEXT,
+      created_by TEXT REFERENCES users(id) ON DELETE SET NULL,
+      created_at TEXT NOT NULL,
+      voided_at  TEXT,
+      voided_by  TEXT REFERENCES users(id) ON DELETE SET NULL
+    );
+  `);
+
+  connection.exec(`
+    CREATE TABLE IF NOT EXISTS clinical_events (
+      id         TEXT PRIMARY KEY,
+      patient_id TEXT NOT NULL,
+      record_id  TEXT NOT NULL REFERENCES clinical_records(id) ON DELETE CASCADE,
+      actor_id   TEXT REFERENCES users(id) ON DELETE SET NULL,
+      action     TEXT NOT NULL,
+      summary    TEXT,
+      payload    TEXT,
+      created_at TEXT NOT NULL
+    );
+  `);
+
   connection.exec(`
     CREATE INDEX IF NOT EXISTS idx_user_roles_role_id ON user_roles (role_id);
     CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user_id ON refresh_tokens (user_id);
@@ -194,6 +251,8 @@ export function ensureSchema(db: SqliteDatabase): void {
     CREATE INDEX IF NOT EXISTS idx_api_keys_user_id ON api_keys (user_id);
     CREATE INDEX IF NOT EXISTS idx_menu_items_parent ON menu_items (parent_id, position);
     CREATE INDEX IF NOT EXISTS idx_assets_variant ON clinic_assets (variant, active, version DESC);
+    CREATE INDEX IF NOT EXISTS idx_clinical_findings_record ON clinical_findings (record_id, tooth);
+    CREATE INDEX IF NOT EXISTS idx_clinical_events_record ON clinical_events (record_id, created_at);
   `);
 }
 

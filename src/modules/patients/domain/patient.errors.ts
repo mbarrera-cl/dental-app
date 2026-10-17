@@ -38,6 +38,16 @@ export class InvalidSexoError extends DomainError {
   }
 }
 
+export class InvalidNumeroHistoriaError extends DomainError {
+  readonly kind: DomainErrorKind = 'validation';
+
+  constructor(value: string) {
+    super(
+      `"${value}" is not a valid numero de historia clinica (expected the HC-000123 shape)`,
+    );
+  }
+}
+
 export class InvalidRegionError extends DomainError {
   readonly kind: DomainErrorKind = 'validation';
 

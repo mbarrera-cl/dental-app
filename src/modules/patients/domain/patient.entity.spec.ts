@@ -21,6 +21,7 @@ describe('Patient', () => {
     apellidoMaterno: 'Pérez',
     fechaNacimiento: '1990-05-17',
     sexo: 'femenino',
+    numeroHistoria: 'HC-000007',
   };
 
   const persistedProps: PatientProps = {
@@ -36,6 +37,7 @@ describe('Patient', () => {
     prevision: Prevision.create({ tipo: 'FONASA', tramo: 'B' }),
     contactoEmergencia: null,
     notas: 'Alergia a la penicilina',
+    numeroHistoria: 'HC-000042',
     createdAt: new Date('2026-01-01T00:00:00.000Z'),
   };
 
@@ -52,6 +54,7 @@ describe('Patient', () => {
     expect(patient.apellidoPaterno).toBe('Rojas');
     expect(patient.apellidoMaterno).toBe('Pérez');
     expect(patient.nombreCompleto).toBe('Camila Rojas Pérez');
+    expect(patient.numeroHistoria).toBe('HC-000007');
     expect(patient.createdAt).toBeInstanceOf(Date);
   });
 
@@ -122,6 +125,9 @@ describe('Patient', () => {
     expect(() =>
       Patient.create({ ...validProps, prevision: { tipo: 'FONASA' } }),
     ).toThrow(InvalidPrevisionError);
+    expect(() =>
+      Patient.create({ ...validProps, numeroHistoria: '123' }),
+    ).toThrow(expect.objectContaining({ name: 'InvalidNumeroHistoriaError' }));
   });
 
   describe('fecha de nacimiento', () => {
@@ -200,5 +206,6 @@ describe('Patient', () => {
     expect(patient.prevision?.tipo).toBe('FONASA');
     expect(patient.prevision?.tramo).toBe('B');
     expect(patient.notas).toBe('Alergia a la penicilina');
+    expect(patient.numeroHistoria).toBe('HC-000042');
   });
 });

@@ -30,10 +30,11 @@ export class CreatePatientUseCase implements UseCase<
   constructor(private readonly patientRepository: PatientRepositoryPort) {}
 
   async execute(command: CreatePatientCommand): Promise<Patient> {
-    // Build the aggregate first so domain invariants (RUT check digit,
-    // birth date, nested value objects) are validated before the repository
-    // is touched.
-    const patient = Patient.create(command);
+    // Assign the clinical record number first; the entity then validates
+    // every business rule (RUT check digit, birth date, nested value
+    // objects) before the repository is touched.
+    const numeroHistoria = await this.patientRepository.nextNumeroHistoria();
+    const patient = Patient.create({ ...command, numeroHistoria });
 
     const existing = await this.patientRepository.findByRut(patient.rut);
 

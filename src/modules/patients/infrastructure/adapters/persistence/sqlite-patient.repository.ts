@@ -5,6 +5,7 @@ import { ContactoEmergencia } from '../../../domain/contacto-emergencia.vo.js';
 import { Direccion } from '../../../domain/direccion.vo.js';
 import { Email } from '../../../domain/email.vo.js';
 import { FechaNacimiento } from '../../../domain/fecha-nacimiento.vo.js';
+import { formatNumeroHistoria } from '../../../domain/numero-historia.js';
 import { Patient, type Sexo } from '../../../domain/patient.entity.js';
 import {
   PatientAlreadyExistsError,
@@ -16,6 +17,9 @@ import { Telefono } from '../../../../../shared/domain/telefono.vo.js';
 
 /** SQLite status code for a violated UNIQUE constraint (SQLITE_CONSTRAINT_UNIQUE). */
 const SQLITE_CONSTRAINT_UNIQUE = 2067;
+
+/** `bootstrap_state` marker holding the last assigned history-number sequence. */
+const NUMERO_HISTORIA_SEQ_KEY = 'patients.numeroHistoriaSeq';
 
 interface PatientRow {
   id: string;
@@ -39,6 +43,7 @@ interface PatientRow {
   contacto_telefono: string | null;
   contacto_parentesco: string | null;
   notas: string | null;
+  numero_historia: string | null;
   created_at: string;
 }
 
@@ -69,8 +74,9 @@ export class SqlitePatientRepository extends PatientRepositoryPort {
              fecha_nacimiento, sexo, email, telefono,
              direccion_region, direccion_comuna, direccion_calle, direccion_numero,
              direccion_departamento, prevision_tipo, prevision_tramo, prevision_plan,
-             contacto_nombre, contacto_telefono, contacto_parentesco, notas, created_at
-           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+             contacto_nombre, contacto_telefono, contacto_parentesco, notas,
+             numero_historia, created_at
+           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         )
         .run(
           patient.id,
@@ -97,7 +103,7 @@ export class SqlitePatientRepository extends PatientRepositoryPort {
              direccion_numero = ?, direccion_departamento = ?,
              prevision_tipo = ?, prevision_tramo = ?, prevision_plan = ?,
              contacto_nombre = ?, contacto_telefono = ?, contacto_parentesco = ?,
-             notas = ?
+             notas = ?, numero_historia = ?
            WHERE id = ?`,
         )
         .run(...this.toColumnValues(patient), patient.id);
@@ -148,6 +154,34 @@ export class SqlitePatientRepository extends PatientRepositoryPort {
     return rows.map((row) => this.toDomain(row));
   }
 
+  /**
+   * Reads/increments the sequence kept in `bootstrap_state` — the single
+   * writer of that marker is this adapter, so the read-modify-write needs no
+   * locking (`node:sqlite` is synchronous).
+   */
+  async nextNumeroHistoria(): Promise<string> {
+    const row = this.db.connection
+      .prepare('SELECT value FROM bootstrap_state WHERE key = ?')
+      .get(NUMERO_HISTORIA_SEQ_KEY) as unknown as { value: string } | undefined;
+
+    const parsed = row === undefined ? 0 : Number.parseInt(row.value, 10);
+    const next = (Number.isNaN(parsed) ? 0 : parsed) + 1;
+
+    this.db.connection
+      .prepare('INSERT OR REPLACE INTO bootstrap_state (key, value) VALUES (?, ?)')
+      .run(NUMERO_HISTORIA_SEQ_KEY, String(next));
+
+    return formatNumeroHistoria(next);
+  }
+
+  async findWithoutNumeroHistoria(): Promise<Patient[]> {
+    const rows = this.db.connection
+      .prepare('SELECT * FROM patients WHERE numero_historia IS NULL ORDER BY rowid ASC')
+      .all() as unknown as PatientRow[];
+
+    return rows.map((row) => this.toDomain(row));
+  }
+
   /** Patient column values in INSERT/UPDATE order (never `id`/`created_at`). */
   private toColumnValues(patient: Patient): Array<string | null> {
     const direccion = patient.direccion;
@@ -175,6 +209,7 @@ export class SqlitePatientRepository extends PatientRepositoryPort {
       contacto?.telefono ?? null,
       contacto?.parentesco ?? null,
       patient.notas,
+      patient.numeroHistoria,
     ];
   }
 
@@ -216,6 +251,7 @@ export class SqlitePatientRepository extends PatientRepositoryPort {
                 parentesco: row.contacto_parentesco,
               }),
         notas: row.notas,
+        numeroHistoria: row.numero_historia,
         createdAt: new Date(row.created_at),
       },
       row.id,

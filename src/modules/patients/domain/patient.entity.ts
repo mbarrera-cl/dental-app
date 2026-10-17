@@ -8,6 +8,7 @@ import {
 import { Direccion, type DireccionInput } from './direccion.vo.js';
 import { Email } from './email.vo.js';
 import { FechaNacimiento } from './fecha-nacimiento.vo.js';
+import { normalizeNumeroHistoria } from './numero-historia.js';
 import { InvalidPatientNameError, InvalidSexoError } from './patient.errors.js';
 import { Prevision, type PrevisionInput } from './prevision.vo.js';
 
@@ -28,6 +29,8 @@ export interface PatientProps {
   prevision: Prevision | null;
   contactoEmergencia: ContactoEmergencia | null;
   notas: string | null;
+  /** Null only on rows created before the numbering feature (backfilled on boot). */
+  numeroHistoria: string | null;
   createdAt: Date;
 }
 
@@ -44,6 +47,7 @@ export interface CreatePatientProps {
   prevision?: PrevisionInput | null;
   contactoEmergencia?: ContactoEmergenciaInput | null;
   notas?: string | null;
+  numeroHistoria: string;
 }
 
 /**
@@ -69,6 +73,7 @@ export class Patient extends Entity<PatientProps> {
     prevision,
     contactoEmergencia,
     notas,
+    numeroHistoria,
   }: CreatePatientProps): Patient {
     return new Patient({
       rut: Rut.create(rut),
@@ -101,6 +106,7 @@ export class Patient extends Entity<PatientProps> {
           ? null
           : ContactoEmergencia.create(contactoEmergencia),
       notas: Patient.normalizeNotas(notas),
+      numeroHistoria: normalizeNumeroHistoria(numeroHistoria),
       createdAt: new Date(),
     });
   }
@@ -162,6 +168,11 @@ export class Patient extends Entity<PatientProps> {
     return this.props.notas;
   }
 
+  /** `HC-000123`; null only for legacy rows before the boot backfill runs. */
+  get numeroHistoria(): string | null {
+    return this.props.numeroHistoria;
+  }
+
   get createdAt(): Date {
     return this.props.createdAt;
   }
@@ -221,6 +232,11 @@ export class Patient extends Entity<PatientProps> {
 
   changeNotas(notas: string | null): void {
     this.props.notas = Patient.normalizeNotas(notas);
+  }
+
+  /** Assignment of the clinical record number (backfill); validated like `create`. */
+  changeNumeroHistoria(numeroHistoria: string): void {
+    this.props.numeroHistoria = normalizeNumeroHistoria(numeroHistoria);
   }
 
   private static normalizeName(value: string, field: string): string {

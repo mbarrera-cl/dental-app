@@ -23,4 +23,10 @@ export abstract class PatientRepositoryPort {
   abstract findByRut(rut: string): Promise<Patient | null>;
 
   abstract findAll(): Promise<Patient[]>;
+
+  /** Next free clinical record number, formatted `HC-000123`. */
+  abstract nextNumeroHistoria(): Promise<string>;
+
+  /** Patients still missing their clinical record number, oldest first. */
+  abstract findWithoutNumeroHistoria(): Promise<Patient[]>;
 }

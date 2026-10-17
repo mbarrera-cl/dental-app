@@ -129,6 +129,14 @@ export class PatientResponseDto {
   })
   notas: string | null;
 
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    example: 'HC-000123',
+    description: 'Clinical record number; assigned on create.',
+  })
+  numeroHistoria: string | null;
+
   @ApiProperty({ example: '2026-01-01T12:00:00.000Z', format: 'date-time' })
   createdAt: string;
 
@@ -156,6 +164,7 @@ export class PatientResponseDto {
         ? null
         : ContactoEmergenciaResponseDto.fromDomain(patient.contactoEmergencia);
     dto.notas = patient.notas;
+    dto.numeroHistoria = patient.numeroHistoria;
     dto.createdAt = patient.createdAt.toISOString();
     return dto;
   }

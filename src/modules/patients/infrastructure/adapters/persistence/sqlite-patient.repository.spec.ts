@@ -19,6 +19,9 @@ describe('SqlitePatientRepository', () => {
     database.onModuleDestroy();
   });
 
+  /** Sequential HC numbers keep the UNIQUE index happy across patients. */
+  let numeroHistoriaSequence = 0;
+
   const makePatient = (rut = '12345678-5', nombres = 'Camila') =>
     Patient.create({
       rut,
@@ -43,6 +46,7 @@ describe('SqlitePatientRepository', () => {
         parentesco: 'Madre',
       },
       notas: 'Alergia a la penicilina',
+      numeroHistoria: `HC-${String((numeroHistoriaSequence += 1)).padStart(6, '0')}`,
     });
 
   it('saves a patient and reconstitutes every field from the database', async () => {
@@ -69,6 +73,7 @@ describe('SqlitePatientRepository', () => {
     expect(found?.contactoEmergencia?.telefono).toBe('+56987654321');
     expect(found?.contactoEmergencia?.parentesco).toBe('Madre');
     expect(found?.notas).toBe('Alergia a la penicilina');
+    expect(found?.numeroHistoria).toBe(patient.numeroHistoria);
     expect(found?.createdAt).toEqual(patient.createdAt);
   });
 
@@ -80,6 +85,7 @@ describe('SqlitePatientRepository', () => {
       apellidoMaterno: 'Soto',
       fechaNacimiento: '1988-03-10',
       sexo: 'otro',
+      numeroHistoria: 'HC-000124',
     });
 
     await repository.save(patient);
@@ -149,5 +155,28 @@ describe('SqlitePatientRepository', () => {
 
     const all = await repository.findAll();
     expect(all.map((patient) => patient.id)).toEqual([camila.id, grace.id]);
+  });
+
+  it('assigns sequential numeros de historia and persists them on update', async () => {
+    await expect(repository.nextNumeroHistoria()).resolves.toBe('HC-000001');
+    await expect(repository.nextNumeroHistoria()).resolves.toBe('HC-000002');
+
+    const patient = makePatient();
+    await repository.save(patient);
+
+    // Simulate a legacy row: no number until the backfill assigns one.
+    database.connection
+      .prepare('UPDATE patients SET numero_historia = NULL WHERE id = ?')
+      .run(patient.id);
+
+    const [legacy] = await repository.findWithoutNumeroHistoria();
+    expect(legacy?.id).toBe(patient.id);
+
+    legacy?.changeNumeroHistoria('HC-000003');
+    await repository.update(legacy!);
+
+    const found = await repository.findById(patient.id);
+    expect(found?.numeroHistoria).toBe('HC-000003');
+    await expect(repository.findWithoutNumeroHistoria()).resolves.toEqual([]);
   });
 });
