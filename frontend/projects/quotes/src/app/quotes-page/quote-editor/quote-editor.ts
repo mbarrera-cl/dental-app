@@ -92,33 +92,49 @@ interface DraftItem {
         </div>
       }
 
-      <!-- Patient picker -->
+      <!-- Patient picker (fixed when the quote starts from the patient profile) -->
       <div class="bg-card grid gap-4 rounded-lg border p-4">
         <div class="grid gap-2">
           <label hlmLabel>{{ 'quotes.editor.patient' | transloco }}</label>
-          <input
-            hlmInput
-            [value]="patientQuery()"
-            (input)="patientQuery.set($any($event.target).value)"
-            placeholder="{{ 'quotes.editor.searchPatient' | transloco }}"
-            data-testid="quote-patient-search"
-          />
-          <div class="flex flex-wrap gap-2">
-            @for (patient of patientMatches(); track patient.id) {
-              <button
-                hlmBtn
-                variant="outline"
-                size="sm"
-                type="button"
-                class="justify-start"
-                (click)="selectPatient(patient)"
-              >
-                {{ patient.nombres }} {{ patient.apellidoPaterno }} · {{ formatRut(patient.rut) }}
-              </button>
-            }
-          </div>
+
+          @if (patientLocked()) {
+            <div
+              class="border-input flex items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm"
+              data-testid="quote-patient-locked"
+            >
+              <span class="font-medium">
+                {{ lockedPatientName() }} · {{ formatRut(lockedPatientRut() ?? '') }}
+              </span>
+              <span class="text-muted-foreground text-xs">{{ 'quotes.editor.patientLocked' | transloco }}</span>
+            </div>
+          } @else {
+            <input
+              hlmInput
+              [value]="patientQuery()"
+              (input)="patientQuery.set($any($event.target).value)"
+              placeholder="{{ 'quotes.editor.searchPatient' | transloco }}"
+              data-testid="quote-patient-search"
+            />
+            <div class="flex flex-wrap gap-2">
+              @for (patient of patientMatches(); track patient.id) {
+                <button
+                  hlmBtn
+                  variant="outline"
+                  size="sm"
+                  type="button"
+                  class="justify-start"
+                  (click)="selectPatient(patient)"
+                >
+                  {{ patient.nombres }} {{ patient.apellidoPaterno }} · {{ formatRut(patient.rut) }}
+                </button>
+              }
+            </div>
+          }
+
           @if (quote()?.patientName; as name) {
-            <p class="text-muted-foreground text-sm">{{ 'quotes.editor.selectedPatient' | transloco }}: <span class="font-medium">{{ name }}</span></p>
+            <p class="text-muted-foreground text-sm">
+              {{ 'quotes.editor.selectedPatient' | transloco }}: <span class="font-medium">{{ name }}</span>
+            </p>
           }
         </div>
       </div>
@@ -360,6 +376,10 @@ export class QuoteEditor {
   protected readonly patientQuery = signal('');
   protected readonly patients = signal<Patient[]>([]);
   protected readonly selectedPatientId = signal<string | null>(null);
+  /** Patient fixed by the URL context or by the quote being edited. */
+  protected readonly lockedPatientName = signal<string | null>(null);
+  protected readonly lockedPatientRut = signal<string | null>(null);
+  protected readonly patientLocked = computed(() => this.lockedPatientName() !== null);
 
   protected readonly ucoQuery = signal('');
   protected readonly procedures = signal<UcoProcedure[]>([]);
@@ -419,6 +439,32 @@ export class QuoteEditor {
     this.load();
     this.patientsApi.list().subscribe({ next: (patients) => this.patients.set(patients) });
     this.ucoApi.list().subscribe({ next: (procedures) => this.procedures.set(procedures) });
+    this.lockPatientFromQuery();
+  }
+
+  /**
+   * The patient profile opens `/quotes/new?patientId=…`: the patient is fixed
+   * so a budget created from a record cannot land on another patient.
+   */
+  private lockPatientFromQuery(): void {
+    const patientId = this.route.snapshot.queryParamMap.get('patientId');
+
+    if (patientId === null || patientId === '') {
+      return;
+    }
+
+    this.selectedPatientId.set(patientId);
+
+    this.patientsApi.getById(patientId).subscribe({
+      next: (patient) => {
+        this.lockedPatientName.set(
+          `${patient.nombres} ${patient.apellidoPaterno} ${patient.apellidoMaterno}`.trim(),
+        );
+        this.lockedPatientRut.set(patient.rut);
+      },
+      // The id is still usable; the API validates the patient on save.
+      error: () => undefined,
+    });
   }
 
   protected load(): void {
@@ -433,6 +479,9 @@ export class QuoteEditor {
       next: (quote) => {
         this.quote.set(quote);
         this.selectedPatientId.set(quote.patientId);
+        // An existing quote belongs to its patient: the patient never changes.
+        this.lockedPatientName.set(quote.patientName);
+        this.lockedPatientRut.set(quote.patientRut);
         this.items.set(
           quote.items.map((item) => ({
             id: item.id,

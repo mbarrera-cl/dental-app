@@ -1,10 +1,12 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
   lucideActivity,
   lucideArrowLeft,
+  lucideBadgeDollarSign,
   lucideClipboardList,
   lucideFilePlus2,
   lucideRefreshCw,
@@ -17,6 +19,7 @@ import { HlmBadge } from '@ui/badge';
 import { HlmButton } from '@ui/button';
 import { HlmSkeleton } from '@ui/skeleton';
 import { BrandingApi, ageInYears, mapApiError, type Patient } from 'data-access';
+import { filter, map } from 'rxjs';
 import { ClinicalRecordStore } from '../clinical-record.store';
 
 /**
@@ -41,6 +44,7 @@ import { ClinicalRecordStore } from '../clinical-record.store';
     provideIcons({
       lucideActivity,
       lucideArrowLeft,
+      lucideBadgeDollarSign,
       lucideClipboardList,
       lucideFilePlus2,
       lucideRefreshCw,
@@ -54,12 +58,29 @@ import { ClinicalRecordStore } from '../clinical-record.store';
 export class PatientDetailPage {
   private readonly transloco = inject(TranslocoService);
   private readonly branding = inject(BrandingApi);
+  private readonly router = inject(Router);
 
   /** Exposed for the template; shared with the tabs through the route. */
   protected readonly store = inject(ClinicalRecordStore);
   protected readonly permissionKeys = PERMISSION_KEYS;
 
   protected readonly establecimiento = signal<string | null>(null);
+
+  /** Live URL, to tell the clinical tabs from the quotes tab. */
+  private readonly url = toSignal(
+    this.router.events.pipe(
+      filter((event): event is NavigationEnd => event instanceof NavigationEnd),
+      map((event) => event.urlAfterRedirects),
+    ),
+    { initialValue: this.router.url },
+  );
+
+  /**
+   * `true` while a clinical tab is active. Patients without a record have no
+   * clinical tabs, so the “open the record” card replaces the outlet there —
+   * the quotes tab stays reachable in any case.
+   */
+  protected readonly clinicalSection = computed(() => !/\/presupuestos(?:[/?#]|$)/.test(this.url()));
 
   protected readonly categoriaLabelKey = computed(() => {
     const record = this.store.record();

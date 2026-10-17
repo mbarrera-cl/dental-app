@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
@@ -19,7 +19,8 @@ import { HlmSkeleton } from '@ui/skeleton';
 import { HlmBadge } from '@ui/badge';
 import { HlmTBody, HlmTable, HlmTableContainer, HlmTd, HlmTh, HlmTHead, HlmTr } from '@ui/table';
 import { HasPermissionDirective, PERMISSION_KEYS, SessionStore } from 'auth';
-import { QuotesApi, mapApiError, type Quote } from 'data-access';
+import { PatientsApi, QuotesApi, mapApiError, type Quote } from 'data-access';
+import { distinctUntilChanged, map } from 'rxjs';
 import { formatDateTime } from 'ui';
 
 type RowStatus = 'borrador' | 'entregada' | 'aprobada' | 'rechazada' | 'vencida';
@@ -79,6 +80,7 @@ const STATUS_VARIANT: Record<RowStatus, 'secondary' | 'outline' | 'default' | 'd
             hlmBtn
             size="sm"
             routerLink="/quotes/new"
+            [queryParams]="patientId() === null ? {} : { patientId: patientId() }"
             data-testid="quotes-new"
           >
             <ng-icon name="lucideFileText" />
@@ -86,6 +88,16 @@ const STATUS_VARIANT: Record<RowStatus, 'secondary' | 'outline' | 'default' | 'd
           </a>
         </div>
       </header>
+
+      @if (patientId() !== null) {
+        <div
+          class="bg-muted/50 flex flex-wrap items-center justify-between gap-3 rounded-lg border px-4 py-3 text-sm"
+          data-testid="quotes-patient-banner"
+        >
+          <p>{{ 'quotes.filteredByPatient' | transloco: { name: patientLabel() ?? '…' } }}</p>
+          <a hlmBtn variant="ghost" size="sm" routerLink="/quotes">{{ 'quotes.showAll' | transloco }}</a>
+        </div>
+      }
 
       <div class="flex flex-wrap items-center gap-3">
         <div class="relative min-w-64 flex-1">
@@ -219,6 +231,8 @@ const STATUS_VARIANT: Record<RowStatus, 'secondary' | 'outline' | 'default' | 'd
 })
 export class QuotesPage {
   private readonly api = inject(QuotesApi);
+  private readonly patientsApi = inject(PatientsApi);
+  private readonly route = inject(ActivatedRoute);
   private readonly session = inject(SessionStore);
   private readonly transloco = inject(TranslocoService);
 
@@ -230,6 +244,9 @@ export class QuotesPage {
 
   protected readonly quotes = signal<Quote[]>([]);
   protected readonly loading = signal(true);
+  /** Deep link filter: `/quotes?patientId=…` shows one patient's quotations. */
+  protected readonly patientId = signal<string | null>(null);
+  protected readonly patientLabel = signal<string | null>(null);
   protected readonly loadError = signal<string | null>(null);
   protected readonly query = signal('');
   protected readonly statusFilter = signal('');
@@ -247,14 +264,43 @@ export class QuotesPage {
   });
 
   constructor() {
-    this.load();
+    this.route.queryParamMap
+      .pipe(
+        map((params) => params.get('patientId')),
+        distinctUntilChanged(),
+      )
+      .subscribe((patientId) => {
+        const normalized = patientId === null || patientId === '' ? null : patientId;
+        this.patientId.set(normalized);
+        this.loadPatientLabel(normalized);
+        this.load();
+      });
+  }
+
+  /** Resolves the patient name for the filter banner (non-blocking). */
+  private loadPatientLabel(patientId: string | null): void {
+    if (patientId === null) {
+      this.patientLabel.set(null);
+      return;
+    }
+
+    this.patientsApi.getById(patientId).subscribe({
+      next: (patient) =>
+        this.patientLabel.set(
+          `${patient.nombres} ${patient.apellidoPaterno} ${patient.apellidoMaterno}`.trim(),
+        ),
+      error: () => this.patientLabel.set(null),
+    });
   }
 
   protected load(): void {
     this.loading.set(true);
     this.loadError.set(null);
 
-    this.api.list().subscribe({
+    const patientId = this.patientId();
+    const filter = patientId === null ? {} : { patientId };
+
+    this.api.list(filter).subscribe({
       next: (quotes) => this.quotes.set(quotes),
       error: (error: unknown) => this.loadError.set(mapApiError(error)),
       complete: () => this.loading.set(false),

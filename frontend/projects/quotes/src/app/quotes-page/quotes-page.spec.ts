@@ -1,7 +1,8 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { type ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
+import { BehaviorSubject } from 'rxjs';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { SessionStore } from 'auth';
 import type { Quote } from 'data-access';
@@ -53,8 +54,11 @@ interface PageHandle {
 
 describe('QuotesPage', () => {
   let http: HttpTestingController;
+  let queryParams: BehaviorSubject<ReturnType<typeof convertToParamMap>>;
 
   beforeEach(async () => {
+    queryParams = new BehaviorSubject(convertToParamMap({}));
+
     await TestBed.configureTestingModule({
       imports: [QuotesPage],
       providers: [
@@ -64,6 +68,10 @@ describe('QuotesPage', () => {
         provideAppTransloco(),
         provideSpartanHlm(),
         { provide: SessionStore, useValue: { has: () => true, hasAll: () => true, hasAny: () => true } },
+        {
+          provide: ActivatedRoute,
+          useValue: { queryParamMap: queryParams.asObservable() },
+        },
       ],
     }).compileComponents();
 
@@ -127,6 +135,46 @@ describe('QuotesPage', () => {
 
     expect(page.statusOf(QUOTE)).toBe('borrador');
     expect(page.statusOf(EXPIRED)).toBe('vencida');
+  });
+
+  it('filters by patient when the URL carries ?patientId', () => {
+    const fixture = TestBed.createComponent(QuotesPage);
+    fixture.detectChanges();
+
+    // The initial (empty) query triggers the unfiltered load.
+    http.expectOne((request) => request.url === QUOTES_URL).flush([QUOTE]);
+    fixture.detectChanges();
+
+    queryParams.next(convertToParamMap({ patientId: 'patient-1' }));
+    fixture.detectChanges();
+
+    const filtered = http.expectOne(
+      (request) => request.url === QUOTES_URL && request.params.get('patientId') === 'patient-1',
+    );
+    expect(filtered.request.params.get('patientId')).toBe('patient-1');
+    filtered.flush([QUOTE]);
+    http.expectOne(`${BASE}/patients/patient-1`).flush({
+      id: 'patient-1',
+      rut: '12345678-5',
+      nombres: 'Camila',
+      apellidoPaterno: 'Rojas',
+      apellidoMaterno: 'Pérez',
+      fechaNacimiento: '1990-05-17',
+      sexo: 'femenino',
+      email: null,
+      telefono: null,
+      direccion: null,
+      prevision: null,
+      contactoEmergencia: null,
+      notas: null,
+      numeroHistoria: 'HC-000001',
+      createdAt: '2026-10-01T08:00:00.000Z',
+    });
+    fixture.detectChanges();
+
+    const nativeElement = fixture.nativeElement as HTMLElement;
+    expect(nativeElement.querySelector('[data-testid="quotes-patient-banner"]')).not.toBeNull();
+    expect(nativeElement.textContent).toContain('Camila Rojas Pérez');
   });
 
   it('shows the empty state when there are no quotations', () => {

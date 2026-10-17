@@ -35,6 +35,11 @@ export const PATIENTS_ROUTES: Routes = [
         path: 'indicadores',
         loadComponent: () => import('./indices/indices-page').then((m) => m.IndicesPage),
       },
+      {
+        path: 'presupuestos',
+        loadComponent: () =>
+          import('./patient-quotes/patient-quotes-page').then((m) => m.PatientQuotesPage),
+      },
     ],
   },
 ];

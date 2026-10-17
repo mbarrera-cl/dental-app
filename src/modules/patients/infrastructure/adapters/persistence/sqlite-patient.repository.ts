@@ -9,6 +9,7 @@ import { formatNumeroHistoria } from '../../../domain/numero-historia.js';
 import { Patient, type Sexo } from '../../../domain/patient.entity.js';
 import {
   PatientAlreadyExistsError,
+  PatientHasQuotesError,
   PatientNotFoundError,
 } from '../../../domain/patient.errors.js';
 import { Prevision } from '../../../domain/prevision.vo.js';
@@ -121,12 +122,22 @@ export class SqlitePatientRepository extends PatientRepositoryPort {
   }
 
   async delete(id: string): Promise<void> {
-    const result = this.db.connection
-      .prepare('DELETE FROM patients WHERE id = ?')
-      .run(id);
+    try {
+      const result = this.db.connection
+        .prepare('DELETE FROM patients WHERE id = ?')
+        .run(id);
 
-    if (result.changes === 0) {
-      throw new PatientNotFoundError(id);
+      if (result.changes === 0) {
+        throw new PatientNotFoundError(id);
+      }
+    } catch (error) {
+      // The patient is referenced by quotations (`ON DELETE RESTRICT`): a
+      // priced document must not disappear with the patient.
+      if (isForeignKeyViolation(error)) {
+        throw new PatientHasQuotesError(id);
+      }
+
+      throw error;
     }
   }
 
@@ -264,5 +275,17 @@ function isUniqueViolation(error: unknown): boolean {
     error instanceof Error &&
     'errcode' in error &&
     (error as { errcode?: number }).errcode === SQLITE_CONSTRAINT_UNIQUE
+  );
+}
+
+/** SQLite status code for a violated foreign key (SQLITE_CONSTRAINT_FOREIGNKEY). */
+const SQLITE_CONSTRAINT_FOREIGNKEY = 787;
+
+function isForeignKeyViolation(error: unknown): boolean {
+  return (
+    (error instanceof Error &&
+      'errcode' in error &&
+      (error as { errcode?: number }).errcode === SQLITE_CONSTRAINT_FOREIGNKEY) ||
+    (error instanceof Error && error.message.includes('FOREIGN KEY constraint failed'))
   );
 }

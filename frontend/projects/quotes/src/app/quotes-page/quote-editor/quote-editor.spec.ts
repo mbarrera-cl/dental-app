@@ -50,8 +50,11 @@ interface PageHandle {
 
 describe('QuoteEditor', () => {
   let http: HttpTestingController;
+  let queryParams: Record<string, string>;
 
   beforeEach(async () => {
+    queryParams = {};
+
     await TestBed.configureTestingModule({
       imports: [QuoteEditor],
       providers: [
@@ -65,7 +68,14 @@ describe('QuoteEditor', () => {
         provideSpartanHlm(),
         {
           provide: ActivatedRoute,
-          useValue: { snapshot: { paramMap: convertToParamMap({}) } },
+          useValue: {
+            snapshot: {
+              paramMap: convertToParamMap({}),
+              get queryParamMap() {
+                return convertToParamMap(queryParams);
+              },
+            },
+          },
         },
       ],
     }).compileComponents();
@@ -99,6 +109,21 @@ describe('QuoteEditor', () => {
     expect(page.subtotal()).toBe(Number.parseInt(String(PROCEDURE.units * 3000), 10));
     expect(page.discountTotal()).toBe(0);
     expect(page.total()).toBe(page.subtotal());
+  });
+
+  it('locks the patient when the URL carries ?patientId', () => {
+    queryParams = { patientId: PATIENT.id };
+
+    const fixture = TestBed.createComponent(QuoteEditor);
+    fixture.detectChanges();
+    http.expectOne(`${BASE}/patients`).flush([PATIENT]);
+    http.expectOne((req) => req.url === `${BASE}/uco`).flush([PROCEDURE]);
+    http.expectOne(`${BASE}/patients/${PATIENT.id}`).flush(PATIENT);
+    fixture.detectChanges();
+
+    const native = fixture.nativeElement as HTMLElement;
+    expect(native.querySelector('[data-testid="quote-patient-search"]')).toBeNull();
+    expect(native.querySelector('[data-testid="quote-patient-locked"]')?.textContent).toContain('Camila');
   });
 
   it('creates a quote for the selected patient', () => {

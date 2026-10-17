@@ -115,3 +115,15 @@ export class PatientAlreadyExistsError extends DomainError {
     super(`A patient with RUT "${rut}" already exists`);
   }
 }
+
+/**
+ * A patient with quotations cannot be deleted: the quotes reference it
+ * (`ON DELETE RESTRICT`) and a priced document must not vanish silently.
+ */
+export class PatientHasQuotesError extends DomainError {
+  readonly kind: DomainErrorKind = 'conflict';
+
+  constructor(id: string) {
+    super(`Patient with id "${id}" has quotations and cannot be deleted`);
+  }
+}

@@ -34,6 +34,7 @@ export const ES = {
     invalidName: 'El nombre no es válido.',
     patientAlreadyExists: 'Ya existe un paciente con ese RUT.',
     patientNotFound: 'El paciente no existe (puede haber sido eliminado).',
+    patientHasQuotes: 'El paciente tiene presupuestos asociados: elimínalos o ciérralos antes de borrarlo.',
     patientRutNotFound: 'No hay ningún paciente registrado con ese RUT.',
     invalidRut: 'El RUT no es válido (revisa el dígito verificador).',
     invalidFechaNacimiento: 'La fecha de nacimiento no es válida.',
@@ -242,19 +243,6 @@ export const ES = {
       lastLogin: 'Último acceso',
       actions: 'Acciones',
     },
-    itemStatus: {
-      generado: 'Generado',
-      aprobado: 'Aprobado',
-      rechazado: 'Rechazado',
-    },
-    decide: {
-      approve: 'Aprobar ítem',
-      reject: 'Rechazar ítem',
-      reopen: 'Volver a generado',
-      saved: 'Estado del ítem actualizado.',
-    },
-    sanctionApproveConfirm: '¿Sancionar {{folio}} como aprobada? La cotización se bloqueará.',
-    sanctionRejectConfirm: '¿Marcar {{folio}} como rechazada? La cotización se bloqueará.',
     status: {
       active: 'Activo',
       disabled: 'Deshabilitado',
@@ -455,6 +443,7 @@ export const ES = {
       record: 'Ficha clínica',
       odontogram: 'Odontograma',
       indicators: 'Indicadores',
+      quotes: 'Presupuestos',
     },
     header: {
       establecimiento: 'Establecimiento',
@@ -1106,6 +1095,12 @@ export const ES = {
     zoom: 'Zoom',
     apply: 'Usar este recorte',
   },
+  patientQuotes: {
+    title: 'Presupuestos del paciente',
+    subtitle: 'Cotizaciones asociadas a esta ficha, con su estado y totales.',
+    newQuote: 'Nuevo presupuesto',
+    empty: 'Este paciente todavía no tiene presupuestos.',
+  },
   quotes: {
     title: 'Cotizaciones',
     subtitle: 'Presupuestos dentales sobre el arancel UCO, con estados por ítem y sanción.',
@@ -1114,6 +1109,8 @@ export const ES = {
     filterStatus: 'Estado',
     allStatuses: 'Todos',
     empty: 'Todavía no hay cotizaciones.',
+    filteredByPatient: 'Mostrando los presupuestos de {{name}}.',
+    showAll: 'Ver todos los presupuestos',
     noMatches: 'Ninguna cotización coincide con el filtro.',
     printAction: 'Imprimir',
     sanction: 'Sancionar',
@@ -1121,7 +1118,6 @@ export const ES = {
     sanctionConfirm: 'Sancionar la cotización {{folio}}.',
     sanctionApprove: 'Aceptar para aprobarla',
     sanctionReject: 'Aceptar para rechazarla',
-    sanctionRejectConfirm: '¿Marcar {{folio}} como rechazada? Se bloqueará.',
     sanctioned: 'Cotización {{folio}} sancionada.',
     deleteConfirm: '¿Eliminar el borrador {{folio}}? Esta acción no se puede deshacer.',
     deleted: 'Cotización {{folio}} eliminada.',
@@ -1134,6 +1130,19 @@ export const ES = {
       rechazada: 'Rechazada',
       vencida: 'Vencida',
     },
+    itemStatus: {
+      generado: 'Generado',
+      aprobado: 'Aprobado',
+      rechazado: 'Rechazado',
+    },
+    decide: {
+      approve: 'Aprobar ítem',
+      reject: 'Rechazar ítem',
+      reopen: 'Volver a generado',
+      saved: 'Estado del ítem actualizado.',
+    },
+    sanctionApproveConfirm: '¿Sancionar {{folio}} como aprobada? La cotización se bloqueará.',
+    sanctionRejectConfirm: '¿Marcar {{folio}} como rechazada? La cotización se bloqueará.',
     columns: {
       folio: 'Folio',
       patient: 'Paciente',
@@ -1160,6 +1169,7 @@ export const ES = {
     editor: {
       patient: 'Paciente',
       searchPatient: 'Buscar paciente por nombre o RUT…',
+      patientLocked: 'Paciente fijo',
       selectedPatient: 'Paciente seleccionado',
       items: 'Prestaciones',
       searchUco: 'Buscar en el arancel UCO…',

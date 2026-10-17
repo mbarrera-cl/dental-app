@@ -361,5 +361,25 @@ describe('Patients API (e2e)', () => {
         .delete('/patients/does-not-exist')
         .expect(404);
     });
+
+    it('refuses to delete a patient that has quotations (409)', async () => {
+      const created = await createPatient().expect(201);
+      const patientId = (created.body as { id: string }).id;
+
+      await api()
+        .post('/quotes')
+        .send({
+          patientId,
+          items: [{ description: 'Consulta de control', quantity: 1, unitPrice: 3000 }],
+        })
+        .expect(201);
+
+      const response = await api().delete(`/patients/${patientId}`).expect(409);
+
+      expect((response.body as { error: string }).error).toBe('PatientHasQuotesError');
+
+      // The patient and its quotations are still there.
+      await api().get(`/patients/${patientId}`).expect(200);
+    });
   });
 });

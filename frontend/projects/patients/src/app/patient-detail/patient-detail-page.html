@@ -94,8 +94,8 @@
       }
     </div>
 
-    @if (store.record()) {
-      <nav class="flex flex-wrap gap-1 border-b" [attr.aria-label]="'clinical.title' | transloco">
+    <nav class="flex flex-wrap gap-1 border-b" [attr.aria-label]="'clinical.title' | transloco">
+      @if (store.record()) {
         <a
           routerLink="ficha"
           routerLinkActive="border-primary text-foreground"
@@ -123,10 +123,20 @@
           <ng-icon name="lucideActivity" />
           {{ 'clinical.tabs.indicators' | transloco }}
         </a>
-      </nav>
+      }
+      <a
+        *hasPermission="permissionKeys.quotes.read"
+        routerLink="presupuestos"
+        routerLinkActive="border-primary text-foreground"
+        class="text-muted-foreground hover:text-foreground -mb-px flex items-center gap-2 border-b-2 border-transparent px-3 py-2 text-sm font-medium"
+        data-testid="clinical-tab-quotes"
+      >
+        <ng-icon name="lucideBadgeDollarSign" />
+        {{ 'clinical.tabs.quotes' | transloco }}
+      </a>
+    </nav>
 
-      <router-outlet />
-    } @else {
+    @if (!store.record() && clinicalSection()) {
       <div
         class="bg-card grid justify-items-center gap-3 rounded-lg border p-8 text-center"
         data-testid="clinical-missing"
@@ -142,6 +152,8 @@
           </button>
         </ng-container>
       </div>
+    } @else {
+      <router-outlet />
     }
   }
 </section>

@@ -27,6 +27,7 @@ const ERROR_NAME_TO_KEY: Readonly<Record<string, string>> = {
   InvalidDireccionError: 'errors.invalidDireccion',
   InvalidPrevisionError: 'errors.invalidPrevision',
   InvalidContactoEmergenciaError: 'errors.invalidContactoEmergencia',
+  PatientHasQuotesError: 'errors.patientHasQuotes',
   // clinical context (ficha dental)
   ClinicalRecordAlreadyExistsError: 'errors.clinicalRecordExists',
   PatientClinicalRecordNotFoundError: 'errors.clinicalRecordNotFound',

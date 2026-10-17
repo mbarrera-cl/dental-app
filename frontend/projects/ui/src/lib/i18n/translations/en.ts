@@ -26,6 +26,7 @@ export const EN = {
     invalidName: 'The name is not valid.',
     patientAlreadyExists: 'A patient with that RUT already exists.',
     patientNotFound: 'The patient does not exist (it may have been deleted).',
+    patientHasQuotes: 'The patient has quotations: remove or close them before deleting the patient.',
     patientRutNotFound: 'No patient is registered with that RUT.',
     invalidRut: 'The RUT is not valid (check the check digit).',
     invalidFechaNacimiento: 'The date of birth is not valid.',
@@ -232,19 +233,6 @@ export const EN = {
       lastLogin: 'Last login',
       actions: 'Actions',
     },
-    itemStatus: {
-      generado: 'Generated',
-      aprobado: 'Approved',
-      rechazado: 'Rejected',
-    },
-    decide: {
-      approve: 'Approve item',
-      reject: 'Reject item',
-      reopen: 'Back to generated',
-      saved: 'Item status updated.',
-    },
-    sanctionApproveConfirm: 'Sanction {{folio}} as approved? The quotation will be locked.',
-    sanctionRejectConfirm: 'Mark {{folio}} as rejected? The quotation will be locked.',
     status: {
       active: 'Active',
       disabled: 'Disabled',
@@ -445,6 +433,7 @@ export const EN = {
       record: 'Clinical record',
       odontogram: 'Odontogram',
       indicators: 'Indicators',
+      quotes: 'Quotations',
     },
     header: {
       establecimiento: 'Facility',
@@ -1093,6 +1082,12 @@ export const EN = {
     zoom: 'Zoom',
     apply: 'Use this crop',
   },
+  patientQuotes: {
+    title: 'Patient quotations',
+    subtitle: 'Quotations linked to this record, with their status and totals.',
+    newQuote: 'New quotation',
+    empty: 'This patient has no quotations yet.',
+  },
   quotes: {
     title: 'Quotations',
     subtitle: 'Dental estimates over the UCO fee catalog, with per-item states and sanction.',
@@ -1101,6 +1096,8 @@ export const EN = {
     filterStatus: 'Status',
     allStatuses: 'All',
     empty: 'There are no quotations yet.',
+    filteredByPatient: 'Showing the quotations of {{name}}.',
+    showAll: 'Show all quotations',
     noMatches: 'No quotation matches the filter.',
     printAction: 'Print',
     sanction: 'Sanction',
@@ -1108,7 +1105,6 @@ export const EN = {
     sanctionConfirm: 'Sanction quotation {{folio}}.',
     sanctionApprove: 'OK to approve it',
     sanctionReject: 'OK to reject it',
-    sanctionRejectConfirm: 'Mark {{folio}} as rejected? It will be locked.',
     sanctioned: 'Quotation {{folio}} sanctioned.',
     deleteConfirm: 'Delete the draft {{folio}}? This cannot be undone.',
     deleted: 'Quotation {{folio}} deleted.',
@@ -1121,6 +1117,19 @@ export const EN = {
       rechazada: 'Rejected',
       vencida: 'Expired',
     },
+    itemStatus: {
+      generado: 'Generated',
+      aprobado: 'Approved',
+      rechazado: 'Rejected',
+    },
+    decide: {
+      approve: 'Approve item',
+      reject: 'Reject item',
+      reopen: 'Back to generated',
+      saved: 'Item status updated.',
+    },
+    sanctionApproveConfirm: 'Sanction {{folio}} as approved? The quotation will be locked.',
+    sanctionRejectConfirm: 'Mark {{folio}} as rejected? The quotation will be locked.',
     columns: {
       folio: 'Folio',
       patient: 'Patient',
@@ -1147,6 +1156,7 @@ export const EN = {
     editor: {
       patient: 'Patient',
       searchPatient: 'Search patient by name or RUT…',
+      patientLocked: 'Fixed patient',
       selectedPatient: 'Selected patient',
       items: 'Procedures',
       searchUco: 'Search the UCO fee catalog…',
