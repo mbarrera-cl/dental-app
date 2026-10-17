@@ -30,3 +30,5 @@ npm-debug.log*
 
 # Angular build cache
 .angular/
+
+backups/
