@@ -20,7 +20,7 @@ fi
 # let it override their angular.json ports). Keep it local to the backend
 # process so a PORT override cannot move the microfrontends.
 backend_port="${PORT:-3000}"
-PORT="$backend_port" node dist/main.js &
+PORT="$backend_port" node --env-file-if-exists=.env dist/main.js &
 BACKEND_PID=$!
 
 cleanup() {

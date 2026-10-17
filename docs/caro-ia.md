@@ -24,6 +24,22 @@ usuario tiene `caroIa:use`.
 
 ### Variables de entorno (solo servidor)
 
+En desarrollo, crea `/Users/mbarrera/hexa/.env` a partir de `.env.example` y
+completa las claves reales. `scripts/dev-all.sh` carga ese archivo con
+`node --env-file-if-exists=.env`; `.env` está ignorado por git y nunca debe
+subirse. Después reinicia el servidor:
+
+```bash
+cd /Users/mbarrera/hexa
+cp .env.example .env
+# edita .env con tus claves
+MCP_ENABLED=true npm run dev:all
+```
+
+En producción (Railway, Docker, etc.) configura las mismas variables en el
+panel de variables de entorno del servicio; no las pongas en el frontend ni en
+la base de datos.
+
 | Variable | Por defecto | Uso |
 | --- | --- | --- |
 | `DEEPSEEK_API_KEY` | — | Obligatoria para responder. Nunca va al frontend ni a la base de datos. |
