@@ -44,10 +44,13 @@ Credenciales de desarrollo: `admin@hexa.local` / `Admin123!`.
 - **Audio**: botón de micrófono (`MediaRecorder`), temporizador y transcripción
   simulada que se inserta en el composer. La integración real con **Deepgram**
   se hace en la rama backend.
-- **Tabla de conversaciones** responsive (`/caro-ia` → botón
-  “Conversaciones”): título, último mensaje, actualizada, nº de mensajes y
-  acciones.
-- **i18n ES/EN** y diseño responsive (sidebar/drawer, tabla/tarjetas).
+- **Tabla de conversaciones** como vista inicial (`/caro-ia`): título, último
+  mensaje, actualizada, nº de mensajes y acciones. Ocupa todo el ancho y
+  trunca los títulos largos con puntos suspensivos.
+- **Chat** a pantalla completa, sin cabecera propia ni scroll de página: se
+  abre al seleccionar una fila o crear una conversación, y solo scrollea el
+  historial. El botón “Volver a conversaciones” regresa a la tabla.
+- **i18n ES/EN** y diseño responsive (tabla/tarjetas, composer fijo).
 
 ---
 
@@ -86,7 +89,7 @@ frontend/projects/data-access/src/lib/
 └── caro-ia.gateway.ts      # puerto de la UI
 
 frontend/projects/shell/src/app/caro-ia/
-├── caro-ia-page.ts/html    # layout chat + tabla
+├── caro-ia-page.ts/html    # tabla inicial + chat full-height
 ├── caro-ia.store.ts        # estado, streaming, adjuntos, aprobaciones
 ├── caro-ia.mock.ts         # gateway simulado y fixtures
 ├── caro-audio-recorder.ts  # MediaRecorder + temporizador

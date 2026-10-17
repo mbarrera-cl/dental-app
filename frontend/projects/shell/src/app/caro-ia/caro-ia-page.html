@@ -107,8 +107,9 @@
         </button>
       </div>
 
-      <pk-chat-container-root class="bg-card min-h-0 flex-1 rounded-xl border px-3 py-5 sm:px-6">
-        <pk-chat-container-content class="mx-auto w-full max-w-3xl gap-6">
+      <div class="relative min-h-0 flex-1">
+        <pk-chat-container-root class="bg-card absolute inset-0 rounded-xl border px-3 py-5 sm:px-6 overscroll-contain">
+          <pk-chat-container-content class="mx-auto w-full max-w-3xl gap-6">
           @if (store.loadingMessages()) {
             <div class="grid gap-4 py-8">
               @for (row of [0, 1, 2]; track row) {
@@ -222,7 +223,8 @@
           }
           <pk-chat-container-scroll-anchor />
         </pk-chat-container-content>
-      </pk-chat-container-root>
+        </pk-chat-container-root>
+      </div>
 
       @if (store.transcribing()) {
         <div class="text-muted-foreground mt-2 flex items-center gap-2 text-xs">
