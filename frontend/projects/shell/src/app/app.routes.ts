@@ -28,6 +28,11 @@ export const routes: Routes = [
     loadComponent: () => import('./account/api-keys/api-keys-page').then((m) => m.ApiKeysPage),
   },
   {
+    path: 'settings/menu',
+    canMatch: [authGuard, permissionGuard({ allOf: [PERMISSION_KEYS.settings.read] })],
+    loadComponent: () => import('./settings/menu/menu-page').then((m) => m.MenuPage),
+  },
+  {
     path: 'patients',
     canMatch: [authGuard],
     loadChildren: () =>

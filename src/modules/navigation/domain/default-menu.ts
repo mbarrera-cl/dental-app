@@ -63,6 +63,12 @@ export const DEFAULT_MENU: readonly DefaultMenuEntry[] = [
         routeKey: 'admin.apiKeys',
         requiredPermission: apiKeysPermissions.read,
       },
+      {
+        kind: 'item',
+        icon: 'lucidePanelLeft',
+        routeKey: 'settings.menu',
+        requiredPermission: settingsPermissions.read,
+      },
     ],
   },
   {

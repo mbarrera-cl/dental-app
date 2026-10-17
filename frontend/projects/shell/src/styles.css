@@ -7,3 +7,14 @@
 @import '../../ui/src/styles/theme.css';
 
 @source '../../ui/src';
+
+/* Angular CDK drag & drop polish (menu editor): the preview floats above the
+ * tree and the placeholder keeps its slot visible while dragging. */
+.cdk-drag-preview {
+  border-radius: 0.375rem;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.18);
+}
+
+.cdk-drag-placeholder {
+  opacity: 0.4;
+}

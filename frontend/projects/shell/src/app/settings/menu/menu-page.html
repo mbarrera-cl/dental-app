@@ -1,0 +1,538 @@
+<div class="space-y-6">
+  <header class="flex flex-wrap items-start justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-semibold">{{ 'menu.title' | transloco }}</h1>
+      <p class="text-muted-foreground text-sm">{{ 'menu.subtitle' | transloco }}</p>
+    </div>
+    <div class="flex items-center gap-2">
+      <button type="button" hlmBtn variant="outline" (click)="askReset()">
+        <ng-icon name="lucideRotateCcw" class="me-1.5 text-sm" />
+        {{ 'menu.reset' | transloco }}
+      </button>
+      <button type="button" hlmBtn (click)="startCreate()">
+        <ng-icon name="lucidePlus" class="me-1.5 text-sm" />
+        {{ 'menu.newItem' | transloco }}
+      </button>
+    </div>
+  </header>
+
+  @if (loading()) {
+    <div class="flex justify-center py-16">
+      <hlm-spinner [attr.aria-label]="'common.loading' | transloco" />
+    </div>
+  } @else {
+    <div class="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
+      <!-- Menu tree: drag & drop, ordering, visibility, edit/delete -->
+      <section class="rounded-lg border p-4" [attr.aria-label]="'menu.tree.title' | transloco">
+        <header class="mb-3">
+          <h2 class="text-sm font-semibold">{{ 'menu.tree.title' | transloco }}</h2>
+          <p class="text-muted-foreground text-xs">{{ 'menu.tree.hint' | transloco }}</p>
+        </header>
+
+        @if (tree().length === 0) {
+          <p class="text-muted-foreground py-6 text-center text-sm">{{ 'menu.tree.empty' | transloco }}</p>
+        } @else {
+          <div cdkDropListGroup>
+            <div
+              cdkDropList
+              [cdkDropListData]="null"
+              (cdkDropListDropped)="onDrop($event)"
+              class="flex flex-col gap-1"
+            >
+              @for (node of tree(); track node.id; let first = $first; let last = $last) {
+                <div cdkDrag [cdkDragData]="node.id">
+                  <ng-container
+                    [ngTemplateOutlet]="row"
+                    [ngTemplateOutletContext]="{ $implicit: node, first: first, last: last }"
+                  />
+                </div>
+
+                @if (node.kind === 'group') {
+                  <div
+                    cdkDropList
+                    [cdkDropListData]="node.id"
+                    (cdkDropListDropped)="onDrop($event)"
+                    class="border-border ms-4 flex flex-col gap-1 border-s ps-3"
+                  >
+                    @for (child of node.children; track child.id; let childFirst = $first; let childLast = $last) {
+                      <div cdkDrag [cdkDragData]="child.id">
+                        <ng-container
+                          [ngTemplateOutlet]="row"
+                          [ngTemplateOutletContext]="{ $implicit: child, first: childFirst, last: childLast }"
+                        />
+                      </div>
+                    }
+                    @if (node.children.length === 0) {
+                      <p class="text-muted-foreground rounded-md border border-dashed px-2 py-1.5 text-xs">
+                        {{ 'menu.tree.dropHere' | transloco }}
+                      </p>
+                    }
+                  </div>
+                }
+              }
+            </div>
+          </div>
+        }
+      </section>
+
+      <!-- Editor -->
+      <aside class="rounded-lg border p-4">
+        @if (editorOpen()) {
+          <form [formGroup]="form" (ngSubmit)="save()" class="space-y-4">
+            <h2 class="text-sm font-semibold">
+              {{ (editingId() !== null ? 'menu.editor.editTitle' : 'menu.editor.createTitle') | transloco }}
+            </h2>
+
+            <fieldset class="space-y-1.5">
+              <legend class="text-sm font-medium">{{ 'menu.editor.kind' | transloco }}</legend>
+              <div class="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+                <label class="flex items-center gap-2">
+                  <input type="radio" formControlName="kind" value="item" [disabled]="editingId() !== null" />
+                  {{ 'menu.editor.kindItem' | transloco }}
+                </label>
+                <label class="flex items-center gap-2">
+                  <input type="radio" formControlName="kind" value="group" [disabled]="editingId() !== null" />
+                  {{ 'menu.editor.kindGroup' | transloco }}
+                </label>
+                <label class="flex items-center gap-2">
+                  <input type="radio" formControlName="kind" value="divider" [disabled]="editingId() !== null" />
+                  {{ 'menu.editor.kindDivider' | transloco }}
+                </label>
+              </div>
+              @if (editingId() !== null) {
+                <p class="text-muted-foreground text-xs">{{ 'menu.editor.kindLocked' | transloco }}</p>
+              }
+            </fieldset>
+
+            @if (kind() !== 'divider') {
+              <div class="grid gap-1.5">
+                <label class="text-sm font-medium" for="menu-label">{{ 'menu.editor.label' | transloco }}</label>
+                <input
+                  id="menu-label"
+                  type="text"
+                  formControlName="label"
+                  maxlength="60"
+                  class="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-9 w-full rounded-md border px-3 text-sm shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px]"
+                />
+                @if (kind() === 'item') {
+                  <p class="text-muted-foreground text-xs">{{ 'menu.editor.labelHint' | transloco }}</p>
+                }
+              </div>
+            }
+
+            @if (kind() !== 'group') {
+              @if (editingId() === null) {
+                <div class="grid gap-1.5">
+                  <label class="text-sm font-medium" for="menu-parent">{{ 'menu.editor.parent' | transloco }}</label>
+                  <select
+                    id="menu-parent"
+                    formControlName="parentId"
+                    class="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-9 w-full rounded-md border px-3 text-sm shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px]"
+                  >
+                    <option value="">{{ 'menu.editor.parentRoot' | transloco }}</option>
+                    @for (group of parentOptions(); track group.id) {
+                      <option [value]="group.id">{{ labelOf(group) }}</option>
+                    }
+                  </select>
+                </div>
+              } @else {
+                <p class="text-muted-foreground text-xs">{{ 'menu.editor.parentLocked' | transloco }}</p>
+              }
+            }
+
+            @if (kind() === 'item') {
+              <fieldset class="space-y-1.5">
+                <legend class="text-sm font-medium">{{ 'menu.editor.destination' | transloco }}</legend>
+                <div class="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+                  <label class="flex items-center gap-2">
+                    <input type="radio" formControlName="destination" value="route" />
+                    {{ 'menu.editor.destinationRoute' | transloco }}
+                  </label>
+                  <label class="flex items-center gap-2">
+                    <input type="radio" formControlName="destination" value="external" />
+                    {{ 'menu.editor.destinationExternal' | transloco }}
+                  </label>
+                </div>
+              </fieldset>
+
+              @if (destination() === 'route') {
+                <div class="grid gap-1.5">
+                  <label class="text-sm font-medium" for="menu-route">{{ 'menu.editor.route' | transloco }}</label>
+                  <select
+                    id="menu-route"
+                    formControlName="routeKey"
+                    class="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-9 w-full rounded-md border px-3 text-sm shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px]"
+                  >
+                    <option value="" disabled>{{ 'menu.editor.routePlaceholder' | transloco }}</option>
+                    @if (selectedRouteUnknown()) {
+                      <option [value]="formValue().routeKey">
+                        {{ formValue().routeKey }} · {{ 'menu.tree.unknownRoute' | transloco }}
+                      </option>
+                    }
+                    @for (route of routeOptions; track route.key) {
+                      <option [value]="route.key">{{ route.label | transloco }} · {{ route.path }}</option>
+                    }
+                  </select>
+                </div>
+              } @else {
+                <div class="grid gap-1.5">
+                  <label class="text-sm font-medium" for="menu-url">{{ 'menu.editor.externalUrl' | transloco }}</label>
+                  <input
+                    id="menu-url"
+                    type="url"
+                    formControlName="externalUrl"
+                    placeholder="https://…"
+                    class="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-9 w-full rounded-md border px-3 text-sm shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px]"
+                  />
+                </div>
+              }
+            }
+
+            @if (kind() !== 'divider') {
+              <div class="grid gap-1.5">
+                <label class="text-sm font-medium" for="menu-permission">
+                  {{ 'menu.editor.permission' | transloco }}
+                </label>
+                <select
+                  id="menu-permission"
+                  formControlName="requiredPermission"
+                  class="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-9 w-full rounded-md border px-3 text-sm shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px]"
+                >
+                  <option value="">{{ 'menu.editor.permissionAll' | transloco }}</option>
+                  @for (key of permissionOptions(); track key) {
+                    <option [value]="key">{{ permissionLabel(key) }} ({{ key }})</option>
+                  }
+                </select>
+              </div>
+
+              <div class="relative grid gap-1.5">
+                <span class="text-sm font-medium">{{ 'menu.editor.icon' | transloco }}</span>
+                <button
+                  type="button"
+                  class="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 flex h-9 w-full items-center gap-2 rounded-md border px-3 text-sm shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px]"
+                  [attr.aria-expanded]="iconPickerOpen()"
+                  (click)="toggleIconPicker()"
+                >
+                  <ng-icon [name]="selectedIcon()" class="shrink-0 text-base" aria-hidden="true" />
+                  <span class="flex-1 truncate text-start">
+                    {{ formValue().icon === '' ? ('menu.editor.iconNone' | transloco) : formValue().icon }}
+                  </span>
+                  <ng-icon name="lucideChevronDown" class="shrink-0 text-sm" aria-hidden="true" />
+                </button>
+
+                @if (iconPickerOpen()) {
+                  <div class="bg-popover absolute top-full z-50 mt-1 w-72 rounded-md border p-2 shadow-md">
+                    <div class="relative mb-2">
+                      <ng-icon
+                        name="lucideSearch"
+                        class="text-muted-foreground pointer-events-none absolute start-2 top-1/2 -translate-y-1/2 text-sm"
+                        aria-hidden="true"
+                      />
+                      <input
+                        type="search"
+                        class="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-8 w-full rounded-md border ps-8 pe-2 text-sm shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px]"
+                        [value]="iconQuery()"
+                        [placeholder]="'menu.editor.iconSearch' | transloco"
+                        (input)="onIconQuery($event)"
+                      />
+                    </div>
+                    <div class="grid max-h-44 grid-cols-6 gap-1 overflow-y-auto">
+                      @for (name of filteredIcons(); track name) {
+                        <button
+                          type="button"
+                          class="hover:bg-muted flex items-center justify-center rounded p-1.5"
+                          [class.bg-secondary]="formValue().icon === name"
+                          [attr.title]="name"
+                          [attr.aria-label]="name"
+                          (click)="pickIcon(name)"
+                        >
+                          <ng-icon [name]="name" class="text-base" aria-hidden="true" />
+                        </button>
+                      }
+                    </div>
+                    <button
+                      type="button"
+                      class="text-muted-foreground hover:text-foreground mt-2 flex w-full items-center gap-1.5 rounded px-2 py-1 text-start text-xs"
+                      (click)="pickIcon('')"
+                    >
+                      <ng-icon name="lucideX" class="text-xs" aria-hidden="true" />
+                      {{ 'menu.editor.iconNone' | transloco }}
+                    </button>
+                  </div>
+                }
+              </div>
+            }
+
+            <label class="flex items-center gap-2 text-sm">
+              <input type="checkbox" formControlName="enabled" class="size-4" />
+              {{ 'menu.editor.enabled' | transloco }}
+            </label>
+
+            @if (formError(); as errorKey) {
+              <p class="text-destructive text-sm" role="alert">{{ errorKey | transloco }}</p>
+            }
+
+            <div class="flex flex-wrap items-center gap-2">
+              <button type="submit" hlmBtn [disabled]="saving()">
+                @if (saving()) {
+                  <hlm-spinner class="me-1.5" [attr.aria-label]="'common.loading' | transloco" />
+                }
+                {{ (editingId() !== null ? 'menu.editor.save' : 'menu.editor.create') | transloco }}
+              </button>
+              <button type="button" hlmBtn variant="outline" (click)="closeEditor()">
+                {{ 'menu.editor.cancel' | transloco }}
+              </button>
+              @if (editingItem(); as item) {
+                <button
+                  type="button"
+                  hlmBtn
+                  variant="destructive"
+                  class="ms-auto"
+                  (click)="askDelete(item)"
+                >
+                  <ng-icon name="lucideTrash2" class="me-1.5 text-sm" />
+                  {{ 'menu.editor.delete' | transloco }}
+                </button>
+              }
+            </div>
+          </form>
+        } @else {
+          <div class="text-muted-foreground flex min-h-40 items-center justify-center p-6 text-center text-sm">
+            {{ 'menu.editor.empty' | transloco }}
+          </div>
+        }
+      </aside>
+    </div>
+
+    <!-- "View as" preview: replicates the backend filtering client-side -->
+    <section class="rounded-lg border p-4" [attr.aria-label]="'menu.preview.title' | transloco">
+      <header class="mb-3 flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h2 class="text-sm font-semibold">{{ 'menu.preview.title' | transloco }}</h2>
+          <p class="text-muted-foreground text-xs">{{ 'menu.preview.subtitle' | transloco }}</p>
+        </div>
+        <div class="grid gap-1">
+          <label class="text-xs font-medium" for="menu-preview-role">
+            {{ 'menu.preview.role' | transloco }}
+          </label>
+          <select
+            id="menu-preview-role"
+            class="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-8 rounded-md border px-2 text-xs shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px]"
+            [value]="previewRoleId()"
+            (change)="onPreviewRoleChanged($event)"
+          >
+            <option value="">{{ 'menu.preview.asSelf' | transloco }}</option>
+            @for (role of roles(); track role.id) {
+              <option [value]="role.id">{{ role.name }}</option>
+            }
+          </select>
+        </div>
+      </header>
+
+      @if (roles().length === 0) {
+        <p class="text-muted-foreground mb-2 text-xs">{{ 'menu.preview.rolesUnavailable' | transloco }}</p>
+      }
+
+      <div class="bg-muted/30 max-w-xs rounded-md border p-2">
+        @if (previewTree().length === 0) {
+          <p class="text-muted-foreground px-2 py-4 text-center text-xs">{{ 'menu.preview.empty' | transloco }}</p>
+        } @else {
+          @for (node of previewTree(); track node.id) {
+            @if (node.kind === 'divider') {
+              <hr class="border-border my-2" />
+            } @else if (node.kind === 'group') {
+              <div class="px-2 py-1.5">
+                <p class="text-muted-foreground text-xs font-medium">{{ labelOf(node) }}</p>
+                <div class="border-border ms-2 mt-1 flex flex-col gap-0.5 border-s ps-2">
+                  @for (child of node.children; track child.id) {
+                    <p class="flex items-center gap-2 text-sm">
+                      <ng-icon [name]="iconOf(child)" class="shrink-0 text-base" aria-hidden="true" />
+                      <span class="truncate">{{ labelOf(child) }}</span>
+                      @if (child.externalUrl !== null) {
+                        <ng-icon name="lucideExternalLink" class="text-muted-foreground shrink-0 text-xs" aria-hidden="true" />
+                      }
+                    </p>
+                  }
+                </div>
+              </div>
+            } @else {
+              <p class="flex items-center gap-2 px-2 py-1.5 text-sm">
+                <ng-icon [name]="iconOf(node)" class="shrink-0 text-base" aria-hidden="true" />
+                <span class="truncate">{{ labelOf(node) }}</span>
+                @if (node.externalUrl !== null) {
+                  <ng-icon name="lucideExternalLink" class="text-muted-foreground shrink-0 text-xs" aria-hidden="true" />
+                }
+              </p>
+            }
+          }
+        }
+      </div>
+    </section>
+  }
+</div>
+
+<!-- One row of the tree (shared by top-level entries and group children) -->
+<ng-template #row let-node let-first="first" let-last="last">
+  @if (node.kind === 'divider') {
+    <div class="flex items-center gap-2 rounded-md border border-dashed px-2 py-1.5">
+      <button
+        type="button"
+        cdkDragHandle
+        class="text-muted-foreground hover:text-foreground cursor-grab rounded p-0.5"
+        [attr.aria-label]="'menu.tree.drag' | transloco"
+      >
+        <ng-icon name="lucideGripVertical" class="text-sm" aria-hidden="true" />
+      </button>
+      <hr class="border-border flex-1" />
+      <span class="text-muted-foreground text-xs">{{ 'menu.tree.divider' | transloco }}</span>
+      <ng-container
+        [ngTemplateOutlet]="rowActions"
+        [ngTemplateOutletContext]="{ $implicit: node, first: first, last: last }"
+      />
+    </div>
+  } @else {
+    <div
+      class="bg-card flex items-center gap-2 rounded-md border px-2 py-1.5"
+      [class.opacity-60]="!node.enabled"
+    >
+      <button
+        type="button"
+        cdkDragHandle
+        class="text-muted-foreground hover:text-foreground cursor-grab rounded p-0.5"
+        [attr.aria-label]="'menu.tree.drag' | transloco"
+      >
+        <ng-icon name="lucideGripVertical" class="text-sm" aria-hidden="true" />
+      </button>
+      <ng-icon [name]="iconOf(node)" class="shrink-0 text-base" aria-hidden="true" />
+      <span class="flex-1 truncate text-sm">{{ labelOf(node) }}</span>
+
+      @if (node.kind === 'group') {
+        <span class="text-muted-foreground bg-muted rounded px-1.5 py-0.5 text-[11px]">
+          {{ 'menu.tree.group' | transloco }}
+        </span>
+      }
+      @if (isUnknownRoute(node)) {
+        <ng-icon
+          name="lucideTriangleAlert"
+          class="text-amber-600 text-sm dark:text-amber-500"
+          [attr.title]="'menu.tree.unknownRoute' | transloco"
+          [attr.aria-label]="'menu.tree.unknownRoute' | transloco"
+        />
+      }
+      @if (node.externalUrl !== null) {
+        <ng-icon
+          name="lucideExternalLink"
+          class="text-muted-foreground text-xs"
+          [attr.title]="node.externalUrl"
+          aria-hidden="true"
+        />
+      }
+      @if (!node.enabled) {
+        <span class="text-muted-foreground bg-muted rounded px-1.5 py-0.5 text-[11px]">
+          {{ 'menu.tree.hidden' | transloco }}
+        </span>
+      }
+
+      <ng-container
+        [ngTemplateOutlet]="rowActions"
+        [ngTemplateOutletContext]="{ $implicit: node, first: first, last: last }"
+      />
+    </div>
+  }
+</ng-template>
+
+<ng-template #rowActions let-node let-first="first" let-last="last">
+  <span class="flex items-center gap-0.5">
+    <button
+      type="button"
+      class="text-muted-foreground hover:bg-muted hover:text-foreground rounded p-1 disabled:opacity-40"
+      [disabled]="first"
+      [attr.aria-label]="'menu.tree.up' | transloco"
+      (click)="shift(node, -1)"
+    >
+      <ng-icon name="lucideArrowUp" class="text-sm" aria-hidden="true" />
+    </button>
+    <button
+      type="button"
+      class="text-muted-foreground hover:bg-muted hover:text-foreground rounded p-1 disabled:opacity-40"
+      [disabled]="last"
+      [attr.aria-label]="'menu.tree.down' | transloco"
+      (click)="shift(node, 1)"
+    >
+      <ng-icon name="lucideArrowDown" class="text-sm" aria-hidden="true" />
+    </button>
+    <button
+      type="button"
+      class="text-muted-foreground hover:bg-muted hover:text-foreground rounded p-1 disabled:opacity-40"
+      [disabled]="busyId() === node.id"
+      [attr.aria-label]="(node.enabled ? 'menu.tree.hide' : 'menu.tree.show') | transloco"
+      (click)="toggleEnabled(node)"
+    >
+      <ng-icon [name]="node.enabled ? 'lucideEye' : 'lucideEyeOff'" class="text-sm" aria-hidden="true" />
+    </button>
+    <button
+      type="button"
+      class="text-muted-foreground hover:bg-muted hover:text-foreground rounded p-1"
+      [attr.aria-label]="'menu.tree.edit' | transloco"
+      (click)="startEdit(node)"
+    >
+      <ng-icon name="lucidePencil" class="text-sm" aria-hidden="true" />
+    </button>
+    <button
+      type="button"
+      class="text-muted-foreground hover:bg-muted hover:text-destructive rounded p-1"
+      [attr.aria-label]="'menu.tree.delete' | transloco"
+      (click)="askDelete(node)"
+    >
+      <ng-icon name="lucideTrash2" class="text-sm" aria-hidden="true" />
+    </button>
+  </span>
+</ng-template>
+
+<!-- Delete confirmation -->
+<hlm-alert-dialog
+  [state]="deleteTarget() !== null ? 'open' : 'closed'"
+  (stateChanged)="onDeleteStateChanged($event)"
+>
+  <hlm-alert-dialog-content *hlmAlertDialogPortal="let ctx">
+    <hlm-alert-dialog-header>
+      <h2 hlmAlertDialogTitle>{{ 'menu.tree.deleteTitle' | transloco }}</h2>
+      <p hlmAlertDialogDescription>
+        @if (deleteTarget(); as target) {
+          {{ 'menu.tree.deleteDescription' | transloco: { name: labelOf(target) } }}
+        }
+      </p>
+    </hlm-alert-dialog-header>
+    <hlm-alert-dialog-footer>
+      <button hlmAlertDialogCancel [disabled]="deleting()">{{ 'common.cancel' | transloco }}</button>
+      <button hlmAlertDialogAction variant="destructive" [disabled]="deleting()" (click)="confirmDelete()">
+        @if (deleting()) {
+          <hlm-spinner class="me-1.5" [attr.aria-label]="'common.loading' | transloco" />
+        }
+        {{ 'common.delete' | transloco }}
+      </button>
+    </hlm-alert-dialog-footer>
+  </hlm-alert-dialog-content>
+</hlm-alert-dialog>
+
+<!-- Reset confirmation -->
+<hlm-alert-dialog
+  [state]="resetOpen() ? 'open' : 'closed'"
+  (stateChanged)="onResetStateChanged($event)"
+>
+  <hlm-alert-dialog-content *hlmAlertDialogPortal="let ctx">
+    <hlm-alert-dialog-header>
+      <h2 hlmAlertDialogTitle>{{ 'menu.resetTitle' | transloco }}</h2>
+      <p hlmAlertDialogDescription>{{ 'menu.resetDescription' | transloco }}</p>
+    </hlm-alert-dialog-header>
+    <hlm-alert-dialog-footer>
+      <button hlmAlertDialogCancel [disabled]="resetting()">{{ 'common.cancel' | transloco }}</button>
+      <button hlmAlertDialogAction variant="destructive" [disabled]="resetting()" (click)="confirmReset()">
+        @if (resetting()) {
+          <hlm-spinner class="me-1.5" [attr.aria-label]="'common.loading' | transloco" />
+        }
+        {{ 'menu.resetConfirm' | transloco }}
+      </button>
+    </hlm-alert-dialog-footer>
+  </hlm-alert-dialog-content>
+</hlm-alert-dialog>

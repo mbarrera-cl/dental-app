@@ -56,6 +56,20 @@ const ERROR_NAME_TO_KEY: Readonly<Record<string, string>> = {
   SettingsUnknownKeyError: 'errors.settingUnknown',
   SettingsValueInvalidError: 'errors.settingInvalid',
   EmptySettingsUpdateError: 'errors.settingsEmpty',
+  // navigation context
+  InvalidMenuItemKindError: 'errors.validation',
+  InvalidMenuDestinationError: 'errors.menuDestination',
+  InvalidMenuRouteKeyError: 'errors.menuRouteKey',
+  InvalidMenuExternalUrlError: 'errors.menuExternalUrl',
+  InvalidMenuLabelError: 'errors.invalidName',
+  InvalidMenuIconError: 'errors.menuIcon',
+  InvalidMenuPositionError: 'errors.validation',
+  NestedMenuGroupError: 'errors.menuNestedGroup',
+  MenuItemNotFoundError: 'errors.menuItemNotFound',
+  MenuParentNotGroupError: 'errors.menuParentNotGroup',
+  MenuReorderDuplicateError: 'errors.validation',
+  MenuReorderSelfParentError: 'errors.validation',
+  EmptyMenuItemUpdateError: 'errors.emptyUpdate',
 };
 
 /**
