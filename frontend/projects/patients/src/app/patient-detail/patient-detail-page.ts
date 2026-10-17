@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
-import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
+import { ActivatedRoute, NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
@@ -19,7 +19,7 @@ import { HlmBadge } from '@ui/badge';
 import { HlmButton } from '@ui/button';
 import { HlmSkeleton } from '@ui/skeleton';
 import { BrandingApi, ageInYears, mapApiError, type Patient } from 'data-access';
-import { filter, map } from 'rxjs';
+import { distinctUntilChanged, filter, map } from 'rxjs';
 import { ClinicalRecordStore } from '../clinical-record.store';
 
 /**
@@ -58,6 +58,7 @@ import { ClinicalRecordStore } from '../clinical-record.store';
 export class PatientDetailPage {
   private readonly transloco = inject(TranslocoService);
   private readonly branding = inject(BrandingApi);
+  private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
 
   /** Exposed for the template; shared with the tabs through the route. */
@@ -89,6 +90,15 @@ export class PatientDetailPage {
   });
 
   constructor() {
+    // Component ActivatedRoute has `:id`; the store's EnvironmentInjector route does not.
+    this.route.paramMap
+      .pipe(
+        map((params) => params.get('id') ?? ''),
+        distinctUntilChanged(),
+        takeUntilDestroyed(),
+      )
+      .subscribe((patientId) => this.store.load(patientId));
+
     this.branding.get().subscribe({
       next: (snapshot) => this.establecimiento.set(snapshot.branding?.name ?? null),
       // The header is decoration: a missing clinic name never blocks the ficha.
@@ -116,7 +126,7 @@ export class PatientDetailPage {
   }
 
   protected retry(): void {
-    this.store.load(this.store.patientId());
+    this.store.load(this.store.patientId(), { force: true });
   }
 
   protected openRecord(): void {

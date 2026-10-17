@@ -1,8 +1,6 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { ActivatedRoute, convertToParamMap } from '@angular/router';
-import { BehaviorSubject, of } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
   API_BASE_URL,
@@ -112,6 +110,7 @@ const INDICES: ClinicalIndices = {
 
 describe('ClinicalRecordStore', () => {
   let http: HttpTestingController;
+  let store: ClinicalRecordStore;
 
   beforeEach(() => {
     TestBed.configureTestingModule({
@@ -120,14 +119,11 @@ describe('ClinicalRecordStore', () => {
         provideHttpClient(),
         provideHttpClientTesting(),
         { provide: API_BASE_URL, useValue: BASE_URL },
-        {
-          provide: ActivatedRoute,
-          useValue: { paramMap: of(convertToParamMap({ id: PATIENT_ID })) },
-        },
       ],
     });
 
     http = TestBed.inject(HttpTestingController);
+    store = TestBed.inject(ClinicalRecordStore);
   });
 
   afterEach(() => {
@@ -135,6 +131,7 @@ describe('ClinicalRecordStore', () => {
   });
 
   function loadPatient(): void {
+    store.load(PATIENT_ID);
     http.expectOne('http://api.test/v1/patients/patient-1').flush(PATIENT);
   }
 
@@ -147,8 +144,6 @@ describe('ClinicalRecordStore', () => {
   }
 
   it('treats a missing clinical record as a normal state (404 on load)', () => {
-    const store = TestBed.inject(ClinicalRecordStore);
-
     loadPatient();
     http
       .expectOne('http://api.test/v1/patients/patient-1/clinical-record')
@@ -164,8 +159,6 @@ describe('ClinicalRecordStore', () => {
   });
 
   it('loads the record with its findings and derived indices', () => {
-    const store = TestBed.inject(ClinicalRecordStore);
-
     loadPatient();
     loadRecord();
 
@@ -176,8 +169,6 @@ describe('ClinicalRecordStore', () => {
   });
 
   it('opens the record of the patient and refreshes the derived data', () => {
-    const store = TestBed.inject(ClinicalRecordStore);
-
     loadPatient();
     http
       .expectOne('http://api.test/v1/patients/patient-1/clinical-record')
@@ -197,8 +188,6 @@ describe('ClinicalRecordStore', () => {
   });
 
   it('appends findings and voids them through the append-only log', () => {
-    const store = TestBed.inject(ClinicalRecordStore);
-
     loadPatient();
     loadRecord();
 
@@ -223,8 +212,6 @@ describe('ClinicalRecordStore', () => {
   });
 
   it('patches the record and refreshes the derived indices', () => {
-    const store = TestBed.inject(ClinicalRecordStore);
-
     loadPatient();
     loadRecord();
 
@@ -239,12 +226,9 @@ describe('ClinicalRecordStore', () => {
   });
 
   it('does not refetch a patient that is already loaded', () => {
-    const store = TestBed.inject(ClinicalRecordStore);
-
     loadPatient();
     loadRecord();
 
-    // A re-evaluated route asks again for the same patient: no new requests.
     store.load(PATIENT_ID);
 
     expect(store.record()?.id).toBe(RECORD_ID);
@@ -252,24 +236,20 @@ describe('ClinicalRecordStore', () => {
     http.expectNone('http://api.test/v1/patients/patient-1');
   });
 
+  it('force-reloads the same patient on retry', () => {
+    loadPatient();
+    loadRecord();
+
+    store.load(PATIENT_ID, { force: true });
+    http.expectOne('http://api.test/v1/patients/patient-1').flush(PATIENT);
+    loadRecord();
+
+    expect(store.loading()).toBe(false);
+    expect(store.record()?.id).toBe(RECORD_ID);
+  });
+
   it('switches patients, cancelling the requests of the previous one', () => {
-    const route$ = new BehaviorSubject(convertToParamMap({ id: PATIENT_ID }));
-
-    TestBed.resetTestingModule();
-    TestBed.configureTestingModule({
-      providers: [
-        ClinicalRecordStore,
-        provideHttpClient(),
-        provideHttpClientTesting(),
-        { provide: API_BASE_URL, useValue: BASE_URL },
-        { provide: ActivatedRoute, useValue: { paramMap: route$.asObservable() } },
-      ],
-    });
-
-    http = TestBed.inject(HttpTestingController);
-    const store = TestBed.inject(ClinicalRecordStore);
-
-    // The first patient never answers: its requests are abandoned below.
+    store.load(PATIENT_ID);
     http.expectOne('http://api.test/v1/patients/patient-1').flush(PATIENT);
     http
       .expectOne('http://api.test/v1/patients/patient-1/clinical-record')
@@ -277,9 +257,7 @@ describe('ClinicalRecordStore', () => {
     http.expectOne(`http://api.test/v1/clinical-records/${RECORD_ID}/findings`).flush([]);
     http.expectOne(`http://api.test/v1/clinical-records/${RECORD_ID}/indices`).flush(INDICES);
 
-    route$.next(convertToParamMap({ id: 'patient-2' }));
-
-    TestBed.flushEffects();
+    store.load('patient-2');
 
     http
       .expectOne('http://api.test/v1/patients/patient-2')

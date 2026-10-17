@@ -1,7 +1,6 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
-import { Observable, Subject, catchError, distinctUntilChanged, map, of, switchMap, takeUntil, tap } from 'rxjs';
+import { Observable, Subject, catchError, map, of, switchMap, takeUntil, tap } from 'rxjs';
 import {
   ClinicalApi,
   PatientsApi,
@@ -23,15 +22,14 @@ import {
  * loading the record is not an error: it means the record has not been
  * opened yet and the detail page offers to create it.
  *
- * Redundant loads are dropped: the store is recreated with its route, so it
- * remembers the last patient it fetched and `load` becomes a no-op for it.
- * Switching patients cancels the in-flight requests of the previous one, and
- * `paramMap` is de-duplicated, so a re-evaluated route never re-triggers the
- * four GETs (that storm is what looked like a navigation loop).
+ * The host page drives `load(patientId)` from its component `ActivatedRoute`
+ * — a store provided on the route injects an EnvironmentInjector route that
+ * has no `:id` param, so subscribing to `paramMap` here never fires the GETs.
+ * Redundant loads of the same patient are skipped; switching patients cancels
+ * the previous in-flight requests.
  */
 @Injectable()
 export class ClinicalRecordStore {
-  private readonly route = inject(ActivatedRoute);
   private readonly patientsApi = inject(PatientsApi);
   private readonly clinicalApi = inject(ClinicalApi);
 
@@ -56,28 +54,20 @@ export class ClinicalRecordStore {
 
   readonly recordId = computed(() => this.record()?.id ?? null);
 
-  constructor() {
-    this.route.paramMap
-      .pipe(
-        map((params) => params.get('id') ?? ''),
-        // Same patient (re-evaluated route): nothing to load again.
-        distinctUntilChanged(),
-        takeUntil(this.destroy),
-      )
-      .subscribe((patientId) => {
-        // Cancel whatever the previous patient left in flight, then start the
-        // new load. `load` must not cancel its own request (it would kill the
-        // four GETs the moment they start).
-        this.patientChange.next();
-        this.load(patientId);
-      });
-  }
-
-  load(patientId: string): void {
-    if (patientId === '' || patientId === this.loadedPatientId) {
+  /**
+   * Loads patient + clinical record. Same id is a no-op unless `force` (retry).
+   * Switching ids cancels whatever the previous patient left in flight.
+   */
+  load(patientId: string, options: { force?: boolean } = {}): void {
+    if (patientId === '') {
       return;
     }
 
+    if (!options.force && patientId === this.loadedPatientId) {
+      return;
+    }
+
+    this.patientChange.next();
     this.loadedPatientId = patientId;
     this.patientId.set(patientId);
     this.loading.set(true);

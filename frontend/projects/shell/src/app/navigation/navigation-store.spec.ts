@@ -78,6 +78,18 @@ describe('NavigationStore', () => {
     expect(store.loading()).toBe(false);
   });
 
+  it('does not refetch when loading finishes after sign-in', async () => {
+    await signIn();
+    TestBed.flushEffects();
+
+    http.expectOne('http://localhost:3000/navigation').flush([PATIENTS]);
+    expect(store.loading()).toBe(false);
+
+    // With the old bug, reading loadingSignal inside load() made this re-arm a GET.
+    TestBed.flushEffects();
+    http.expectNone('http://localhost:3000/navigation');
+  });
+
   it('shares one in-flight request between concurrent loads', () => {
     store.load();
     store.load();
