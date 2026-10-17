@@ -1,0 +1,123 @@
+@if (store.mobileOpen()) {
+  <button
+    type="button"
+    class="fixed inset-0 z-40 bg-black/50 md:hidden"
+    [attr.aria-label]="'shell.closeMenu' | transloco"
+    (click)="store.closeMobile()"
+  ></button>
+}
+
+<aside
+  class="bg-background fixed inset-y-0 start-0 z-50 flex w-64 shrink-0 flex-col border-e transition-[width,transform] duration-200 md:sticky md:top-14 md:z-30 md:h-[calc(100dvh-3.5rem)]"
+  [class]="positionClass()"
+>
+  <nav
+    class="flex flex-1 flex-col gap-0.5 overflow-y-auto p-2"
+    [attr.aria-label]="'shell.mainMenu' | transloco"
+  >
+    @for (node of nodes(); track node.id) {
+      @switch (node.kind) {
+        @case ('divider') {
+          <hr class="border-border my-2" />
+        }
+        @case ('group') {
+          <button
+            type="button"
+            class="text-muted-foreground hover:bg-muted/60 hover:text-foreground flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium transition-colors"
+            [attr.aria-expanded]="isExpanded(node.id)"
+            [attr.aria-controls]="isExpanded(node.id) ? 'menu-group-' + node.id : null"
+            [attr.title]="collapsed() ? node.label : null"
+            (click)="toggleGroup(node.id)"
+          >
+            <ng-icon [name]="node.icon" class="shrink-0 text-base" aria-hidden="true" />
+            @if (!collapsed()) {
+              <span class="flex-1 truncate text-start">{{ node.label }}</span>
+              <ng-icon
+                name="lucideChevronRight"
+                class="shrink-0 text-base transition-transform"
+                [class.rotate-90]="isExpanded(node.id)"
+                aria-hidden="true"
+              />
+            }
+          </button>
+          @if (isExpanded(node.id) && !collapsed()) {
+            <div
+              [id]="'menu-group-' + node.id"
+              class="border-border ms-3 flex flex-col gap-0.5 border-s ps-1"
+            >
+              @for (child of node.children; track child.id) {
+                @switch (child.kind) {
+                  @case ('divider') {
+                    <hr class="border-border my-2" />
+                  }
+                  @default {
+                    <ng-container
+                      [ngTemplateOutlet]="leaf"
+                      [ngTemplateOutletContext]="{ $implicit: child }"
+                    />
+                  }
+                }
+              }
+            </div>
+          }
+        }
+        @default {
+          <ng-container [ngTemplateOutlet]="leaf" [ngTemplateOutletContext]="{ $implicit: node }" />
+        }
+      }
+    }
+  </nav>
+
+  <div class="hidden border-t p-2 md:block">
+    <button
+      type="button"
+      class="text-muted-foreground hover:bg-muted/60 hover:text-foreground flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors"
+      [attr.aria-label]="(collapsed() ? 'shell.expandMenu' : 'shell.collapseMenu') | transloco"
+      (click)="toggleCollapsed()"
+    >
+      <ng-icon
+        [name]="collapsed() ? 'lucidePanelLeftOpen' : 'lucidePanelLeftClose'"
+        class="shrink-0 text-base"
+        aria-hidden="true"
+      />
+      @if (!collapsed()) {
+        <span class="truncate">{{ 'shell.collapseMenu' | transloco }}</span>
+      }
+    </button>
+  </div>
+</aside>
+
+<ng-template #leaf let-node>
+  @if (node.externalUrl !== null) {
+    <a
+      [href]="node.externalUrl"
+      target="_blank"
+      rel="noopener noreferrer"
+      [attr.title]="collapsed() ? node.label : ('shell.externalLink' | transloco)"
+      class="text-muted-foreground hover:bg-muted/60 hover:text-foreground flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors"
+    >
+      <ng-icon [name]="node.icon" class="shrink-0 text-base" aria-hidden="true" />
+      @if (!collapsed()) {
+        <span class="flex-1 truncate text-start">{{ node.label }}</span>
+        <ng-icon
+          name="lucideExternalLink"
+          class="text-muted-foreground shrink-0 text-xs"
+          aria-hidden="true"
+        />
+      }
+    </a>
+  } @else {
+    <a
+      [routerLink]="node.path"
+      routerLinkActive="bg-secondary text-secondary-foreground"
+      [attr.title]="collapsed() ? node.label : null"
+      class="text-muted-foreground hover:bg-muted/60 hover:text-foreground flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors"
+      (click)="store.closeMobile()"
+    >
+      <ng-icon [name]="node.icon" class="shrink-0 text-base" aria-hidden="true" />
+      @if (!collapsed()) {
+        <span class="flex-1 truncate text-start">{{ node.label }}</span>
+      }
+    </a>
+  }
+</ng-template>

@@ -8,6 +8,7 @@ import {
 import { provideRouter } from '@angular/router';
 import { authInterceptor, SessionStore } from 'auth';
 import { provideAppTransloco, provideSpartanHlm } from 'ui';
+import { NavigationStore } from './navigation/navigation-store';
 import { routes } from './app.routes';
 
 export const appConfig: ApplicationConfig = {
@@ -18,6 +19,9 @@ export const appConfig: ApplicationConfig = {
     // Silent sign-in on reload: with a valid refresh cookie the session is
     // restored before the first route resolves, so there is no login flash.
     provideAppInitializer(() => inject(SessionStore).bootstrap()),
+    // Initializers run in order, so the session is already settled: the
+    // sidebar loads its tree once (login/logout transitions reload it later).
+    provideAppInitializer(() => inject(NavigationStore).init()),
     // Transloco is shared as a singleton through Native Federation, so the
     // language picked in the shell re-renders the remotes as well.
     provideAppTransloco(),

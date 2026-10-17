@@ -18,6 +18,8 @@ export * from './lib/api-key.model';
 export * from './lib/api-keys-api';
 export * from './lib/patient.model';
 export * from './lib/patients-api';
+export * from './lib/navigation.model';
+export * from './lib/navigation-api';
 export * from './lib/region';
 export * from './lib/rut';
 export * from './lib/telefono';

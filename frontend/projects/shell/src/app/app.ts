@@ -1,50 +1,30 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
-import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { RouterOutlet } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import {
-  lucideHexagon,
-  lucideLayoutDashboard,
-  lucideSettings,
-  lucideStethoscope,
-  lucideUsers,
-} from '@ng-icons/lucide';
+import { lucideHexagon, lucideMenu } from '@ng-icons/lucide';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { HlmButton } from '@ui/button';
 import { HlmToaster } from '@ui/sonner';
-import { HasPermissionDirective, PERMISSION_KEYS, SessionStore } from 'auth';
+import { SessionStore } from 'auth';
 import { LanguageSwitcher } from './language-switcher';
+import { NavigationStore } from './navigation/navigation-store';
+import { Sidebar } from './navigation/sidebar';
 import { UserMenu } from './user-menu';
 
+/**
+ * Shell chrome: brand header (language + user menu) around the configurable
+ * sidebar and the routed remote. The navigation links live in the database —
+ * see `Sidebar` — so this component only toggles the mobile drawer.
+ */
 @Component({
   selector: 'app-root',
-  imports: [
-    RouterOutlet,
-    RouterLink,
-    RouterLinkActive,
-    TranslocoPipe,
-    NgIcon,
-    HlmButton,
-    HlmToaster,
-    HasPermissionDirective,
-    LanguageSwitcher,
-    UserMenu,
-  ],
-  providers: [
-    provideIcons({
-      lucideHexagon,
-      lucideUsers,
-      lucideLayoutDashboard,
-      lucideStethoscope,
-      lucideSettings,
-    }),
-  ],
+  imports: [RouterOutlet, TranslocoPipe, NgIcon, HlmButton, HlmToaster, LanguageSwitcher, UserMenu, Sidebar],
+  providers: [provideIcons({ lucideHexagon, lucideMenu })],
   templateUrl: './app.html',
   styleUrl: './app.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class App {
   protected readonly store = inject(SessionStore);
-
-  /** Permission keys used by the navigation; a typo can only hide UI. */
-  protected readonly keys = PERMISSION_KEYS;
+  protected readonly navigation = inject(NavigationStore);
 }
