@@ -2,7 +2,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap } from '@angular/router';
-import { of } from 'rxjs';
+import { BehaviorSubject, of } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
   API_BASE_URL,
@@ -236,5 +236,61 @@ describe('ClinicalRecordStore', () => {
     http.expectOne(`http://api.test/v1/clinical-records/${RECORD_ID}/indices`).flush(INDICES);
 
     expect(store.record()?.motivoConsulta).toBe('Dolor en pieza 36');
+  });
+
+  it('does not refetch a patient that is already loaded', () => {
+    const store = TestBed.inject(ClinicalRecordStore);
+
+    loadPatient();
+    loadRecord();
+
+    // A re-evaluated route asks again for the same patient: no new requests.
+    store.load(PATIENT_ID);
+
+    expect(store.record()?.id).toBe(RECORD_ID);
+    expect(store.loading()).toBe(false);
+    http.expectNone('http://api.test/v1/patients/patient-1');
+  });
+
+  it('switches patients, cancelling the requests of the previous one', () => {
+    const route$ = new BehaviorSubject(convertToParamMap({ id: PATIENT_ID }));
+
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [
+        ClinicalRecordStore,
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: API_BASE_URL, useValue: BASE_URL },
+        { provide: ActivatedRoute, useValue: { paramMap: route$.asObservable() } },
+      ],
+    });
+
+    http = TestBed.inject(HttpTestingController);
+    const store = TestBed.inject(ClinicalRecordStore);
+
+    // The first patient never answers: its requests are abandoned below.
+    http.expectOne('http://api.test/v1/patients/patient-1').flush(PATIENT);
+    http
+      .expectOne('http://api.test/v1/patients/patient-1/clinical-record')
+      .flush(buildRecord());
+    http.expectOne(`http://api.test/v1/clinical-records/${RECORD_ID}/findings`).flush([]);
+    http.expectOne(`http://api.test/v1/clinical-records/${RECORD_ID}/indices`).flush(INDICES);
+
+    route$.next(convertToParamMap({ id: 'patient-2' }));
+
+    TestBed.flushEffects();
+
+    http
+      .expectOne('http://api.test/v1/patients/patient-2')
+      .flush({ ...PATIENT, id: 'patient-2', numeroHistoria: 'HC-000002' });
+    http
+      .expectOne('http://api.test/v1/patients/patient-2/clinical-record')
+      .flush({ statusCode: 404, error: 'PatientClinicalRecordNotFoundError', message: 'x' }, { status: 404, statusText: 'Not Found' });
+
+    expect(store.patientId()).toBe('patient-2');
+    expect(store.patient()?.numeroHistoria).toBe('HC-000002');
+    expect(store.record()).toBeNull();
+    expect(store.loading()).toBe(false);
   });
 });
