@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import type { UseCase } from '../../../../shared/application/use-case.js';
 import type { Patient } from '../../domain/patient.entity.js';
 import { PatientRutNotFoundError } from '../../domain/patient.errors.js';
-import { Rut } from '../../domain/rut.vo.js';
+import { Rut } from '../../../../shared/domain/rut.vo.js';
 import { PatientRepositoryPort } from '../ports/patient-repository.port.js';
 
 export interface GetPatientByRutQuery {

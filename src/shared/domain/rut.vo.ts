@@ -1,5 +1,5 @@
-import { ValueObject } from '../../../shared/domain/value-object.js';
-import { InvalidRutError } from './patient.errors.js';
+import { InvalidRutError } from './persona.errors.js';
+import { ValueObject } from './value-object.js';
 
 /** Longest real RUT body in use (the check digit comes on top). */
 const MAX_BODY_LENGTH = 9;
@@ -12,8 +12,8 @@ const SEPARATOR_PATTERN = /[.\-\s]/g;
  *
  * An instance is *always* in the canonical form — body without dots or
  * leading zeros, uppercase check digit — and its check digit has been
- * verified with the módulo 11 algorithm the Registro Civil uses. This makes
- * the RUT the natural business key of a patient.
+ * verified with the módulo 11 algorithm the Registro Civil uses. Shared by
+ * every context that stores one (patients today, the clinic identity next).
  */
 export class Rut extends ValueObject<string> {
   private constructor(value: string) {

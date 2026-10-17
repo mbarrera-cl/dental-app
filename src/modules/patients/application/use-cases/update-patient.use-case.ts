@@ -14,8 +14,8 @@ import {
   PatientNotFoundError,
 } from '../../domain/patient.errors.js';
 import { Prevision, type PrevisionInput } from '../../domain/prevision.vo.js';
-import { Rut } from '../../domain/rut.vo.js';
-import { Telefono } from '../../domain/telefono.vo.js';
+import { Rut } from '../../../../shared/domain/rut.vo.js';
+import { Telefono } from '../../../../shared/domain/telefono.vo.js';
 import { PatientRepositoryPort } from '../ports/patient-repository.port.js';
 
 export interface UpdatePatientCommand {

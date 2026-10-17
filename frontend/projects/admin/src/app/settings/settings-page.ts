@@ -63,10 +63,19 @@ export class SettingsPage {
 
   protected readonly dirtyCount = computed(() => Object.keys(this.draft()).length);
 
+  /**
+   * Settings grouped in registry order. The `clinic` group is skipped: it is
+   * edited from its own panel (`/settings/clinic`), not from this dynamic
+   * form, which only knows numeric and boolean rows.
+   */
   protected readonly groups = computed<SettingGroup[]>(() => {
     const groups = new Map<string, Setting[]>();
 
     for (const setting of this.settings()) {
+      if (setting.group === 'clinic') {
+        continue;
+      }
+
       const items = groups.get(setting.group) ?? [];
       items.push(setting);
       groups.set(setting.group, items);

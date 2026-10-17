@@ -1,4 +1,4 @@
-import { InvalidRutError } from './patient.errors.js';
+import { InvalidRutError } from './persona.errors.js';
 import { Rut } from './rut.vo.js';
 
 describe('Rut', () => {

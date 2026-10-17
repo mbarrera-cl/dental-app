@@ -157,6 +157,25 @@ describe('SettingsPage', () => {
     expect(page.valueOf(SETTINGS[0])).toBe(12);
   });
 
+  it('skips the clinic group, which has its own panel', () => {
+    const fixture = render([
+      ...SETTINGS,
+      {
+        key: 'clinic.name',
+        group: 'clinic',
+        type: 'string',
+        value: 'Mi clínica',
+        default: 'Mi clínica',
+        maxLength: 60,
+        description: 'Clinic display name',
+      },
+    ]);
+
+    const groups = native(fixture).querySelectorAll('[data-testid="settings-group"]');
+    expect(groups.length).toBe(2);
+    expect(native(fixture).querySelector('[data-testid="setting-input-clinic.name"]')).toBeNull();
+  });
+
   it('toggles boolean settings', () => {
     const fixture = render();
     const page = handle(fixture);

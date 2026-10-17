@@ -1,3 +1,6 @@
+import { InvalidTelefonoError } from '../../../shared/domain/persona.errors.js';
+import { Rut } from '../../../shared/domain/rut.vo.js';
+import { Telefono } from '../../../shared/domain/telefono.vo.js';
 import { Email } from './email.vo.js';
 import { FechaNacimiento } from './fecha-nacimiento.vo.js';
 import { Patient, type PatientProps } from './patient.entity.js';
@@ -7,11 +10,8 @@ import {
   InvalidPatientNameError,
   InvalidPrevisionError,
   InvalidSexoError,
-  InvalidTelefonoError,
 } from './patient.errors.js';
 import { Prevision } from './prevision.vo.js';
-import { Rut } from './rut.vo.js';
-import { Telefono } from './telefono.vo.js';
 
 describe('Patient', () => {
   const validProps = {

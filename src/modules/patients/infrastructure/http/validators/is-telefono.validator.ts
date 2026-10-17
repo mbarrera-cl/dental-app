@@ -1,5 +1,5 @@
 import { registerDecorator, type ValidationOptions } from 'class-validator';
-import { Telefono } from '../../../domain/telefono.vo.js';
+import { Telefono } from '../../../../../shared/domain/telefono.vo.js';
 
 /**
  * Validates that a property is a Chilean phone number. Delegates to the

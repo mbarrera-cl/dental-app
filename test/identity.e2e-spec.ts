@@ -272,5 +272,63 @@ describe('Identity bootstrap, roles and settings API (e2e)', () => {
         details: { problems: [{ key: 'passwordPolicy.minLength', reason: 'must be >= 6' }] },
       });
     });
+
+    it('normalizes clinic values before storing them', async () => {
+      const response = await request(app.getHttpServer())
+        .patch('/settings')
+        .set('Authorization', authorization)
+        .send({
+          values: {
+            'clinic.rut': '12.345.678-5',
+            'clinic.contact.phone': '+56 9 1234 5678',
+            'clinic.contact.email': ' Contacto@Clinica.CL ',
+            'clinic.theme.primary': '#0284C7',
+          },
+        })
+        .expect(200);
+
+      const values = Object.fromEntries(
+        response.body.map((setting: { key: string; value: unknown }) => [
+          setting.key,
+          setting.value,
+        ]),
+      );
+
+      expect(values['clinic.rut']).toBe('12345678-5');
+      expect(values['clinic.contact.phone']).toBe('+56912345678');
+      expect(values['clinic.contact.email']).toBe('contacto@clinica.cl');
+      expect(values['clinic.theme.primary']).toBe('#0284c7');
+    });
+
+    it('exposes the clinic keys and refuses to edit managed ones', async () => {
+      const overview = await request(app.getHttpServer())
+        .get('/settings')
+        .set('Authorization', authorization)
+        .expect(200);
+
+      const logoVersion = overview.body.find(
+        (setting: { key: string }) => setting.key === 'clinic.logo.version',
+      );
+
+      expect(logoVersion).toMatchObject({ value: 0, default: 0, managed: true, group: 'clinic' });
+
+      const rejected = await request(app.getHttpServer())
+        .patch('/settings')
+        .set('Authorization', authorization)
+        .send({ values: { 'clinic.logo.version': 3 } })
+        .expect(400);
+
+      expect(rejected.body).toMatchObject({
+        error: 'SettingsValueInvalidError',
+        details: {
+          problems: [
+            {
+              key: 'clinic.logo.version',
+              reason: 'is managed internally and cannot be edited',
+            },
+          ],
+        },
+      });
+    });
   });
 });

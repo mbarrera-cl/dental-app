@@ -1,6 +1,6 @@
+import { Telefono } from '../../../shared/domain/telefono.vo.js';
 import { ValueObject } from '../../../shared/domain/value-object.js';
 import { InvalidContactoEmergenciaError } from './patient.errors.js';
-import { Telefono } from './telefono.vo.js';
 
 export interface ContactoEmergenciaProps {
   nombre: string;

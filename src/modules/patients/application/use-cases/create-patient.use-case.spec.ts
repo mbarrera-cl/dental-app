@@ -1,8 +1,6 @@
 import { InMemoryPatientRepository } from '../../infrastructure/adapters/persistence/in-memory-patient.repository.js';
-import {
-  InvalidRutError,
-  PatientAlreadyExistsError,
-} from '../../domain/patient.errors.js';
+import { PatientAlreadyExistsError } from '../../domain/patient.errors.js';
+import { InvalidRutError } from '../../../../shared/domain/persona.errors.js';
 import { CreatePatientUseCase } from './create-patient.use-case.js';
 
 describe('CreatePatientUseCase', () => {

@@ -1,4 +1,6 @@
 import { Entity } from '../../../shared/domain/entity.js';
+import { Rut } from '../../../shared/domain/rut.vo.js';
+import { Telefono } from '../../../shared/domain/telefono.vo.js';
 import {
   ContactoEmergencia,
   type ContactoEmergenciaInput,
@@ -8,8 +10,6 @@ import { Email } from './email.vo.js';
 import { FechaNacimiento } from './fecha-nacimiento.vo.js';
 import { InvalidPatientNameError, InvalidSexoError } from './patient.errors.js';
 import { Prevision, type PrevisionInput } from './prevision.vo.js';
-import { Rut } from './rut.vo.js';
-import { Telefono } from './telefono.vo.js';
 
 export const SEXOS = ['femenino', 'masculino', 'otro'] as const;
 

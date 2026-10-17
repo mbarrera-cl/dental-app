@@ -11,8 +11,8 @@ import {
   PatientNotFoundError,
 } from '../../../domain/patient.errors.js';
 import { Prevision } from '../../../domain/prevision.vo.js';
-import { Rut } from '../../../domain/rut.vo.js';
-import { Telefono } from '../../../domain/telefono.vo.js';
+import { Rut } from '../../../../../shared/domain/rut.vo.js';
+import { Telefono } from '../../../../../shared/domain/telefono.vo.js';
 
 /** SQLite status code for a violated UNIQUE constraint (SQLITE_CONSTRAINT_UNIQUE). */
 const SQLITE_CONSTRAINT_UNIQUE = 2067;

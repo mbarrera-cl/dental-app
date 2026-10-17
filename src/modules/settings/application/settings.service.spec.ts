@@ -92,6 +92,41 @@ describe('SettingsService', () => {
     });
   });
 
+  it('normalizes values before storing them', async () => {
+    const { repository, service } = setup();
+
+    await service.update({
+      'clinic.rut': '12.345.678-5',
+      'clinic.contact.phone': '+56 9 1234 5678',
+      'clinic.contact.email': ' Contacto@Clinica.CL ',
+      'clinic.theme.primary': ' #0284C7 ',
+    });
+
+    expect(repository.stored).toEqual({
+      'clinic.rut': '12345678-5',
+      'clinic.contact.phone': '+56912345678',
+      'clinic.contact.email': 'contacto@clinica.cl',
+      'clinic.theme.primary': '#0284c7',
+    });
+  });
+
+  it('rejects settings flagged as managed by their own module', async () => {
+    const { repository, service } = setup();
+
+    await expect(service.update({ 'clinic.logo.version': 2 })).rejects.toMatchObject({
+      name: 'SettingsValueInvalidError',
+      details: {
+        problems: [
+          {
+            key: 'clinic.logo.version',
+            reason: 'is managed internally and cannot be edited',
+          },
+        ],
+      },
+    });
+    expect(repository.stored).toEqual({});
+  });
+
   it('enforces cross-field consistency between min and max length', async () => {
     const { service } = setup();
 

@@ -1,10 +1,10 @@
 import { InMemoryPatientRepository } from '../../infrastructure/adapters/persistence/in-memory-patient.repository.js';
 import {
   EmptyPatientUpdateError,
-  InvalidTelefonoError,
   PatientAlreadyExistsError,
   PatientNotFoundError,
 } from '../../domain/patient.errors.js';
+import { InvalidTelefonoError } from '../../../../shared/domain/persona.errors.js';
 import { CreatePatientUseCase } from './create-patient.use-case.js';
 import { UpdatePatientUseCase } from './update-patient.use-case.js';
 

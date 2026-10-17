@@ -1,3 +1,5 @@
+import { Rut } from '../../../shared/domain/rut.vo.js';
+import { Telefono } from '../../../shared/domain/telefono.vo.js';
 import type { SettingDefinition, SettingGroup, SettingValue } from './setting-definition.js';
 
 /** UI groups of the settings form, in presentation order. */
@@ -6,6 +8,7 @@ export const SETTING_GROUPS: readonly SettingGroup[] = [
   { id: 'login', description: 'Failed-login lockout policy' },
   { id: 'session', description: 'Token lifetimes' },
   { id: 'apiKeys', description: 'API key limits' },
+  { id: 'clinic', description: 'Clinic identity, contact details and theme' },
 ];
 
 /** The source of truth for every configurable value in the system. */
@@ -128,6 +131,125 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
     max: 100,
     description: 'Maximum number of active API keys per user',
   },
+  {
+    key: 'clinic.name',
+    group: 'clinic',
+    type: 'string',
+    default: 'Mi clínica',
+    maxLength: 60,
+    description: 'Clinic display name (used by the shell, login and print headers)',
+  },
+  {
+    key: 'clinic.slogan',
+    group: 'clinic',
+    type: 'string',
+    default: '',
+    maxLength: 120,
+    description: 'Short tagline shown next to the name',
+  },
+  {
+    key: 'clinic.legalName',
+    group: 'clinic',
+    type: 'string',
+    default: '',
+    maxLength: 120,
+    description: 'Legal name (razón social) used on documents',
+  },
+  {
+    key: 'clinic.rut',
+    group: 'clinic',
+    type: 'rut',
+    default: '',
+    description: 'Clinic RUT, stored canonical (`12345678-5`); empty when not configured',
+  },
+  {
+    key: 'clinic.address.region',
+    group: 'clinic',
+    type: 'string',
+    default: '',
+    description: 'Region of the clinic address',
+  },
+  {
+    key: 'clinic.address.comuna',
+    group: 'clinic',
+    type: 'string',
+    default: '',
+    description: 'Comuna of the clinic address',
+  },
+  {
+    key: 'clinic.address.calle',
+    group: 'clinic',
+    type: 'string',
+    default: '',
+    description: 'Street of the clinic address',
+  },
+  {
+    key: 'clinic.address.numero',
+    group: 'clinic',
+    type: 'string',
+    default: '',
+    description: 'Street number',
+  },
+  {
+    key: 'clinic.address.oficina',
+    group: 'clinic',
+    type: 'string',
+    default: '',
+    description: 'Apartment or office, when the address has one',
+  },
+  {
+    key: 'clinic.contact.phone',
+    group: 'clinic',
+    type: 'phone',
+    default: '',
+    description: 'Contact phone, stored canonical (`+56912345678`)',
+  },
+  {
+    key: 'clinic.contact.email',
+    group: 'clinic',
+    type: 'email',
+    default: '',
+    description: 'Contact email',
+  },
+  {
+    key: 'clinic.contact.website',
+    group: 'clinic',
+    type: 'url',
+    default: '',
+    description: 'Website (http/https)',
+  },
+  {
+    key: 'clinic.theme.primary',
+    group: 'clinic',
+    type: 'color',
+    default: '#0284c7',
+    description: 'Primary brand color seed; the rest of the palette is derived',
+  },
+  {
+    key: 'clinic.theme.accent',
+    group: 'clinic',
+    type: 'color',
+    default: '#f59e0b',
+    description: 'Accent brand color seed',
+  },
+  {
+    key: 'clinic.theme.mode',
+    group: 'clinic',
+    type: 'enum',
+    default: 'auto',
+    values: ['light', 'auto'],
+    description: 'Color mode: always light or follow the operating system',
+  },
+  {
+    key: 'clinic.logo.version',
+    group: 'clinic',
+    type: 'number',
+    default: 0,
+    min: 0,
+    max: 1_000_000,
+    managed: true,
+    description: 'Current logo version; only the clinic module writes it',
+  },
 ];
 
 const DEFINITIONS_BY_KEY = new Map(SETTING_DEFINITIONS.map((definition) => [definition.key, definition]));
@@ -136,28 +258,142 @@ export function findSettingDefinition(key: string): SettingDefinition | undefine
   return DEFINITIONS_BY_KEY.get(key);
 }
 
-/** Reason why `value` is invalid for `definition`, or `null` when it is valid. */
-export function validateSettingValue(definition: SettingDefinition, value: unknown): string | null {
+/** Result of validating and normalizing one value. */
+export type SettingCoercion =
+  | { readonly ok: true; readonly value: SettingValue }
+  | { readonly ok: false; readonly reason: string };
+
+const HEX_COLOR_PATTERN = /^#[0-9a-f]{6}$/;
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const MAX_EMAIL_LENGTH = 254;
+
+/**
+ * Validates `value` against `definition` and returns the *normalized* value
+ * to store: colors lower-cased, RUTs canonical (`12345678-5`), phones in
+ * `+56…` form, emails trimmed/lower-cased. Every text-like kind accepts the
+ * empty string — "not configured" is a first-class state (e.g.
+ * `clinic.contact.email` starts empty).
+ */
+export function coerceSettingValue(
+  definition: SettingDefinition,
+  value: unknown,
+): SettingCoercion {
   switch (definition.type) {
     case 'number': {
       if (typeof value !== 'number' || !Number.isInteger(value)) {
-        return 'must be an integer';
+        return invalid('must be an integer');
       }
 
       if (definition.min !== undefined && value < definition.min) {
-        return `must be >= ${definition.min}`;
+        return invalid(`must be >= ${definition.min}`);
       }
 
       if (definition.max !== undefined && value > definition.max) {
-        return `must be <= ${definition.max}`;
+        return invalid(`must be <= ${definition.max}`);
       }
 
-      return null;
+      return { ok: true, value };
     }
     case 'boolean':
-      return typeof value === 'boolean' ? null : 'must be a boolean';
-    case 'string':
-      return typeof value === 'string' ? null : 'must be a string';
+      return typeof value === 'boolean' ? { ok: true, value } : invalid('must be a boolean');
+    case 'string': {
+      if (typeof value !== 'string') {
+        return invalid('must be a string');
+      }
+
+      if (definition.maxLength !== undefined && value.length > definition.maxLength) {
+        return invalid(`must have at most ${definition.maxLength} characters`);
+      }
+
+      return { ok: true, value };
+    }
+    case 'color': {
+      if (typeof value !== 'string') {
+        return invalid('must be a string');
+      }
+
+      const normalized = value.trim().toLowerCase();
+
+      return HEX_COLOR_PATTERN.test(normalized)
+        ? { ok: true, value: normalized }
+        : invalid('must be a #rrggbb hex color');
+    }
+    case 'email': {
+      if (typeof value !== 'string') {
+        return invalid('must be a string');
+      }
+
+      const normalized = value.trim().toLowerCase();
+
+      if (normalized === '') {
+        return { ok: true, value: '' };
+      }
+
+      return normalized.length <= MAX_EMAIL_LENGTH && EMAIL_PATTERN.test(normalized)
+        ? { ok: true, value: normalized }
+        : invalid('must be an email address');
+    }
+    case 'url': {
+      if (typeof value !== 'string') {
+        return invalid('must be a string');
+      }
+
+      const normalized = value.trim();
+
+      return normalized === '' || isHttpUrl(normalized)
+        ? { ok: true, value: normalized }
+        : invalid('must be an http(s) URL');
+    }
+    case 'rut': {
+      if (typeof value !== 'string') {
+        return invalid('must be a string');
+      }
+
+      if (value.trim() === '') {
+        return { ok: true, value: '' };
+      }
+
+      try {
+        return { ok: true, value: Rut.create(value).value };
+      } catch {
+        return invalid('must be a valid Chilean RUT');
+      }
+    }
+    case 'phone': {
+      if (typeof value !== 'string') {
+        return invalid('must be a string');
+      }
+
+      if (value.trim() === '') {
+        return { ok: true, value: '' };
+      }
+
+      try {
+        return { ok: true, value: Telefono.create(value).value };
+      } catch {
+        return invalid('must be a valid Chilean phone number');
+      }
+    }
+    case 'enum': {
+      const allowed = definition.values ?? [];
+
+      return typeof value === 'string' && allowed.includes(value)
+        ? { ok: true, value }
+        : invalid(`must be one of: ${allowed.join(', ')}`);
+    }
+  }
+}
+
+function invalid(reason: string): SettingCoercion {
+  return { ok: false, reason };
+}
+
+function isHttpUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return (url.protocol === 'http:' || url.protocol === 'https:') && url.hostname !== '';
+  } catch {
+    return false;
   }
 }
 

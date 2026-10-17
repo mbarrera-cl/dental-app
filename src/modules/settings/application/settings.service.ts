@@ -2,9 +2,9 @@ import { Injectable } from '@nestjs/common';
 import type { SettingOverview, SettingValue } from '../domain/setting-definition.js';
 import {
   SETTING_DEFINITIONS,
+  coerceSettingValue,
   findSettingDefinition,
   mergeSettingValues,
-  validateSettingValue,
 } from '../domain/settings-registry.js';
 import {
   EmptySettingsUpdateError,
@@ -90,13 +90,24 @@ export class SettingsService {
     }
 
     const problems: SettingProblem[] = [];
+    const normalized: Record<string, SettingValue> = {};
 
     for (const [key, value] of entries) {
-      const reason = validateSettingValue(findSettingDefinition(key)!, value);
+      const definition = findSettingDefinition(key)!;
 
-      if (reason !== null) {
-        problems.push({ key, reason });
+      if (definition.managed === true) {
+        problems.push({ key, reason: 'is managed internally and cannot be edited' });
+        continue;
       }
+
+      const coerced = coerceSettingValue(definition, value);
+
+      if (!coerced.ok) {
+        problems.push({ key, reason: coerced.reason });
+        continue;
+      }
+
+      normalized[key] = coerced.value;
     }
 
     if (problems.length > 0) {
@@ -105,10 +116,10 @@ export class SettingsService {
 
     this.assertCrossFieldConsistency({
       ...(await this.storedValues()),
-      ...(values as Record<string, SettingValue>),
+      ...normalized,
     });
 
-    await this.repository.saveMany(values as Record<string, SettingValue>);
+    await this.repository.saveMany(normalized);
     this.stored = null;
 
     return this.overview();

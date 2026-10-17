@@ -1,5 +1,5 @@
-import { ValueObject } from '../../../shared/domain/value-object.js';
-import { InvalidTelefonoError } from './patient.errors.js';
+import { InvalidTelefonoError } from './persona.errors.js';
+import { ValueObject } from './value-object.js';
 
 /** Visual separators tolerated on input. */
 const SEPARATOR_PATTERN = /[\s.\-()]/g;
@@ -12,7 +12,8 @@ const MAX_INPUT_LENGTH = 30;
 /**
  * Chilean phone number value object. On input it tolerates the usual
  * spellings (`+56 9 1234 5678`, `912345678`, `+56912345678`); the stored
- * value is always the canonical `+56912345678` form.
+ * value is always the canonical `+56912345678` form. Shared by every context
+ * that stores one (patients today, the clinic identity next).
  */
 export class Telefono extends ValueObject<string> {
   private constructor(value: string) {

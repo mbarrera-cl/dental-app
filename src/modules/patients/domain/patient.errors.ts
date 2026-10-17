@@ -3,14 +3,6 @@ import {
   type DomainErrorKind,
 } from '../../../shared/domain/domain-error.js';
 
-export class InvalidRutError extends DomainError {
-  readonly kind: DomainErrorKind = 'validation';
-
-  constructor(rut: string) {
-    super(`"${rut}" is not a valid Chilean RUT (expected e.g. "12345678-5")`);
-  }
-}
-
 /** Local copy on purpose: the patients context stays decoupled from users. */
 export class InvalidEmailError extends DomainError {
   readonly kind: DomainErrorKind = 'validation';
@@ -43,16 +35,6 @@ export class InvalidSexoError extends DomainError {
 
   constructor(value: string) {
     super(`"${value}" is not a supported sexo (femenino, masculino or otro)`);
-  }
-}
-
-export class InvalidTelefonoError extends DomainError {
-  readonly kind: DomainErrorKind = 'validation';
-
-  constructor(phone: string) {
-    super(
-      `"${phone}" is not a valid Chilean phone number (expected e.g. "+56912345678")`,
-    );
   }
 }
 

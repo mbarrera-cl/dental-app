@@ -4,11 +4,25 @@
  * database. The admin panel renders its form from the definitions, so adding
  * a configurable knob is a one-line change.
  */
-export type SettingType = 'number' | 'boolean' | 'string';
+export type SettingType =
+  | 'number'
+  | 'boolean'
+  | 'string'
+  | 'color'
+  | 'email'
+  | 'url'
+  | 'rut'
+  | 'phone'
+  | 'enum';
 
 export type SettingValue = number | boolean | string;
 
-export type SettingGroupId = 'passwordPolicy' | 'login' | 'session' | 'apiKeys';
+export type SettingGroupId =
+  | 'passwordPolicy'
+  | 'login'
+  | 'session'
+  | 'apiKeys'
+  | 'clinic';
 
 export interface SettingGroup {
   readonly id: SettingGroupId;
@@ -25,6 +39,15 @@ export interface SettingDefinition {
   /** Inclusive bounds for `number` settings. */
   readonly min?: number;
   readonly max?: number;
+  /** Longest accepted value for text-like settings (`string`). */
+  readonly maxLength?: number;
+  /** Allowed values for `enum` settings. */
+  readonly values?: readonly string[];
+  /**
+   * Managed settings are written by their own module (never by
+   * `PATCH /settings`), e.g. `clinic.logo.version` from the clinic module.
+   */
+  readonly managed?: boolean;
   /** Developer-facing description (UI wording lives in the i18n dictionaries). */
   readonly description: string;
 }

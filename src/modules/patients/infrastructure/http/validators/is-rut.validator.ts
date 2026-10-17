@@ -1,5 +1,5 @@
 import { registerDecorator, type ValidationOptions } from 'class-validator';
-import { Rut } from '../../../domain/rut.vo.js';
+import { Rut } from '../../../../../shared/domain/rut.vo.js';
 
 /**
  * Validates that a property is a Chilean RUT with a correct check digit

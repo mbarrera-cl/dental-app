@@ -12,7 +12,10 @@ export class SettingResponseDto {
   @ApiProperty({ example: 'passwordPolicy' })
   group: string;
 
-  @ApiProperty({ enum: ['number', 'boolean', 'string'], example: 'number' })
+  @ApiProperty({
+    enum: ['number', 'boolean', 'string', 'color', 'email', 'url', 'rut', 'phone', 'enum'],
+    example: 'number',
+  })
   type: SettingType;
 
   @ApiProperty({ oneOf: [{ type: 'number' }, { type: 'boolean' }, { type: 'string' }], example: 8 })
@@ -27,6 +30,15 @@ export class SettingResponseDto {
   @ApiProperty({ example: 64, required: false })
   max?: number;
 
+  @ApiProperty({ example: 60, required: false })
+  maxLength?: number;
+
+  @ApiProperty({ example: ['light', 'auto'], required: false })
+  values?: readonly string[];
+
+  @ApiProperty({ example: false, required: false })
+  managed?: boolean;
+
   @ApiProperty({ example: 'Minimum password length' })
   description: string;
 
@@ -39,6 +51,9 @@ export class SettingResponseDto {
     dto.default = overview.default;
     dto.min = overview.min;
     dto.max = overview.max;
+    dto.maxLength = overview.maxLength;
+    dto.values = overview.values;
+    dto.managed = overview.managed;
     dto.description = overview.description;
     return dto;
   }
