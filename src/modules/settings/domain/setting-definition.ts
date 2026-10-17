@@ -22,7 +22,8 @@ export type SettingGroupId =
   | 'login'
   | 'session'
   | 'apiKeys'
-  | 'clinic';
+  | 'clinic'
+  | 'quotes';
 
 export interface SettingGroup {
   readonly id: SettingGroupId;

@@ -9,6 +9,7 @@ export const SETTING_GROUPS: readonly SettingGroup[] = [
   { id: 'session', description: 'Token lifetimes' },
   { id: 'apiKeys', description: 'API key limits' },
   { id: 'clinic', description: 'Clinic identity, contact details and theme' },
+  { id: 'quotes', description: 'Quotations (Arancel UCO) behaviour' },
 ];
 
 /** The source of truth for every configurable value in the system. */
@@ -249,6 +250,32 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
     max: 1_000_000,
     managed: true,
     description: 'Current logo version; only the clinic module writes it',
+  },
+  {
+    key: 'quotes.ucoRate',
+    group: 'quotes',
+    type: 'number',
+    default: 3000,
+    min: 1,
+    max: 10_000_000,
+    description: 'CLP value of a single UCO unit (used to propose line prices)',
+  },
+  {
+    key: 'quotes.folioPrefix',
+    group: 'quotes',
+    type: 'string',
+    default: 'COT',
+    maxLength: 8,
+    description: 'Prefix of the quote folio (e.g. `COT`)',
+  },
+  {
+    key: 'quotes.defaultValidityDays',
+    group: 'quotes',
+    type: 'number',
+    default: 30,
+    min: 1,
+    max: 3650,
+    description: 'Default validity of a quote, in days',
   },
 ];
 

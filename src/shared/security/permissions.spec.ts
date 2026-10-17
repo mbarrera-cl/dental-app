@@ -9,8 +9,10 @@ import {
 import { apiKeysCategory } from '../../modules/apikeys/permissions.js';
 import { clinicalCategory } from '../../modules/clinical/permissions.js';
 import { patientsCategory } from '../../modules/patients/permissions.js';
+import { quotesCategory } from '../../modules/quotes/permissions.js';
 import { rolesCategory } from '../../modules/roles/permissions.js';
 import { settingsCategory } from '../../modules/settings/permissions.js';
+import { ucoCategory } from '../../modules/uco/permissions.js';
 import { usersCategory } from '../../modules/users/permissions.js';
 
 describe('permission catalog', () => {
@@ -68,6 +70,8 @@ describe('permission catalog', () => {
       settingsCategory,
       apiKeysCategory,
       dashboardCategory,
+      ucoCategory,
+      quotesCategory,
     ]);
   });
 

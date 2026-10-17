@@ -258,6 +258,114 @@ export function ensureSchema(db: SqliteDatabase): void {
     );
   `);
 
+  // Dental fee catalog (Arancel UCO): priced procedures measured in UCO units.
+  // `active` is a soft-delete flag so history referencing a procedure keeps
+  // resolving. `units` is stored as REAL (decimal UCO units).
+  connection.exec(`
+    CREATE TABLE IF NOT EXISTS uco_procedures (
+      id         TEXT PRIMARY KEY,
+      code       TEXT NOT NULL UNIQUE,
+      chapter    TEXT NOT NULL,
+      name       TEXT NOT NULL,
+      units      REAL NOT NULL,
+      active     INTEGER NOT NULL DEFAULT 1,
+      created_by TEXT REFERENCES users(id) ON DELETE SET NULL,
+      updated_by TEXT REFERENCES users(id) ON DELETE SET NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+  `);
+
+  // Quotations / budgets: a snapshot of the patient + the agreed items. Totals
+  // are recomputed on the server at save time (never trusted from the client).
+  // A sanctioned (closed) quote is immutable; editing requires duplicating it.
+  connection.exec(`
+    CREATE TABLE IF NOT EXISTS quotes (
+      id                  TEXT PRIMARY KEY,
+      folio               TEXT NOT NULL UNIQUE,
+      patient_id          TEXT NOT NULL REFERENCES patients(id) ON DELETE RESTRICT,
+      patient_name        TEXT NOT NULL,
+      patient_rut         TEXT NOT NULL,
+      patient_email       TEXT,
+      status              TEXT NOT NULL,
+      valid_until         TEXT,
+      notes               TEXT,
+      subtotal            INTEGER NOT NULL,
+      discount_total      INTEGER NOT NULL,
+      total               INTEGER NOT NULL,
+      version             INTEGER NOT NULL DEFAULT 1,
+      replaces_quote_id   TEXT REFERENCES quotes(id) ON DELETE SET NULL,
+      created_by          TEXT REFERENCES users(id) ON DELETE SET NULL,
+      created_by_name     TEXT NOT NULL,
+      created_at          TEXT NOT NULL,
+      updated_by          TEXT REFERENCES users(id) ON DELETE SET NULL,
+      updated_by_name     TEXT NOT NULL,
+      updated_at          TEXT NOT NULL,
+      sanctioned_by       TEXT REFERENCES users(id) ON DELETE SET NULL,
+      sanctioned_by_name  TEXT,
+      sanctioned_at       TEXT
+    );
+  `);
+
+  connection.exec(`
+    CREATE TABLE IF NOT EXISTS quote_items (
+      id                     TEXT PRIMARY KEY,
+      quote_id               TEXT NOT NULL REFERENCES quotes(id) ON DELETE CASCADE,
+      position               INTEGER NOT NULL,
+      uco_code               TEXT REFERENCES uco_procedures(code) ON DELETE SET NULL,
+      description            TEXT NOT NULL,
+      pieza_dental           TEXT,
+      quantity               INTEGER NOT NULL,
+      unit_price             INTEGER NOT NULL,
+      discount_percent       INTEGER NOT NULL DEFAULT 0,
+      subtotal               INTEGER NOT NULL,
+      discount_amount        INTEGER NOT NULL DEFAULT 0,
+      net_amount             INTEGER NOT NULL,
+      status                 TEXT NOT NULL,
+      status_changed_by      TEXT REFERENCES users(id) ON DELETE SET NULL,
+      status_changed_by_name TEXT,
+      status_changed_at      TEXT
+    );
+  `);
+
+  connection.exec(`
+    CREATE TABLE IF NOT EXISTS quote_versions (
+      id            TEXT PRIMARY KEY,
+      quote_id      TEXT NOT NULL REFERENCES quotes(id) ON DELETE CASCADE,
+      version       INTEGER NOT NULL,
+      action        TEXT NOT NULL,
+      snapshot_json TEXT NOT NULL,
+      actor_id      TEXT REFERENCES users(id) ON DELETE SET NULL,
+      actor_name    TEXT NOT NULL,
+      created_at    TEXT NOT NULL
+    );
+  `);
+
+  connection.exec(`
+    CREATE TABLE IF NOT EXISTS quote_counters (
+      year        INTEGER PRIMARY KEY,
+      last_number INTEGER NOT NULL DEFAULT 0
+    );
+  `);
+
+  // Dental fee catalog (Arancel UCO): priced procedures measured in UCO units.
+  // `active` is a soft-delete flag so history referencing a procedure keeps
+  // resolving. `units` is stored as REAL (decimal UCO units).
+  connection.exec(`
+    CREATE TABLE IF NOT EXISTS uco_procedures (
+      id         TEXT PRIMARY KEY,
+      code       TEXT NOT NULL UNIQUE,
+      chapter    TEXT NOT NULL,
+      name       TEXT NOT NULL,
+      units      REAL NOT NULL,
+      active     INTEGER NOT NULL DEFAULT 1,
+      created_by TEXT REFERENCES users(id) ON DELETE SET NULL,
+      updated_by TEXT REFERENCES users(id) ON DELETE SET NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+  `);
+
   connection.exec(`
     CREATE INDEX IF NOT EXISTS idx_user_roles_role_id ON user_roles (role_id);
     CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user_id ON refresh_tokens (user_id);
@@ -267,6 +375,12 @@ export function ensureSchema(db: SqliteDatabase): void {
     CREATE INDEX IF NOT EXISTS idx_assets_variant ON clinic_assets (variant, active, version DESC);
     CREATE INDEX IF NOT EXISTS idx_clinical_findings_record ON clinical_findings (record_id, tooth);
     CREATE INDEX IF NOT EXISTS idx_clinical_events_record ON clinical_events (record_id, created_at);
+    CREATE INDEX IF NOT EXISTS idx_uco_code ON uco_procedures (code);
+    CREATE INDEX IF NOT EXISTS idx_quotes_patient ON quotes (patient_id);
+    CREATE INDEX IF NOT EXISTS idx_quotes_status ON quotes (status);
+    CREATE INDEX IF NOT EXISTS idx_quotes_folio ON quotes (folio);
+    CREATE INDEX IF NOT EXISTS idx_quote_items_quote ON quote_items (quote_id, position);
+    CREATE INDEX IF NOT EXISTS idx_quote_versions_quote ON quote_versions (quote_id, version);
   `);
 }
 
