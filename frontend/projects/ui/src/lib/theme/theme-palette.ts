@@ -25,6 +25,11 @@ const WHITE = '#ffffff';
 const INK = '#09090b';
 const FALLBACK_PRIMARY = '#0284c7';
 const FALLBACK_ACCENT = '#f59e0b';
+/** Seeds used when a clinic has not configured its own (registry defaults). */
+export const DEFAULT_THEME_SEEDS: ThemeSeeds = {
+  primary: FALLBACK_PRIMARY,
+  accent: FALLBACK_ACCENT,
+};
 /** How far a seed travels towards white for the dark scheme. */
 const DARK_MIX = 0.35;
 
@@ -159,7 +164,7 @@ function linearize(channel: number): number {
 }
 
 /** Foreground (pure white or near-black zinc) with the best contrast. */
-function readableOn(background: string): string {
+export function readableOn(background: string): string {
   return contrastRatio(background, WHITE) >= contrastRatio(background, INK) ? WHITE : INK;
 }
 

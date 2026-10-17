@@ -56,6 +56,12 @@ const ERROR_NAME_TO_KEY: Readonly<Record<string, string>> = {
   SettingsUnknownKeyError: 'errors.settingUnknown',
   SettingsValueInvalidError: 'errors.settingInvalid',
   EmptySettingsUpdateError: 'errors.settingsEmpty',
+  // clinic context
+  InvalidImageError: 'errors.invalidImage',
+  UnsupportedImageFormatError: 'errors.unsupportedImageFormat',
+  ImageTooLargeError: 'errors.imageTooLarge',
+  UnknownVariantError: 'errors.notFound',
+  ClinicAssetNotFoundError: 'errors.notFound',
   // navigation context
   InvalidMenuItemKindError: 'errors.validation',
   InvalidMenuDestinationError: 'errors.menuDestination',

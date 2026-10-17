@@ -67,6 +67,12 @@ export const NAVIGATION_ROUTES: readonly NavigationRoute[] = [
     label: 'shell.navMenu',
     icon: 'lucidePanelLeft',
   },
+  {
+    key: 'settings.clinic',
+    path: '/settings/clinic',
+    label: 'shell.navClinic',
+    icon: 'lucideBuilding2',
+  },
 ];
 
 const ROUTES_BY_KEY = new Map(NAVIGATION_ROUTES.map((route) => [route.key, route]));

@@ -69,6 +69,12 @@ export const DEFAULT_MENU: readonly DefaultMenuEntry[] = [
         routeKey: 'settings.menu',
         requiredPermission: settingsPermissions.read,
       },
+      {
+        kind: 'item',
+        icon: 'lucideBuilding2',
+        routeKey: 'settings.clinic',
+        requiredPermission: settingsPermissions.read,
+      },
     ],
   },
   {
