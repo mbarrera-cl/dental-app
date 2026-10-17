@@ -1,0 +1,235 @@
+<form [formGroup]="form" (ngSubmit)="save()" class="grid gap-6" novalidate>
+  <div class="bg-card grid gap-4 rounded-lg border p-4 sm:grid-cols-2">
+    <div class="grid gap-2">
+      <label hlmLabel for="clinical-categoria">{{ 'clinical.form.categoria' | transloco }}</label>
+      <select
+        id="clinical-categoria"
+        formControlName="categoria"
+        data-testid="clinical-categoria"
+        class="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-9 w-full rounded-md border px-3 text-sm shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px]"
+      >
+        @for (categoria of categorias; track categoria) {
+          <option [value]="categoria">{{ 'clinical.form.categorias.' + categoria | transloco }}</option>
+        }
+      </select>
+    </div>
+
+    <div class="flex items-end pb-2">
+      <label class="flex items-center gap-2 text-sm font-medium">
+        <input
+          type="checkbox"
+          formControlName="embarazada"
+          data-testid="clinical-embarazada"
+          class="border-input size-4 rounded border"
+        />
+        {{ 'clinical.form.embarazada' | transloco }}
+      </label>
+    </div>
+  </div>
+
+  <section class="bg-card grid gap-4 rounded-lg border p-4">
+    <h4 class="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
+      {{ 'clinical.form.sections.motivoConsulta' | transloco }}
+    </h4>
+    <div class="grid gap-2">
+      <textarea
+        hlmInput
+        id="clinical-motivo"
+        formControlName="motivoConsulta"
+        rows="2"
+        class="min-h-16 resize-y"
+        [forceInvalid]="showTextError(form.controls.motivoConsulta, 'x') !== null"
+        [placeholder]="'clinical.form.motivoConsultaPlaceholder' | transloco"
+      ></textarea>
+      @if (showTextError(form.controls.motivoConsulta, 'clinical.validation.motivoConsultaMax'); as errorKey) {
+        <p class="text-destructive text-xs">{{ errorKey | transloco }}</p>
+      }
+    </div>
+  </section>
+
+  <section class="bg-card grid gap-4 rounded-lg border p-4">
+    <h4 class="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
+      {{ 'clinical.form.sections.enfermedadActual' | transloco }}
+    </h4>
+    <div class="grid gap-2">
+      <textarea
+        hlmInput
+        id="clinical-enfermedad"
+        formControlName="enfermedadActual"
+        rows="4"
+        class="min-h-24 resize-y"
+        [forceInvalid]="showTextError(form.controls.enfermedadActual, 'x') !== null"
+        [placeholder]="'clinical.form.enfermedadActualPlaceholder' | transloco"
+      ></textarea>
+      @if (showTextError(form.controls.enfermedadActual, 'clinical.validation.enfermedadActualMax'); as errorKey) {
+        <p class="text-destructive text-xs">{{ errorKey | transloco }}</p>
+      }
+    </div>
+  </section>
+
+  <section class="bg-card grid gap-4 rounded-lg border p-4">
+    <h4 class="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
+      {{ 'clinical.form.sections.antecedentes' | transloco }}
+    </h4>
+
+    <div formGroupName="antecedentes" class="grid gap-4 sm:grid-cols-2">
+      @for (key of antecedentesKeys; track key) {
+        <div [formGroupName]="key" class="grid gap-2 rounded-md border p-3">
+          <label class="flex items-center gap-2 text-sm font-medium">
+            <input type="checkbox" formControlName="present" class="border-input size-4 rounded border" />
+            {{ 'clinical.form.antecedentes.' + key | transloco }}
+          </label>
+          <input
+            hlmInput
+            formControlName="notes"
+            [placeholder]="'clinical.form.antecedentesNotesPlaceholder' | transloco"
+            [attr.data-testid]="'clinical-antecedente-notes-' + key"
+          />
+          @if (antecedenteNotesError(key); as errorKey) {
+            <p class="text-destructive text-xs">{{ errorKey | transloco }}</p>
+          }
+        </div>
+      }
+    </div>
+  </section>
+
+  <section class="bg-card grid gap-4 rounded-lg border p-4">
+    <h4 class="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
+      {{ 'clinical.form.sections.signosVitales' | transloco }}
+    </h4>
+
+    <div formGroupName="signos" class="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+      <div class="grid gap-2">
+        <label hlmLabel for="clinical-pas">{{ 'clinical.form.signosVitales.pas' | transloco }}</label>
+        <input
+          hlmInput
+          id="clinical-pas"
+          type="number"
+          inputmode="numeric"
+          formControlName="pas"
+          [forceInvalid]="signoError('pas') !== null"
+        />
+        @if (signoError('pas'); as errorKey) {
+          <p class="text-destructive text-xs">{{ errorKey | transloco }}</p>
+        }
+      </div>
+
+      <div class="grid gap-2">
+        <label hlmLabel for="clinical-pad">{{ 'clinical.form.signosVitales.pad' | transloco }}</label>
+        <input
+          hlmInput
+          id="clinical-pad"
+          type="number"
+          inputmode="numeric"
+          formControlName="pad"
+          [forceInvalid]="signoError('pad') !== null"
+        />
+        @if (signoError('pad'); as errorKey) {
+          <p class="text-destructive text-xs">{{ errorKey | transloco }}</p>
+        }
+      </div>
+
+      <div class="grid gap-2">
+        <label hlmLabel for="clinical-fc">{{ 'clinical.form.signosVitales.fc' | transloco }}</label>
+        <input
+          hlmInput
+          id="clinical-fc"
+          type="number"
+          inputmode="numeric"
+          formControlName="fc"
+          [forceInvalid]="signoError('fc') !== null"
+        />
+        @if (signoError('fc'); as errorKey) {
+          <p class="text-destructive text-xs">{{ errorKey | transloco }}</p>
+        }
+      </div>
+
+      <div class="grid gap-2">
+        <label hlmLabel for="clinical-temperatura">
+          {{ 'clinical.form.signosVitales.temperatura' | transloco }}
+        </label>
+        <input
+          hlmInput
+          id="clinical-temperatura"
+          type="number"
+          step="0.1"
+          inputmode="decimal"
+          formControlName="temperatura"
+          [forceInvalid]="signoError('temperatura') !== null"
+        />
+        @if (signoError('temperatura'); as errorKey) {
+          <p class="text-destructive text-xs">{{ errorKey | transloco }}</p>
+        }
+      </div>
+
+      <div class="grid gap-2">
+        <label hlmLabel for="clinical-fr">{{ 'clinical.form.signosVitales.fr' | transloco }}</label>
+        <input
+          hlmInput
+          id="clinical-fr"
+          type="number"
+          inputmode="numeric"
+          formControlName="fr"
+          [forceInvalid]="signoError('fr') !== null"
+        />
+        @if (signoError('fr'); as errorKey) {
+          <p class="text-destructive text-xs">{{ errorKey | transloco }}</p>
+        }
+      </div>
+    </div>
+
+    @if (bloodPressureError(); as errorKey) {
+      <p class="text-destructive text-xs">{{ errorKey | transloco }}</p>
+    }
+  </section>
+
+  <section class="bg-card grid gap-4 rounded-lg border p-4">
+    <h4 class="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
+      {{ 'clinical.form.sections.examen' | transloco }}
+    </h4>
+
+    <div formGroupName="regiones" class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      @for (region of regionesKeys; track region) {
+        <div class="grid gap-2">
+          <label hlmLabel [for]="'clinical-region-' + region">
+            {{ 'clinical.form.examen.regiones.' + region | transloco }}
+          </label>
+          <select
+            [id]="'clinical-region-' + region"
+            [formControlName]="region"
+            class="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-9 w-full rounded-md border px-3 text-sm shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px]"
+          >
+            <option value="">{{ 'clinical.form.examen.estado.none' | transloco }}</option>
+            <option value="normal">{{ 'clinical.form.examen.estado.normal' | transloco }}</option>
+            <option value="alterado">{{ 'clinical.form.examen.estado.alterado' | transloco }}</option>
+          </select>
+        </div>
+      }
+    </div>
+
+    <div class="grid gap-2">
+      <label hlmLabel for="clinical-examen-descripcion">
+        {{ 'clinical.form.examen.descripcion' | transloco }}
+      </label>
+      <textarea
+        hlmInput
+        id="clinical-examen-descripcion"
+        formControlName="descripcion"
+        rows="3"
+        class="min-h-20 resize-y"
+        [forceInvalid]="showTextError(form.controls.examen.controls.descripcion, 'x') !== null"
+        [placeholder]="'clinical.form.examen.descripcionPlaceholder' | transloco"
+      ></textarea>
+      @if (showTextError(form.controls.examen.controls.descripcion, 'clinical.validation.descripcionMax'); as errorKey) {
+        <p class="text-destructive text-xs">{{ errorKey | transloco }}</p>
+      }
+    </div>
+  </section>
+
+  <div class="flex justify-end">
+    <button hlmBtn type="submit" [disabled]="saving()" data-testid="clinical-save">
+      <ng-icon name="lucideSave" />
+      {{ (saving() ? 'clinical.form.saving' : 'clinical.form.save') | transloco }}
+    </button>
+  </div>
+</form>

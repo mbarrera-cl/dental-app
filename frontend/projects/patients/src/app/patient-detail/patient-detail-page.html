@@ -1,0 +1,147 @@
+<section class="flex flex-col gap-6">
+  <header class="grid gap-3">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <a
+        hlmBtn
+        variant="ghost"
+        size="sm"
+        [routerLink]="['..']"
+        class="-ms-2"
+        data-testid="clinical-back"
+      >
+        <ng-icon name="lucideArrowLeft" />
+        {{ 'clinical.backToList' | transloco }}
+      </a>
+
+      @if (store.record(); as record) {
+        <span hlmBadge [variant]="record.status === 'finalizada' ? 'secondary' : 'outline'">
+          {{ 'clinical.status.' + record.status | transloco }}
+        </span>
+      }
+    </div>
+
+    <div class="grid gap-1">
+      <h2 class="text-2xl font-semibold tracking-tight">{{ 'clinical.title' | transloco }}</h2>
+      <p class="text-muted-foreground text-sm">{{ 'clinical.subtitle' | transloco }}</p>
+    </div>
+  </header>
+
+  @if (store.loading()) {
+    <div class="grid gap-3">
+      <div hlmSkeleton class="h-24 w-full rounded-lg"></div>
+      <div hlmSkeleton class="h-10 w-72"></div>
+    </div>
+  } @else if (store.loadError(); as errorKey) {
+    <div
+      class="border-destructive/30 bg-destructive/5 text-destructive flex items-center gap-3 rounded-lg border px-4 py-3 text-sm"
+    >
+      <ng-icon name="lucideTriangleAlert" class="shrink-0" />
+      <p class="flex-1">{{ errorKey | transloco }}</p>
+      <button hlmBtn variant="outline" size="sm" (click)="retry()">
+        {{ 'common.retry' | transloco }}
+      </button>
+    </div>
+  } @else if (store.patient(); as patient) {
+    <!-- HCU header: the fields the form autofills from the identity records. -->
+    <div
+      class="bg-card grid gap-4 rounded-lg border p-4 sm:grid-cols-2 lg:grid-cols-3"
+      data-testid="clinical-header"
+    >
+      <div class="grid gap-1">
+        <p class="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
+          {{ 'clinical.header.establecimiento' | transloco }}
+        </p>
+        <p class="text-sm font-medium">{{ establecimiento() ?? '—' }}</p>
+      </div>
+
+      <div class="grid gap-1">
+        <p class="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
+          {{ 'clinical.header.patient' | transloco }}
+        </p>
+        <p class="text-sm font-medium">{{ nombreCompleto(patient) }}</p>
+      </div>
+
+      <div class="grid gap-1">
+        <p class="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
+          {{ 'clinical.header.numeroHistoria' | transloco }}
+        </p>
+        <p class="font-mono text-sm font-medium">{{ patient.numeroHistoria }}</p>
+      </div>
+
+      <div class="grid gap-1">
+        <p class="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
+          {{ 'clinical.header.sexo' | transloco }}
+        </p>
+        <p class="text-sm font-medium">{{ sexoKey(patient) | transloco }}</p>
+      </div>
+
+      <div class="grid gap-1">
+        <p class="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
+          {{ 'clinical.header.age' | transloco }}
+        </p>
+        <p class="text-sm font-medium">
+          {{ 'clinical.header.ageYears' | transloco: { age: age(patient) } }}
+        </p>
+      </div>
+
+      @if (categoriaLabelKey(); as categoriaKey) {
+        <div class="grid gap-1">
+          <p class="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
+            {{ 'clinical.form.categoria' | transloco }}
+          </p>
+          <p class="text-sm font-medium">{{ categoriaKey | transloco }}</p>
+        </div>
+      }
+    </div>
+
+    @if (store.record()) {
+      <nav class="flex flex-wrap gap-1 border-b" [attr.aria-label]="'clinical.title' | transloco">
+        <a
+          routerLink="ficha"
+          routerLinkActive="border-primary text-foreground"
+          class="text-muted-foreground hover:text-foreground -mb-px flex items-center gap-2 border-b-2 border-transparent px-3 py-2 text-sm font-medium"
+          data-testid="clinical-tab-record"
+        >
+          <ng-icon name="lucideClipboardList" />
+          {{ 'clinical.tabs.record' | transloco }}
+        </a>
+        <a
+          routerLink="odontograma"
+          routerLinkActive="border-primary text-foreground"
+          class="text-muted-foreground hover:text-foreground -mb-px flex items-center gap-2 border-b-2 border-transparent px-3 py-2 text-sm font-medium"
+          data-testid="clinical-tab-odontogram"
+        >
+          <ng-icon name="lucideSmile" />
+          {{ 'clinical.tabs.odontogram' | transloco }}
+        </a>
+        <a
+          routerLink="indicadores"
+          routerLinkActive="border-primary text-foreground"
+          class="text-muted-foreground hover:text-foreground -mb-px flex items-center gap-2 border-b-2 border-transparent px-3 py-2 text-sm font-medium"
+          data-testid="clinical-tab-indicators"
+        >
+          <ng-icon name="lucideActivity" />
+          {{ 'clinical.tabs.indicators' | transloco }}
+        </a>
+      </nav>
+
+      <router-outlet />
+    } @else {
+      <div
+        class="bg-card grid justify-items-center gap-3 rounded-lg border p-8 text-center"
+        data-testid="clinical-missing"
+      >
+        <ng-icon name="lucideFilePlus2" class="text-muted-foreground size-8" />
+        <h3 class="text-lg font-semibold">{{ 'clinical.missing.title' | transloco }}</h3>
+        <p class="text-muted-foreground max-w-md text-sm">
+          {{ 'clinical.missing.description' | transloco }}
+        </p>
+        <ng-container *hasPermission="permissionKeys.clinical.create">
+          <button hlmBtn (click)="openRecord()" [disabled]="store.creating()">
+            {{ (store.creating() ? 'clinical.missing.creating' : 'clinical.missing.action') | transloco }}
+          </button>
+        </ng-container>
+      </div>
+    }
+  }
+</section>

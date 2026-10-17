@@ -1,0 +1,268 @@
+<form
+  [formGroup]="form"
+  (ngSubmit)="save()"
+  class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_24rem]"
+  novalidate
+>
+  <section class="bg-card grid content-start gap-4 rounded-lg border p-4">
+    <div class="grid gap-1">
+      <h3 class="text-lg font-semibold tracking-tight">
+        {{ 'clinical.indicators.higiene.title' | transloco }}
+      </h3>
+      <p class="text-muted-foreground text-sm">
+        {{ 'clinical.indicators.higiene.description' | transloco }}
+      </p>
+    </div>
+
+    <div formGroupName="higiene" class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="text-muted-foreground text-xs uppercase">
+            <th class="py-2 text-left font-medium">{{ 'clinical.indicators.higiene.columns.tooth' | transloco }}</th>
+            <th class="py-2 text-center font-medium">{{ 'clinical.indicators.higiene.columns.placa' | transloco }}</th>
+            <th class="py-2 text-center font-medium">{{ 'clinical.indicators.higiene.columns.calculo' | transloco }}</th>
+            <th class="py-2 text-center font-medium">{{ 'clinical.indicators.higiene.columns.gingivitis' | transloco }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (tooth of teeth; track tooth) {
+            <tr [formGroupName]="tooth.toString()" class="border-t">
+              <td class="py-1.5 pe-2 font-mono tabular-nums">{{ tooth }}</td>
+              <td class="px-1 py-1.5 text-center">
+                <input
+                  hlmInput
+                  type="number"
+                  min="0"
+                  max="3"
+                  class="h-8 w-16 px-1 text-center"
+                  formControlName="placa"
+                  [forceInvalid]="higieneError(tooth, 'placa') !== null"
+                  [attr.data-testid]="'higiene-placa-' + tooth"
+                />
+              </td>
+              <td class="px-1 py-1.5 text-center">
+                <input
+                  hlmInput
+                  type="number"
+                  min="0"
+                  max="3"
+                  class="h-8 w-16 px-1 text-center"
+                  formControlName="calculo"
+                  [forceInvalid]="higieneError(tooth, 'calculo') !== null"
+                  [attr.data-testid]="'higiene-calculo-' + tooth"
+                />
+              </td>
+              <td class="px-1 py-1.5 text-center">
+                <input
+                  hlmInput
+                  type="number"
+                  min="0"
+                  max="1"
+                  class="h-8 w-16 px-1 text-center"
+                  formControlName="gingivitis"
+                  [forceInvalid]="higieneError(tooth, 'gingivitis') !== null"
+                  [attr.data-testid]="'higiene-gingivitis-' + tooth"
+                />
+              </td>
+            </tr>
+          }
+        </tbody>
+        <tfoot>
+          <tr class="border-t text-sm font-semibold">
+            <td class="py-2 pe-2">{{ 'clinical.indicators.higiene.totals' | transloco }}</td>
+            <td class="px-1 py-2 text-center tabular-nums">{{ liveTotals().placa }}</td>
+            <td class="px-1 py-2 text-center tabular-nums">{{ liveTotals().calculo }}</td>
+            <td class="px-1 py-2 text-center tabular-nums">{{ liveTotals().gingivitis }}</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+
+    @if (form.controls.higiene.invalid && form.controls.higiene.touched) {
+      <p class="text-destructive text-xs">{{ 'clinical.validation.higieneRange' | transloco }}</p>
+    }
+  </section>
+
+  <div class="grid content-start gap-6">
+    <section class="bg-card grid gap-4 rounded-lg border p-4">
+      <div class="grid gap-2">
+        <label hlmLabel for="indices-periodontal">
+          {{ 'clinical.indicators.periodontal' | transloco }}
+        </label>
+        <select
+          id="indices-periodontal"
+          formControlName="periodontal"
+          data-testid="indices-periodontal"
+          class="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-9 w-full rounded-md border px-3 text-sm shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px]"
+        >
+          <option value="">{{ 'clinical.indicators.none' | transloco }}</option>
+          @for (level of periodontalLevels; track level) {
+            <option [value]="level">{{ 'clinical.indicators.levels.' + level | transloco }}</option>
+          }
+        </select>
+      </div>
+
+      <div class="grid gap-2">
+        <label hlmLabel for="indices-maloclusion">
+          {{ 'clinical.indicators.maloclusion' | transloco }}
+        </label>
+        <select
+          id="indices-maloclusion"
+          formControlName="maloclusion"
+          data-testid="indices-maloclusion"
+          class="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-9 w-full rounded-md border px-3 text-sm shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px]"
+        >
+          <option value="">{{ 'clinical.indicators.none' | transloco }}</option>
+          @for (angle of maloclusionLevels; track angle) {
+            <option [value]="angle">{{ 'clinical.indicators.angles.' + angle | transloco }}</option>
+          }
+        </select>
+      </div>
+
+      <div class="grid gap-2">
+        <label hlmLabel for="indices-fluorosis">
+          {{ 'clinical.indicators.fluorosis' | transloco }}
+        </label>
+        <select
+          id="indices-fluorosis"
+          formControlName="fluorosis"
+          data-testid="indices-fluorosis"
+          class="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-9 w-full rounded-md border px-3 text-sm shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px]"
+        >
+          <option value="">{{ 'clinical.indicators.none' | transloco }}</option>
+          @for (level of fluorosisLevels; track level) {
+            <option [value]="level">{{ 'clinical.indicators.levels.' + level | transloco }}</option>
+          }
+        </select>
+      </div>
+
+      <button hlmBtn type="submit" [disabled]="saving()" data-testid="indices-save">
+        <ng-icon name="lucideSave" />
+        {{ (saving() ? 'clinical.indicators.saving' : 'clinical.indicators.save') | transloco }}
+      </button>
+    </section>
+
+    @if (indices(); as computed) {
+      <section class="bg-card grid gap-4 rounded-lg border p-4" data-testid="indices-cpo">
+        <div class="grid gap-1">
+          <h4 class="text-sm font-semibold">{{ 'clinical.indicators.cpo.title' | transloco }}</h4>
+          <p class="text-muted-foreground text-xs">
+            {{ 'clinical.indicators.cpo.description' | transloco }}
+          </p>
+        </div>
+
+        <table class="w-full text-sm">
+          <tbody>
+            <tr class="border-t">
+              <td class="py-1.5">{{ 'clinical.indicators.cpo.cariados' | transloco }}</td>
+              <td class="py-1.5 text-right font-semibold tabular-nums">
+                {{ computed.permanentes.cariados.length }}
+              </td>
+              <td class="text-muted-foreground py-1.5 text-right text-xs">
+                {{ cariados(computed.permanentes.cariados) }}
+              </td>
+            </tr>
+            <tr class="border-t">
+              <td class="py-1.5">{{ 'clinical.indicators.cpo.perdidos' | transloco }}</td>
+              <td class="py-1.5 text-right font-semibold tabular-nums">
+                {{ computed.permanentes.perdidos.length }}
+              </td>
+              <td class="text-muted-foreground py-1.5 text-right text-xs">
+                {{ cariados(computed.permanentes.perdidos) }}
+              </td>
+            </tr>
+            <tr class="border-t">
+              <td class="py-1.5">{{ 'clinical.indicators.cpo.obturados' | transloco }}</td>
+              <td class="py-1.5 text-right font-semibold tabular-nums">
+                {{ computed.permanentes.obturados.length }}
+              </td>
+              <td class="text-muted-foreground py-1.5 text-right text-xs">
+                {{ cariados(computed.permanentes.obturados) }}
+              </td>
+            </tr>
+            <tr class="border-t font-semibold">
+              <td class="py-1.5">{{ 'clinical.indicators.cpo.total' | transloco }}</td>
+              <td class="py-1.5 text-right tabular-nums">{{ computed.permanentes.total }}</td>
+              <td></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="grid gap-1 border-t pt-3">
+          <h4 class="text-sm font-semibold">{{ 'clinical.indicators.ceo.title' | transloco }}</h4>
+        </div>
+
+        <table class="w-full text-sm">
+          <tbody>
+            <tr class="border-t">
+              <td class="py-1.5">{{ 'clinical.indicators.ceo.cariados' | transloco }}</td>
+              <td class="py-1.5 text-right font-semibold tabular-nums">
+                {{ computed.temporales.cariados.length }}
+              </td>
+              <td class="text-muted-foreground py-1.5 text-right text-xs">
+                {{ cariados(computed.temporales.cariados) }}
+              </td>
+            </tr>
+            <tr class="border-t">
+              <td class="py-1.5">{{ 'clinical.indicators.ceo.perdidos' | transloco }}</td>
+              <td class="py-1.5 text-right font-semibold tabular-nums">
+                {{ computed.temporales.perdidos.length }}
+              </td>
+              <td class="text-muted-foreground py-1.5 text-right text-xs">
+                {{ cariados(computed.temporales.perdidos) }}
+              </td>
+            </tr>
+            <tr class="border-t">
+              <td class="py-1.5">{{ 'clinical.indicators.ceo.obturados' | transloco }}</td>
+              <td class="py-1.5 text-right font-semibold tabular-nums">
+                {{ computed.temporales.obturados.length }}
+              </td>
+              <td class="text-muted-foreground py-1.5 text-right text-xs">
+                {{ cariados(computed.temporales.obturados) }}
+              </td>
+            </tr>
+            <tr class="border-t font-semibold">
+              <td class="py-1.5">{{ 'clinical.indicators.ceo.total' | transloco }}</td>
+              <td class="py-1.5 text-right tabular-nums">{{ computed.temporales.total }}</td>
+              <td></td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="bg-card grid gap-3 rounded-lg border p-4" data-testid="indices-higiene-totals">
+        <h4 class="text-sm font-semibold">
+          {{ 'clinical.indicators.higieneTotals.title' | transloco }}
+        </h4>
+        <div class="grid grid-cols-4 gap-2 text-center">
+          <div class="grid gap-0.5">
+            <span class="text-muted-foreground text-xs">
+              {{ 'clinical.indicators.higieneTotals.placa' | transloco }}
+            </span>
+            <span class="text-lg font-semibold tabular-nums">{{ computed.higieneOral.placa }}</span>
+          </div>
+          <div class="grid gap-0.5">
+            <span class="text-muted-foreground text-xs">
+              {{ 'clinical.indicators.higieneTotals.calculo' | transloco }}
+            </span>
+            <span class="text-lg font-semibold tabular-nums">{{ computed.higieneOral.calculo }}</span>
+          </div>
+          <div class="grid gap-0.5">
+            <span class="text-muted-foreground text-xs">
+              {{ 'clinical.indicators.higieneTotals.gingivitis' | transloco }}
+            </span>
+            <span class="text-lg font-semibold tabular-nums">
+              {{ computed.higieneOral.gingivitis }}
+            </span>
+          </div>
+          <div class="grid gap-0.5">
+            <span class="text-muted-foreground text-xs">
+              {{ 'clinical.indicators.higieneTotals.total' | transloco }}
+            </span>
+            <span class="text-lg font-semibold tabular-nums">{{ computed.higieneOral.total }}</span>
+          </div>
+        </div>
+      </section>
+    }
+  </div>
+</form>

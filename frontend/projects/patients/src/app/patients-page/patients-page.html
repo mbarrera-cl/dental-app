@@ -58,6 +58,7 @@
         <tr hlmTr>
           <th hlmTh class="w-36">{{ 'patients.columns.rut' | transloco }}</th>
           <th hlmTh>{{ 'patients.columns.patient' | transloco }}</th>
+          <th hlmTh class="w-24">{{ 'patients.columns.historia' | transloco }}</th>
           <th hlmTh class="w-20 text-end">{{ 'patients.columns.age' | transloco }}</th>
           <th hlmTh class="w-44">{{ 'patients.columns.prevision' | transloco }}</th>
           <th hlmTh class="w-28 text-end">{{ 'patients.columns.actions' | transloco }}</th>
@@ -69,6 +70,7 @@
             <tr hlmTr>
               <td hlmTd><div hlmSkeleton class="h-4 w-24"></div></td>
               <td hlmTd><div hlmSkeleton class="h-4 w-52"></div></td>
+              <td hlmTd><div hlmSkeleton class="h-4 w-16"></div></td>
               <td hlmTd><div hlmSkeleton class="ms-auto h-4 w-10"></div></td>
               <td hlmTd><div hlmSkeleton class="h-5 w-28"></div></td>
               <td hlmTd><div hlmSkeleton class="ms-auto h-8 w-20"></div></td>
@@ -76,7 +78,7 @@
           }
         } @else if (filtered().length === 0) {
           <tr hlmTr>
-            <td hlmTd colspan="5" class="py-12">
+            <td hlmTd colspan="6" class="py-12">
               <div class="text-muted-foreground flex flex-col items-center gap-2 text-center">
                 <ng-icon name="lucideSearchX" class="size-6" />
                 <p>{{ 'patients.empty' | transloco }}</p>
@@ -93,6 +95,7 @@
                   <p class="text-muted-foreground text-xs">{{ patient.email }}</p>
                 }
               </td>
+              <td hlmTd class="font-mono text-xs">{{ patient.numeroHistoria }}</td>
               <td hlmTd class="text-end tabular-nums">
                 {{ 'patients.ageYears' | transloco: { age: age(patient.fechaNacimiento) } }}
               </td>
@@ -101,6 +104,17 @@
               </td>
               <td hlmTd>
                 <div class="flex justify-end gap-1">
+                  <a
+                    *hasPermission="permissionKeys.clinical.read"
+                    hlmBtn
+                    variant="ghost"
+                    size="icon-sm"
+                    [routerLink]="[patient.id]"
+                    [attr.aria-label]="'patients.viewClinical' | transloco"
+                    [attr.data-testid]="'patient-clinical-' + patient.id"
+                  >
+                    <ng-icon name="lucideClipboardList" />
+                  </a>
                   <button
                     hlmBtn
                     variant="ghost"

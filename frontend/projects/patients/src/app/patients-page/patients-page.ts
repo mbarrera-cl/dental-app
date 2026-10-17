@@ -11,6 +11,7 @@ import {
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
+  lucideClipboardList,
   lucidePencil,
   lucidePlus,
   lucideRefreshCw,
@@ -19,7 +20,9 @@ import {
   lucideTrash2,
   lucideTriangleAlert,
 } from '@ng-icons/lucide';
+import { RouterLink } from '@angular/router';
 import { toast } from '@spartan-ng/brain/sonner';
+import { HasPermissionDirective, PERMISSION_KEYS } from 'auth';
 import {
   HlmAlertDialog,
   HlmAlertDialogAction,
@@ -113,6 +116,8 @@ function fechaNacimientoValidator(control: AbstractControl): ValidationErrors | 
   selector: 'app-patients-page',
   imports: [
     ReactiveFormsModule,
+    RouterLink,
+    HasPermissionDirective,
     TranslocoPipe,
     NgIcon,
     HlmButton,
@@ -148,6 +153,7 @@ function fechaNacimientoValidator(control: AbstractControl): ValidationErrors | 
   ],
   providers: [
     provideIcons({
+      lucideClipboardList,
       lucidePencil,
       lucidePlus,
       lucideRefreshCw,
@@ -163,6 +169,8 @@ function fechaNacimientoValidator(control: AbstractControl): ValidationErrors | 
 export class PatientsPage {
   private readonly api = inject(PatientsApi);
   private readonly transloco = inject(TranslocoService);
+
+  protected readonly permissionKeys = PERMISSION_KEYS;
 
   protected readonly language = toSignal(this.transloco.langChanges$, {
     initialValue: this.transloco.getActiveLang(),
