@@ -140,11 +140,34 @@ export function ensureSchema(db: SqliteDatabase): void {
     );
   `);
 
+  // Configurable side menu. The *route* lives in code (the frontend route
+  // registry); this table only holds the presentation: label, icon, order,
+  // visibility and the permission required to see each entry.
+  connection.exec(`
+    CREATE TABLE IF NOT EXISTS menu_items (
+      id                  TEXT PRIMARY KEY,
+      parent_id           TEXT REFERENCES menu_items(id) ON DELETE CASCADE,
+      kind                TEXT NOT NULL DEFAULT 'item',
+      label               TEXT,
+      icon                TEXT,
+      route_key           TEXT,
+      external_url        TEXT,
+      position            INTEGER NOT NULL,
+      required_permission TEXT,
+      enabled             INTEGER NOT NULL DEFAULT 1,
+      created_at          TEXT NOT NULL,
+      updated_at          TEXT NOT NULL,
+      created_by          TEXT REFERENCES users(id) ON DELETE SET NULL,
+      updated_by          TEXT REFERENCES users(id) ON DELETE SET NULL
+    );
+  `);
+
   connection.exec(`
     CREATE INDEX IF NOT EXISTS idx_user_roles_role_id ON user_roles (role_id);
     CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user_id ON refresh_tokens (user_id);
     CREATE INDEX IF NOT EXISTS idx_password_history_user_id ON password_history (user_id);
     CREATE INDEX IF NOT EXISTS idx_api_keys_user_id ON api_keys (user_id);
+    CREATE INDEX IF NOT EXISTS idx_menu_items_parent ON menu_items (parent_id, position);
   `);
 }
 
