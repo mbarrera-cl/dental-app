@@ -39,5 +39,17 @@ import { QuotesController } from './infrastructure/http/quotes.controller.js';
     // Swap this binding for another database adapter (Postgres, MongoDB, ...).
     { provide: QuoteRepositoryPort, useClass: SqliteQuoteRepository },
   ],
+  exports: [
+    CreateQuoteUseCase,
+    ListQuotesUseCase,
+    GetQuoteUseCase,
+    UpdateQuoteUseCase,
+    DeleteQuoteUseCase,
+    RestoreQuoteUseCase,
+    DecideQuoteItemUseCase,
+    SanctionQuoteUseCase,
+    DuplicateQuoteUseCase,
+    ListQuoteVersionsUseCase,
+  ],
 })
 export class QuotesModule {}

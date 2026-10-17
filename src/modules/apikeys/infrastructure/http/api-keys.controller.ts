@@ -26,6 +26,7 @@ import { PermissionDeniedError } from '../../../../shared/security/permission.er
 import type { Principal } from '../../../../shared/security/principal.js';
 import type { AuthenticatedRequest } from '../../../../shared/security/authenticated-request.js';
 import { RequireAnyPermissions } from '../../../../shared/security/require-any-permissions.decorator.js';
+import { ActivityAction } from '../../../activity/infrastructure/http/activity-action.decorator.js';
 import { CreateApiKeyUseCase } from '../../application/use-cases/create-api-key.use-case.js';
 import { GetApiKeyUseCase } from '../../application/use-cases/get-api-key.use-case.js';
 import { ListApiKeysUseCase } from '../../application/use-cases/list-api-keys.use-case.js';
@@ -81,6 +82,7 @@ export class ApiKeysController {
 
   @Post()
   @RequireAnyPermissions(apiKeysPermissions.self, apiKeysPermissions.manage)
+  @ActivityAction({ action: 'apikeys.create', subjectType: 'api-key' })
   @ApiOperation({ summary: 'Create an API key (own, or on behalf of a user)' })
   @ApiCreatedResponse({
     type: CreatedApiKeyResponseDto,
@@ -117,6 +119,7 @@ export class ApiKeysController {
 
   @Post(':id/rotate')
   @RequireAnyPermissions(apiKeysPermissions.self, apiKeysPermissions.manage)
+  @ActivityAction({ action: 'apikeys.rotate', subjectType: 'api-key', subjectParam: 'id' })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Rotate the secret of a key, keeping its scopes' })
   @ApiOkResponse({
@@ -138,6 +141,7 @@ export class ApiKeysController {
 
   @Delete(':id')
   @RequireAnyPermissions(apiKeysPermissions.self, apiKeysPermissions.manage)
+  @ActivityAction({ action: 'apikeys.revoke', subjectType: 'api-key', subjectParam: 'id' })
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Revoke a key; it never authenticates again' })
   @ApiNoContentResponse({ description: 'The key was revoked.' })

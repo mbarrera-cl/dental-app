@@ -44,6 +44,9 @@
       </a>
 
       <div class="ms-auto flex items-center gap-2">
+        @if (store.isAuthenticated() && store.has(keys.activity.read)) {
+          <app-activity-menu />
+        }
         <app-language-switcher />
         @if (store.isAuthenticated()) {
           <app-user-menu />

@@ -26,6 +26,10 @@ import { GetPatientUseCase } from '../../application/use-cases/get-patient.use-c
 import { ListPatientsUseCase } from '../../application/use-cases/list-patients.use-case.js';
 import { UpdatePatientUseCase } from '../../application/use-cases/update-patient.use-case.js';
 import { RequirePermissions } from '../../../../shared/security/require-permissions.decorator.js';
+import {
+  ActivityAction,
+  personNameLabel,
+} from '../../../activity/infrastructure/http/activity-action.decorator.js';
 import { patientsPermissions } from '../../permissions.js';
 import { CreatePatientRequestDto } from './dtos/create-patient.request.dto.js';
 import { PatientResponseDto } from './dtos/patient-response.dto.js';
@@ -49,6 +53,11 @@ export class PatientsController {
 
   @Post()
   @RequirePermissions(patientsPermissions.create)
+  @ActivityAction({
+    action: 'patients.create',
+    subjectType: 'patient',
+    subjectLabel: personNameLabel,
+  })
   @ApiOperation({ summary: 'Create a patient' })
   @ApiCreatedResponse({
     type: PatientResponseDto,
@@ -116,6 +125,12 @@ export class PatientsController {
 
   @Patch(':id')
   @RequirePermissions(patientsPermissions.update)
+  @ActivityAction({
+    action: 'patients.update',
+    subjectType: 'patient',
+    subjectParam: 'id',
+    subjectLabel: personNameLabel,
+  })
   @ApiOperation({ summary: 'Update a patient (partial)' })
   @ApiOkResponse({
     type: PatientResponseDto,
@@ -151,6 +166,11 @@ export class PatientsController {
 
   @Delete(':id')
   @RequirePermissions(patientsPermissions.delete)
+  @ActivityAction({
+    action: 'patients.delete',
+    subjectType: 'patient',
+    subjectParam: 'id',
+  })
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete a patient' })
   @ApiNoContentResponse({ description: 'The patient was deleted.' })

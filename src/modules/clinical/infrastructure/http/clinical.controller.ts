@@ -11,6 +11,7 @@ import {
 import { CurrentPrincipal } from '../../../../shared/security/current-principal.decorator.js';
 import type { Principal } from '../../../../shared/security/principal.js';
 import { RequirePermissions } from '../../../../shared/security/require-permissions.decorator.js';
+import { ActivityAction } from '../../../activity/infrastructure/http/activity-action.decorator.js';
 import { AddClinicalFindingUseCase } from '../../application/use-cases/add-clinical-finding.use-case.js';
 import { CreateClinicalRecordUseCase } from '../../application/use-cases/create-clinical-record.use-case.js';
 import { GetClinicalIndicesUseCase } from '../../application/use-cases/get-clinical-indices.use-case.js';
@@ -51,6 +52,11 @@ export class ClinicalController {
 
   @Post('patients/:patientId/clinical-record')
   @RequirePermissions(clinicalPermissions.create)
+  @ActivityAction({
+    action: 'clinical.create',
+    subjectType: 'patient',
+    subjectParam: 'patientId',
+  })
   @ApiOperation({ summary: 'Open the clinical record of a patient' })
   @ApiCreatedResponse({ type: ClinicalRecordResponseDto })
   @ApiBadRequestResponse({ description: 'The payload failed validation.' })
@@ -75,6 +81,11 @@ export class ClinicalController {
 
   @Get('patients/:patientId/clinical-record')
   @RequirePermissions(clinicalPermissions.read)
+  @ActivityAction({
+    action: 'clinical.read',
+    subjectType: 'patient',
+    subjectParam: 'patientId',
+  })
   @ApiOperation({ summary: 'Get the clinical record of a patient' })
   @ApiOkResponse({ type: ClinicalRecordResponseDto })
   @ApiNotFoundResponse({
@@ -90,6 +101,11 @@ export class ClinicalController {
 
   @Get('clinical-records/:id')
   @RequirePermissions(clinicalPermissions.read)
+  @ActivityAction({
+    action: 'clinical.read',
+    subjectType: 'clinical-record',
+    subjectParam: 'id',
+  })
   @ApiOperation({ summary: 'Get a clinical record by id' })
   @ApiOkResponse({ type: ClinicalRecordResponseDto })
   @ApiNotFoundResponse({ description: 'No clinical record with this id exists.' })
@@ -101,6 +117,11 @@ export class ClinicalController {
 
   @Patch('clinical-records/:id')
   @RequirePermissions(clinicalPermissions.update)
+  @ActivityAction({
+    action: 'clinical.update',
+    subjectType: 'clinical-record',
+    subjectParam: 'id',
+  })
   @ApiOperation({ summary: 'Update a clinical record (partial)' })
   @ApiOkResponse({
     type: ClinicalRecordResponseDto,
@@ -149,6 +170,11 @@ export class ClinicalController {
 
   @Post('clinical-records/:id/findings')
   @RequirePermissions(clinicalPermissions.update)
+  @ActivityAction({
+    action: 'clinical.add-finding',
+    subjectType: 'clinical-record',
+    subjectParam: 'id',
+  })
   @ApiOperation({ summary: 'Add an odontogram finding' })
   @ApiCreatedResponse({ type: ClinicalFindingResponseDto })
   @ApiBadRequestResponse({
@@ -176,6 +202,11 @@ export class ClinicalController {
 
   @Post('clinical-records/:id/findings/:findingId/void')
   @RequirePermissions(clinicalPermissions.update)
+  @ActivityAction({
+    action: 'clinical.void-finding',
+    subjectType: 'clinical-record',
+    subjectParam: 'id',
+  })
   @ApiOperation({ summary: 'Void an odontogram finding (undo, keeps history)' })
   @ApiOkResponse({ type: ClinicalFindingResponseDto })
   @ApiNotFoundResponse({ description: 'Record or finding not found.' })

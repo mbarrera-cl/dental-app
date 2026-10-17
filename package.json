@@ -21,6 +21,7 @@
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
+    "mcp:stdio": "node dist/mcp-stdio.js",
     "seed": "node scripts/seed-users.mjs",
     "seed:patients": "node scripts/seed-patients.mjs",
     "admin:rescue": "node scripts/rescue-admin.mjs",
@@ -32,19 +33,27 @@
     "test:e2e": "vitest run --config ./vitest.config.e2e.ts"
   },
   "dependencies": {
+    "@modelcontextprotocol/core": "^2.3.1",
+    "@modelcontextprotocol/node": "^2.1.1",
+    "@modelcontextprotocol/server": "^2.3.1",
     "@nestjs/common": "^12.0.1",
     "@nestjs/core": "^12.0.1",
+    "@nestjs/microservices": "^12.1.3",
     "@nestjs/platform-express": "^12.0.1",
     "@nestjs/swagger": "^12.0.2",
+    "@rekog/mcp-nest": "^2.0.8",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
-    "sharp": "^0.35.5"
+    "sharp": "^0.35.5",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@modelcontextprotocol/client": "^2.3.1",
     "@nestjs/cli": "^12.0.0",
     "@nestjs/mau": "^0.2.6",
+    "@nestjs/platform-fastify": "^12.1.3",
     "@nestjs/schematics": "^12.0.0",
     "@nestjs/testing": "^12.0.1",
     "@types/express": "^5.0.0",

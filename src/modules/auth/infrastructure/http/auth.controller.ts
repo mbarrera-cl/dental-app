@@ -19,6 +19,10 @@ import type { Request, Response } from 'express';
 import { CurrentPrincipal } from '../../../../shared/security/current-principal.decorator.js';
 import type { Principal } from '../../../../shared/security/principal.js';
 import { Public } from '../../../../shared/security/public.decorator.js';
+import { ActivityRecorder } from '../../../activity/application/record-activity.service.js';
+import { ActivitySkip } from '../../../activity/infrastructure/http/activity-action.decorator.js';
+import { activityStatusOf } from '../../../activity/infrastructure/http/activity-status.js';
+import type { ActivityActorRef, ActivityOutcome } from '../../../activity/domain/activity-entry.js';
 import { ChangeExpiredPasswordUseCase } from '../../application/use-cases/change-expired-password.use-case.js';
 import { ChangePasswordUseCase } from '../../application/use-cases/change-password.use-case.js';
 import { GetProfileUseCase } from '../../application/use-cases/get-profile.use-case.js';
@@ -35,9 +39,14 @@ import { clearRefreshCookie, readRefreshCookie, setRefreshCookie } from './refre
  * Driving adapter for authentication. Access tokens travel in the response
  * body (memory-only on the client); the refresh token travels exclusively
  * in the httpOnly `hexa_refresh` cookie, scoped to `/auth`.
+ *
+ * Auth events are audited explicitly (instead of through the generic
+ * interceptor): failures carry the attempted email and the event is useful
+ * even when the caller has no principal yet.
  */
 @ApiTags('auth')
 @Controller('auth')
+@ActivitySkip()
 export class AuthController {
   constructor(
     private readonly loginUseCase: LoginUseCase,
@@ -46,6 +55,7 @@ export class AuthController {
     private readonly changePasswordUseCase: ChangePasswordUseCase,
     private readonly changeExpiredPasswordUseCase: ChangeExpiredPasswordUseCase,
     private readonly getProfileUseCase: GetProfileUseCase,
+    private readonly activity: ActivityRecorder,
   ) {}
 
   @Public()
@@ -56,13 +66,31 @@ export class AuthController {
   @ApiUnauthorizedResponse({ description: 'Invalid credentials.' })
   async login(
     @Body() body: LoginRequestDto,
+    @Req() request: Request,
     @Res({ passthrough: true }) response: Response,
   ): Promise<AuthSessionResponseDto> {
-    const result = await this.loginUseCase.execute(body);
+    try {
+      const result = await this.loginUseCase.execute(body);
 
-    setRefreshCookie(response, result.session.refreshToken, result.session.refreshExpiresAt);
+      setRefreshCookie(response, result.session.refreshToken, result.session.refreshExpiresAt);
+      await this.audit(request, {
+        actor: { id: result.profile.user.id, type: 'user' },
+        action: 'auth.login',
+        outcome: 'success',
+        statusCode: 200,
+      });
 
-    return AuthSessionResponseDto.fromResult(result);
+      return AuthSessionResponseDto.fromResult(result);
+    } catch (error) {
+      await this.audit(request, {
+        actor: { id: null, type: 'anonymous', label: body.email },
+        action: 'auth.login',
+        outcome: 'failure',
+        statusCode: activityStatusOf(error),
+      });
+
+      throw error;
+    }
   }
 
   @Public()
@@ -93,9 +121,18 @@ export class AuthController {
     @Req() request: Request,
     @Res({ passthrough: true }) response: Response,
   ): Promise<void> {
-    await this.logoutUseCase.execute({ refreshToken: readRefreshCookie(request) });
+    const userId = await this.logoutUseCase.execute({ refreshToken: readRefreshCookie(request) });
 
     clearRefreshCookie(response);
+
+    if (userId !== null) {
+      await this.audit(request, {
+        actor: { id: userId, type: 'user' },
+        action: 'auth.logout',
+        outcome: 'success',
+        statusCode: 204,
+      });
+    }
   }
 
   @Public()
@@ -106,13 +143,31 @@ export class AuthController {
   @ApiUnauthorizedResponse({ description: 'Invalid credentials.' })
   async changeExpiredPassword(
     @Body() body: ChangeExpiredPasswordRequestDto,
+    @Req() request: Request,
     @Res({ passthrough: true }) response: Response,
   ): Promise<AuthSessionResponseDto> {
-    const result = await this.changeExpiredPasswordUseCase.execute(body);
+    try {
+      const result = await this.changeExpiredPasswordUseCase.execute(body);
 
-    setRefreshCookie(response, result.session.refreshToken, result.session.refreshExpiresAt);
+      setRefreshCookie(response, result.session.refreshToken, result.session.refreshExpiresAt);
+      await this.audit(request, {
+        actor: { id: result.profile.user.id, type: 'user' },
+        action: 'auth.change-expired-password',
+        outcome: 'success',
+        statusCode: 200,
+      });
 
-    return AuthSessionResponseDto.fromResult(result);
+      return AuthSessionResponseDto.fromResult(result);
+    } catch (error) {
+      await this.audit(request, {
+        actor: { id: null, type: 'anonymous', label: body.email },
+        action: 'auth.change-expired-password',
+        outcome: 'failure',
+        statusCode: activityStatusOf(error),
+      });
+
+      throw error;
+    }
   }
 
   @Get('me')
@@ -131,16 +186,73 @@ export class AuthController {
   async changePassword(
     @CurrentPrincipal() principal: Principal,
     @Body() body: ChangePasswordRequestDto,
+    @Req() request: Request,
     @Res({ passthrough: true }) response: Response,
   ): Promise<AuthSessionResponseDto> {
-    const result = await this.changePasswordUseCase.execute({
-      userId: principal.userId,
-      currentPassword: body.currentPassword,
-      newPassword: body.newPassword,
-    });
+    try {
+      const result = await this.changePasswordUseCase.execute({
+        userId: principal.userId,
+        currentPassword: body.currentPassword,
+        newPassword: body.newPassword,
+      });
 
-    setRefreshCookie(response, result.session.refreshToken, result.session.refreshExpiresAt);
+      setRefreshCookie(response, result.session.refreshToken, result.session.refreshExpiresAt);
+      await this.audit(request, {
+        actor: { id: principal.userId, type: principal.type },
+        action: 'auth.change-password',
+        outcome: 'success',
+        statusCode: 200,
+      });
 
-    return AuthSessionResponseDto.fromResult(result);
+      return AuthSessionResponseDto.fromResult(result);
+    } catch (error) {
+      await this.audit(request, {
+        actor: { id: principal.userId, type: principal.type },
+        action: 'auth.change-password',
+        outcome: 'failure',
+        statusCode: activityStatusOf(error),
+      });
+
+      throw error;
+    }
   }
+
+  private async audit(
+    request: Request,
+    event: {
+      actor: ActivityActorRef;
+      action: string;
+      outcome: ActivityOutcome;
+      statusCode: number | null;
+    },
+  ): Promise<void> {
+    await this.activity.record({
+      actor: event.actor,
+      action: event.action,
+      module: 'auth',
+      outcome: event.outcome,
+      statusCode: event.statusCode,
+      method: 'POST',
+      path: request.path,
+      route: routePatternOf(request),
+      ip: request.ip ?? request.socket?.remoteAddress ?? null,
+      userAgent: userAgentOf(request),
+    });
+  }
+}
+
+function routePatternOf(request: Request): string | null {
+  const route = (request as unknown as { route?: { path?: unknown } }).route;
+
+  return typeof route?.path === 'string' ? route.path : null;
+}
+
+function userAgentOf(request: Request): string | null {
+  const header = request.headers['user-agent'];
+
+  if (typeof header === 'string') {
+    return header;
+  }
+
+  return Array.isArray(header) ? (header[0] ?? null) : null;
 }

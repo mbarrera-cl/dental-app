@@ -253,6 +253,11 @@ source of truth: type, bounds, default and description.
 | `session`        | `refreshTokenTtlDays`          | 7       | Refresh token lifetime               |
 | `apiKeys`        | `defaultExpirationDays`        | 0       | Default key expiry (0 = never)       |
 | `apiKeys`        | `maxKeysPerUser`               | 10      | Active keys per user                 |
+| `mcp`            | `allowWrites`                  | false   | Enable MCP write tools                |
+| `mcp`            | `maxResults`                   | 20      | Max rows per MCP search/list          |
+| `mcp`            | `writeRateLimitPerMinute`      | 20      | MCP writes per key per minute         |
+| `mcp`            | `redactPii`                    | false   | Mask RUT/email/phone in MCP output    |
+| `mcp`            | `requireConfirmation`          | true    | Require `confirm: true` for sensitive MCP actions |
 
 **Adding a setting:** one entry in `SETTING_DEFINITIONS` (+ an i18n label).
 `GET /settings` returns it and the admin panel renders the right control with
@@ -282,6 +287,30 @@ user's keys (`?userId=`, `?all=true`) and `apikeys:manage` creates, rotates and
 revokes on behalf of others. Rotation keeps identity and scopes but kills the
 old secret immediately; `apiKeys.maxKeysPerUser` counts only active keys.
 
+### MCP server (Model Context Protocol)
+
+Hexa can expose the quotation workflow to MCP clients (Claude, Cursor, custom
+agents) over **Streamable HTTP** and **STDIO**, using
+[`@rekog/mcp-nest`](https://github.com/rekog-labs/MCP-Nest). It reuses the same
+use cases, API keys and activity trail:
+
+```bash
+MCP_ENABLED=true npm run dev:all        # POST /mcp on :3000
+HEXA_MCP_API_KEY=hexa_... npm run mcp:stdio   # local STDIO process
+```
+
+Create an API key with the scopes the agent needs (`quotes:read`,
+`quotes:create`, `uco:read`, `patients:read`, `activity:read`, …) and send it as
+`Authorization: Bearer <key>` or `X-Api-Key`. The initial catalog covers
+**presupuestos** (list/get/versions/create/update/duplicate/sanction/delete/
+restore), patients and the UCO fee catalog, plus three prompts and an activity
+reader. **Writes are opt-in** (`mcp.allowWrites`, default `false`) and sensitive
+actions require `confirm: true`; every call is audited as `mcp.<tool>`.
+
+See **[`docs/mcp.md`](docs/mcp.md)** for the full tool table, client
+configuration, settings, STDIO, write-safety model, DeepSeek/PHI guidance and
+the extension recipe.
+
 ### Environment variables
 
 | Variable                          | Default                        | Purpose                                                                |
@@ -292,6 +321,9 @@ old secret immediately; `apiKeys.maxKeysPerUser` counts only active keys.
 | `COOKIE_SECURE`                   | `true` in production           | Force `Secure` on the refresh cookie                                   |
 | `CORS_ORIGIN`                     | the dev servers `:4200`–`:4204` | Comma-separated allow-list (credentials enabled: no `*`)              |
 | `DATABASE_PATH`                   | `data/hexa.sqlite`             | SQLite file                                                            |
+| `MCP_ENABLED`                     | `false`                        | Mounts the MCP Streamable HTTP endpoint at `/mcp`                      |
+| `MCP_SERVER_NAME` / `MCP_SERVER_VERSION` | `hexa-dental` / `1.0.0` | MCP metadata advertised to clients                                   |
+| `HEXA_MCP_API_KEY`                | —                              | Required by the STDIO MCP process (`npm run mcp:stdio`)                |
 | `PORT`                            | `3000`                         | API port                                                               |
 
 ### Security notes & trade-offs

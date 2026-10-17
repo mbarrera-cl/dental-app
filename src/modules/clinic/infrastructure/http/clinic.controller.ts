@@ -26,6 +26,7 @@ import { CurrentPrincipal } from '../../../../shared/security/current-principal.
 import { Public } from '../../../../shared/security/public.decorator.js';
 import type { Principal } from '../../../../shared/security/principal.js';
 import { RequirePermissions } from '../../../../shared/security/require-permissions.decorator.js';
+import { ActivityAction } from '../../../activity/infrastructure/http/activity-action.decorator.js';
 import { settingsPermissions } from '../../../settings/permissions.js';
 import { MAX_UPLOAD_BYTES } from '../../domain/clinic-asset.js';
 import { InvalidImageError } from '../../domain/clinic.errors.js';
@@ -93,6 +94,7 @@ export class ClinicController {
 
   @Post('logo')
   @RequirePermissions(settingsPermissions.update)
+  @ActivityAction({ action: 'clinic.logo-upload', subjectType: 'clinic' })
   @UseInterceptors(
     FileInterceptor('file', { limits: { fileSize: MAX_UPLOAD_BYTES, files: 1 } }),
   )
@@ -124,6 +126,7 @@ export class ClinicController {
 
   @Delete('logo')
   @RequirePermissions(settingsPermissions.update)
+  @ActivityAction({ action: 'clinic.logo-remove', subjectType: 'clinic' })
   @ApiOperation({ summary: 'Remove the current logo, rolling back to the previous version' })
   @ApiOkResponse({ type: LogoVersionResponseDto })
   async remove(): Promise<LogoVersionResponseDto> {

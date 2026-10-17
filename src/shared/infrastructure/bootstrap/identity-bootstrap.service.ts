@@ -5,6 +5,7 @@ import { UserRepositoryPort } from '../../../modules/users/application/ports/use
 import { Email } from '../../../modules/users/domain/email.vo.js';
 import { User } from '../../../modules/users/domain/user.entity.js';
 import { apiKeysCategory } from '../../../modules/apikeys/permissions.js';
+import { activityCategory } from '../../../modules/activity/permissions.js';
 import { usersCategory } from '../../../modules/users/permissions.js';
 import { allPermissionKeys, dashboardCategory } from '../../security/permissions.js';
 import { PasswordHasher } from '../../security/password-hasher.js';
@@ -22,6 +23,7 @@ const VIEWER_PERMISSIONS = [
   dashboardCategory.keys.read,
   usersCategory.keys.read,
   apiKeysCategory.keys.self,
+  activityCategory.keys.read,
 ];
 
 /** Permissions of the seeded `editor` role (manages users, not roles/settings). */

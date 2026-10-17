@@ -29,6 +29,10 @@ import { UpdateUserPermissionsUseCase } from '../../application/use-cases/update
 import { UpdateUserUseCase } from '../../application/use-cases/update-user.use-case.js';
 import { RequirePermissions } from '../../../../shared/security/require-permissions.decorator.js';
 import { UserAccessReaderPort } from '../../../../shared/security/user-access.reader.port.js';
+import {
+  ActivityAction,
+  personNameLabel,
+} from '../../../activity/infrastructure/http/activity-action.decorator.js';
 import type { User } from '../../domain/user.entity.js';
 import { usersPermissions } from '../../permissions.js';
 import { CreateUserRequestDto } from './dtos/create-user.request.dto.js';
@@ -58,6 +62,11 @@ export class UsersController {
 
   @Post()
   @RequirePermissions(usersPermissions.create)
+  @ActivityAction({
+    action: 'users.create',
+    subjectType: 'user',
+    subjectLabel: personNameLabel,
+  })
   @ApiOperation({ summary: 'Create a user' })
   @ApiCreatedResponse({ type: UserResponseDto, description: 'The user was created.' })
   @ApiBadRequestResponse({
@@ -99,6 +108,12 @@ export class UsersController {
 
   @Patch(':id')
   @RequirePermissions(usersPermissions.update)
+  @ActivityAction({
+    action: 'users.update',
+    subjectType: 'user',
+    subjectParam: 'id',
+    subjectLabel: personNameLabel,
+  })
   @ApiOperation({ summary: 'Update a user (partial: profile, roles and status)' })
   @ApiOkResponse({ type: UserResponseDto, description: 'The updated user.' })
   @ApiBadRequestResponse({ description: 'The payload failed validation or is empty.' })
@@ -123,6 +138,11 @@ export class UsersController {
 
   @Post(':id/password')
   @RequirePermissions(usersPermissions.resetPassword)
+  @ActivityAction({
+    action: 'users.reset-password',
+    subjectType: 'user',
+    subjectParam: 'id',
+  })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Reset the password of a user (typed or server-generated)' })
   @ApiOkResponse({
@@ -154,6 +174,11 @@ export class UsersController {
 
   @Put(':id/permissions')
   @RequirePermissions(usersPermissions.permissions)
+  @ActivityAction({
+    action: 'users.permissions',
+    subjectType: 'user',
+    subjectParam: 'id',
+  })
   @ApiOperation({ summary: 'Replace the direct (non-role) permissions of a user' })
   @ApiOkResponse({ type: UserResponseDto, description: 'The updated user.' })
   @ApiBadRequestResponse({ description: 'One or more permission keys are not in the catalog.' })
@@ -172,6 +197,11 @@ export class UsersController {
 
   @Delete(':id')
   @RequirePermissions(usersPermissions.delete)
+  @ActivityAction({
+    action: 'users.delete',
+    subjectType: 'user',
+    subjectParam: 'id',
+  })
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete a user' })
   @ApiNoContentResponse({ description: 'The user was deleted.' })

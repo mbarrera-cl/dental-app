@@ -6,6 +6,7 @@ import {
   dashboardCategory,
   isPermissionKey,
 } from './permissions.js';
+import { activityCategory } from '../../modules/activity/permissions.js';
 import { apiKeysCategory } from '../../modules/apikeys/permissions.js';
 import { clinicalCategory } from '../../modules/clinical/permissions.js';
 import { patientsCategory } from '../../modules/patients/permissions.js';
@@ -72,6 +73,7 @@ describe('permission catalog', () => {
       dashboardCategory,
       ucoCategory,
       quotesCategory,
+      activityCategory,
     ]);
   });
 

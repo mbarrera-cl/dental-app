@@ -22,6 +22,7 @@ import {
 import { CurrentPrincipal } from '../../../../shared/security/current-principal.decorator.js';
 import type { Principal } from '../../../../shared/security/principal.js';
 import { RequirePermissions } from '../../../../shared/security/require-permissions.decorator.js';
+import { ActivityAction } from '../../../activity/infrastructure/http/activity-action.decorator.js';
 import { settingsPermissions } from '../../../settings/permissions.js';
 import { CreateMenuItemUseCase } from '../../application/use-cases/create-menu-item.use-case.js';
 import { DeleteMenuItemUseCase } from '../../application/use-cases/delete-menu-item.use-case.js';
@@ -79,6 +80,7 @@ export class NavigationController {
 
   @Post('items')
   @RequirePermissions(settingsPermissions.update)
+  @ActivityAction({ action: 'navigation.create', subjectType: 'menu-item' })
   @ApiOperation({ summary: 'Create a menu entry (appended at the end of its parent)' })
   @ApiCreatedResponse({ type: MenuItemResponseDto })
   @ApiBadRequestResponse({
@@ -105,6 +107,7 @@ export class NavigationController {
 
   @Patch('items/:id')
   @RequirePermissions(settingsPermissions.update)
+  @ActivityAction({ action: 'navigation.update', subjectType: 'menu-item', subjectParam: 'id' })
   @ApiOperation({ summary: 'Update a menu entry (partial; moving belongs to PUT /order)' })
   @ApiOkResponse({ type: MenuItemResponseDto })
   @ApiBadRequestResponse({ description: 'Invalid payload or an empty update.' })
@@ -131,6 +134,7 @@ export class NavigationController {
   @Delete('items/:id')
   @HttpCode(HttpStatus.NO_CONTENT)
   @RequirePermissions(settingsPermissions.update)
+  @ActivityAction({ action: 'navigation.delete', subjectType: 'menu-item', subjectParam: 'id' })
   @ApiOperation({ summary: 'Delete a menu entry and its children' })
   @ApiNoContentResponse({ description: 'The entry was deleted.' })
   @ApiNotFoundResponse({ description: 'No menu item with this id exists.' })
@@ -140,6 +144,7 @@ export class NavigationController {
 
   @Put('order')
   @RequirePermissions(settingsPermissions.update)
+  @ActivityAction({ action: 'navigation.reorder' })
   @ApiOperation({
     summary: 'Apply a drag & drop batch; positions are re-numbered 0..n per parent',
   })
@@ -165,6 +170,7 @@ export class NavigationController {
   @Post('reset')
   @HttpCode(HttpStatus.OK)
   @RequirePermissions(settingsPermissions.update)
+  @ActivityAction({ action: 'navigation.reset' })
   @ApiOperation({ summary: 'Replace the whole menu with the default seed (anti-lockout)' })
   @ApiOkResponse({ type: [MenuItemResponseDto], description: 'The restored default menu tree.' })
   async reset(): Promise<MenuItemResponseDto[]> {

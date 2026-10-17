@@ -30,6 +30,11 @@ import { PatientsController } from './infrastructure/http/patients.controller.js
     // Swap this binding for another database adapter (Postgres, MongoDB, ...).
     { provide: PatientRepositoryPort, useClass: SqlitePatientRepository },
   ],
-  exports: [PatientRepositoryPort],
+  exports: [
+    PatientRepositoryPort,
+    ListPatientsUseCase,
+    GetPatientUseCase,
+    GetPatientByRutUseCase,
+  ],
 })
 export class PatientsModule {}

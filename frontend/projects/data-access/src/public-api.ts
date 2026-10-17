@@ -20,6 +20,8 @@ export * from './lib/patient.model';
 export * from './lib/patients-api';
 export * from './lib/clinical.model';
 export * from './lib/clinical-api';
+export * from './lib/activity.model';
+export * from './lib/activity-api';
 export * from './lib/navigation.model';
 export * from './lib/navigation-api';
 export * from './lib/branding.model';

@@ -23,6 +23,7 @@ function contextFor(handler: () => void, principal?: Principal): ExecutionContex
   return {
     getHandler: () => handler,
     getClass: () => class {},
+    getType: () => 'http',
     switchToHttp: () => ({ getRequest: () => request }),
   } as unknown as ExecutionContext;
 }

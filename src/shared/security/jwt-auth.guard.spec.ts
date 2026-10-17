@@ -27,6 +27,7 @@ function contextFor(handler: () => void, request: FakeRequest): ExecutionContext
   return {
     getHandler: () => handler,
     getClass: () => class {},
+    getType: () => 'http',
     switchToHttp: () => ({ getRequest: () => request }),
   } as unknown as ExecutionContext;
 }

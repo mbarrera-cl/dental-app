@@ -372,6 +372,40 @@ export function ensureSchema(db: SqliteDatabase): void {
     );
   `);
 
+  // Platform activity trail: one row per relevant action (who, when, what).
+  // Written by the `activity` module. Append-only by design: the only write
+  // paths are the recorder and the (audited) retention/purge job. `actor_id`
+  // intentionally has no foreign key so history survives user deletion.
+  connection.exec(`
+    CREATE TABLE IF NOT EXISTS activity_log (
+      id            TEXT PRIMARY KEY,
+      at            TEXT NOT NULL,
+      actor_id      TEXT,
+      actor_type    TEXT NOT NULL,
+      actor_label   TEXT,
+      action        TEXT NOT NULL,
+      module        TEXT NOT NULL,
+      subject_type  TEXT,
+      subject_id    TEXT,
+      subject_label TEXT,
+      outcome       TEXT NOT NULL,
+      status_code   INTEGER,
+      method        TEXT NOT NULL,
+      path          TEXT NOT NULL,
+      route         TEXT,
+      ip            TEXT,
+      user_agent    TEXT,
+      metadata      TEXT NOT NULL DEFAULT '{}'
+    );
+  `);
+
+  connection.exec(`
+    CREATE INDEX IF NOT EXISTS idx_activity_at ON activity_log (at DESC);
+    CREATE INDEX IF NOT EXISTS idx_activity_actor ON activity_log (actor_id, at DESC);
+    CREATE INDEX IF NOT EXISTS idx_activity_action ON activity_log (action, at DESC);
+    CREATE INDEX IF NOT EXISTS idx_activity_subject ON activity_log (subject_type, subject_id, at DESC);
+  `);
+
   connection.exec(`
     CREATE INDEX IF NOT EXISTS idx_user_roles_role_id ON user_roles (role_id);
     CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user_id ON refresh_tokens (user_id);

@@ -8,6 +8,7 @@ import {
 import { CurrentPrincipal } from '../../../../shared/security/current-principal.decorator.js';
 import type { Principal } from '../../../../shared/security/principal.js';
 import { RequirePermissions } from '../../../../shared/security/require-permissions.decorator.js';
+import { ActivityAction } from '../../../activity/infrastructure/http/activity-action.decorator.js';
 import { SettingsAuditService } from '../../application/settings-audit.service.js';
 import { ExportSettingsUseCase } from '../../application/use-cases/export-settings.use-case.js';
 import { GetSettingsUseCase } from '../../application/use-cases/get-settings.use-case.js';
@@ -42,6 +43,7 @@ export class SettingsController {
 
   @Patch()
   @RequirePermissions(settingsPermissions.update)
+  @ActivityAction({ action: 'settings.update' })
   @ApiOperation({ summary: 'Update settings (validated against the registry, all-or-nothing)' })
   @ApiOkResponse({ type: [SettingResponseDto], description: 'Every setting after the update.' })
   @ApiBadRequestResponse({ description: 'Unknown setting key or invalid value.' })
@@ -67,6 +69,7 @@ export class SettingsController {
 
   @Post('import')
   @RequirePermissions(settingsPermissions.update)
+  @ActivityAction({ action: 'settings.import' })
   @ApiOperation({
     summary: 'Import a configuration envelope (validated, all-or-nothing, audited)',
   })

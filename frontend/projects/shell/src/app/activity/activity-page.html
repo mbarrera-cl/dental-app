@@ -1,0 +1,178 @@
+<section class="flex flex-col gap-6" data-testid="activity-page">
+  <header class="flex flex-wrap items-end justify-between gap-4">
+    <div class="grid gap-1">
+      <h1 class="text-xl font-semibold tracking-tight">{{ 'activity.title' | transloco }}</h1>
+      <p class="text-muted-foreground text-sm">{{ 'activity.pageSubtitle' | transloco }}</p>
+    </div>
+    <div class="flex items-center gap-2">
+      <button
+        hlmBtn
+        variant="outline"
+        size="icon"
+        type="button"
+        [disabled]="store.loading()"
+        [attr.aria-label]="'common.refresh' | transloco"
+        (click)="refresh()"
+      >
+        <ng-icon name="lucideRefreshCw" [class.animate-spin]="store.loading()" />
+      </button>
+      @if (canPurge()) {
+        <button
+          hlmBtn
+          variant="destructive"
+          size="sm"
+          type="button"
+          data-testid="activity-purge-open"
+          (click)="purgeOpen.set(true)"
+        >
+          <ng-icon name="lucideTrash2" />
+          {{ 'activity.purge.action' | transloco }}
+        </button>
+      }
+    </div>
+  </header>
+
+  <div class="bg-card grid gap-3 rounded-lg border p-4 md:grid-cols-2 lg:grid-cols-4">
+    <div class="grid gap-1.5">
+      <label hlmLabel for="activity-module">{{ 'activity.filters.module' | transloco }}</label>
+      <select
+        id="activity-module"
+        class="border-input bg-background h-9 w-full rounded-md border px-2 text-sm"
+        (change)="onModule($event)"
+      >
+        <option value="">{{ 'activity.filters.allModules' | transloco }}</option>
+        @for (module of modules; track module) {
+          <option [value]="module">{{ moduleLabel(module) }}</option>
+        }
+      </select>
+    </div>
+
+    <div class="grid gap-1.5">
+      <label hlmLabel for="activity-outcome">{{ 'activity.filters.outcome' | transloco }}</label>
+      <select
+        id="activity-outcome"
+        class="border-input bg-background h-9 w-full rounded-md border px-2 text-sm"
+        (change)="onOutcome($event)"
+      >
+        <option value="">{{ 'activity.filters.allOutcomes' | transloco }}</option>
+        <option value="success">{{ 'activity.outcomes.success' | transloco }}</option>
+        <option value="failure">{{ 'activity.outcomes.failure' | transloco }}</option>
+      </select>
+    </div>
+
+    <div class="grid gap-1.5">
+      <label hlmLabel for="activity-from">{{ 'activity.filters.from' | transloco }}</label>
+      <input hlmInput id="activity-from" type="date" (change)="onFrom($event)" />
+    </div>
+
+    <div class="grid gap-1.5">
+      <label hlmLabel for="activity-to">{{ 'activity.filters.to' | transloco }}</label>
+      <input hlmInput id="activity-to" type="date" (change)="onTo($event)" />
+    </div>
+
+    <div class="flex flex-wrap items-center gap-4 md:col-span-2 lg:col-span-4">
+      @if (canReadAll()) {
+        <label class="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            class="accent-primary size-4"
+            [checked]="mine()"
+            (change)="onMine($event)"
+          />
+          {{ 'activity.filters.mine' | transloco }}
+        </label>
+      }
+      <button hlmBtn variant="ghost" size="sm" type="button" (click)="clearFilters()">
+        {{ 'activity.filters.clear' | transloco }}
+      </button>
+    </div>
+  </div>
+
+  @if (store.error(); as errorKey) {
+    <div
+      class="border-destructive/30 bg-destructive/5 text-destructive flex items-center gap-3 rounded-lg border px-4 py-3 text-sm"
+      role="alert"
+    >
+      <ng-icon name="lucideTriangleAlert" class="shrink-0" />
+      <p class="flex-1">{{ errorKey | transloco }}</p>
+      <button hlmBtn variant="outline" size="sm" type="button" (click)="refresh()">
+        {{ 'common.retry' | transloco }}
+      </button>
+    </div>
+  }
+
+  @if (store.loading() && store.items().length === 0) {
+    <div class="bg-card grid gap-4 rounded-lg border p-4">
+      @for (row of [0, 1, 2, 3, 4]; track row) {
+        <div class="flex gap-3">
+          <div class="bg-muted size-9 shrink-0 animate-pulse rounded-full"></div>
+          <div class="grid flex-1 gap-2">
+            <div class="bg-muted h-3.5 w-1/2 animate-pulse rounded"></div>
+            <div class="bg-muted h-3 w-1/4 animate-pulse rounded"></div>
+          </div>
+        </div>
+      }
+    </div>
+  } @else if (store.items().length === 0) {
+    <p
+      class="text-muted-foreground bg-card rounded-lg border px-4 py-12 text-center text-sm"
+      data-testid="activity-page-empty"
+    >
+      {{ 'activity.empty' | transloco }}
+    </p>
+  } @else {
+    <ul class="bg-card divide-y rounded-lg border" data-testid="activity-page-list">
+      @for (entry of store.items(); track entry.id) {
+        <li class="flex items-start gap-3 px-4 py-3">
+          <span
+            class="bg-primary/10 text-primary mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full text-xs font-semibold uppercase"
+          >
+            {{ initial(entry) }}
+          </span>
+          <div class="grid min-w-0 flex-1 gap-1">
+            <p class="text-sm">
+              <span class="font-medium">{{ actorLabel(entry) }}</span>
+              <span class="text-muted-foreground"> · {{ actionLabel(entry) }}</span>
+            </p>
+            @if (entry.subject.label; as label) {
+              <p class="text-muted-foreground truncate text-xs">{{ label }}</p>
+            }
+            <div class="flex flex-wrap items-center gap-2 text-[11px]">
+              <span hlmBadge variant="secondary">{{ moduleLabel(entry.module) }}</span>
+              <span hlmBadge [variant]="entry.outcome === 'failure' ? 'destructive' : 'outline'">
+                {{ ('activity.outcomes.' + entry.outcome) | transloco }}
+              </span>
+              @if (entry.statusCode !== null) {
+                <span class="text-muted-foreground font-mono">
+                  {{ entry.method }} {{ entry.statusCode }}
+                </span>
+              }
+              <span class="text-muted-foreground" [attr.title]="absolute(entry.at)">
+                {{ relative(entry.at) }}
+              </span>
+            </div>
+          </div>
+          @if (entry.outcome === 'failure') {
+            <ng-icon name="lucideTriangleAlert" class="text-destructive mt-1 shrink-0" />
+          }
+        </li>
+      }
+    </ul>
+
+    @if (store.hasMore()) {
+      <button
+        hlmBtn
+        variant="outline"
+        type="button"
+        class="self-center"
+        [disabled]="store.loadingMore()"
+        data-testid="activity-load-more"
+        (click)="loadMore()"
+      >
+        {{ (store.loadingMore() ? 'common.loading' : 'activity.loadMore') | transloco }}
+      </button>
+    }
+  }
+
+  <app-activity-purge-dialog [open]="purgeOpen()" (closed)="purgeOpen.set(false)" />
+</section>

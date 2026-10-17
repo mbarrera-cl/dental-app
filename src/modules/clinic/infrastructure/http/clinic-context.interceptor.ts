@@ -20,6 +20,11 @@ export class ClinicContextInterceptor implements NestInterceptor {
   constructor(private readonly getBranding: GetBrandingUseCase) {}
 
   async intercept(context: ExecutionContext, next: CallHandler): Promise<Observable<unknown>> {
+    // MCP tool handlers run in the RPC pipeline and have no HTTP request.
+    if (context.getType() !== 'http') {
+      return next.handle();
+    }
+
     const request = context.switchToHttp().getRequest<ClinicRequest>();
 
     request.clinic ??= await this.getBranding.execute();

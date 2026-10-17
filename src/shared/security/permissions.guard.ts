@@ -18,6 +18,12 @@ export class PermissionsGuard implements CanActivate {
   constructor(private readonly reflector: Reflector) {}
 
   canActivate(context: ExecutionContext): boolean {
+    // MCP capability handlers are authorized by their own tool layer, which
+    // works on both HTTP and STDIO principals.
+    if (context.getType() !== 'http') {
+      return true;
+    }
+
     const required = this.reflector.getAllAndOverride<readonly string[]>(
       REQUIRED_PERMISSIONS_METADATA,
       [context.getHandler(), context.getClass()],

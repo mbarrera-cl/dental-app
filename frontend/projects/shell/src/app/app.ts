@@ -6,6 +6,7 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { HlmButton } from '@ui/button';
 import { HlmToaster } from '@ui/sonner';
 import { PERMISSION_KEYS, SessionStore } from 'auth';
+import { ActivityMenu } from './activity/activity-menu';
 import { BrandingStore } from './branding/branding-store';
 import { LanguageSwitcher } from './language-switcher';
 import { NavigationStore } from './navigation/navigation-store';
@@ -28,7 +29,7 @@ const ONBOARDING_KEY = 'hexa.onboarding.clinic.dismissed';
  */
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, RouterLink, TranslocoPipe, NgIcon, HlmButton, HlmToaster, LanguageSwitcher, UserMenu, Sidebar],
+  imports: [RouterOutlet, RouterLink, TranslocoPipe, NgIcon, HlmButton, HlmToaster, ActivityMenu, LanguageSwitcher, UserMenu, Sidebar],
   providers: [provideIcons({ lucideHexagon, lucideMenu, lucideSparkles, lucideX })],
   templateUrl: './app.html',
   styleUrl: './app.css',
@@ -38,6 +39,7 @@ export class App {
   protected readonly store = inject(SessionStore);
   protected readonly navigation = inject(NavigationStore);
   protected readonly branding = inject(BrandingStore);
+  protected readonly keys = PERMISSION_KEYS;
   private readonly onboardingDismissed = signal(readOnboardingDismissed());
 
   /**

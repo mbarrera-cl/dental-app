@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { DatabaseModule } from '../../shared/infrastructure/database/database.module.js';
 import { SecurityModule } from '../../shared/security/security.module.js';
+import { ActivityModule } from '../activity/activity.module.js';
 import { SettingsModule } from '../settings/settings.module.js';
 import { UsersModule } from '../users/users.module.js';
 import { LoginAttemptsService } from './application/login-attempts.service.js';
@@ -22,7 +23,7 @@ import { AuthController } from './infrastructure/http/auth.controller.js';
  * history, permission resolution) and the shared security services.
  */
 @Module({
-  imports: [DatabaseModule, SecurityModule, SettingsModule, UsersModule],
+  imports: [DatabaseModule, SecurityModule, SettingsModule, UsersModule, ActivityModule],
   controllers: [AuthController],
   providers: [
     SessionService,

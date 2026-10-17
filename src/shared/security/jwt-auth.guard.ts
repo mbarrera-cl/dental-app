@@ -30,6 +30,12 @@ export class JwtAuthGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
+    // MCP capability handlers run in the RPC pipeline where authentication is
+    // performed once by the transport controller; there is no HTTP request.
+    if (context.getType() !== 'http') {
+      return true;
+    }
+
     const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_METADATA, [
       context.getHandler(),
       context.getClass(),
@@ -40,6 +46,13 @@ export class JwtAuthGuard implements CanActivate {
     }
 
     const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
+
+    // The controller may run after the global APP_GUARD already authenticated
+    // this request (e.g. the MCP transport controller).
+    if (request.user !== undefined) {
+      return true;
+    }
+
     const principal = await this.authenticate(request);
 
     if (principal === null) {
@@ -67,8 +80,14 @@ export class JwtAuthGuard implements CanActivate {
       return null;
     }
 
-    const claims = this.jwt.verifyAccessToken(authorization.slice(BEARER_PREFIX.length).trim());
+    const token = authorization.slice(BEARER_PREFIX.length).trim();
+    const claims = this.jwt.verifyAccessToken(token);
 
-    return claims === null ? null : this.permissionResolver.resolveUser(claims.sub);
+    if (claims !== null) {
+      return this.permissionResolver.resolveUser(claims.sub);
+    }
+
+    // MCP clients send the opaque API key in the standard Bearer header.
+    return this.apiKeyAuthenticator === null ? null : this.apiKeyAuthenticator.authenticate(token);
   }
 }

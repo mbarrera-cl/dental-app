@@ -10,6 +10,10 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { RequirePermissions } from '../../../../shared/security/require-permissions.decorator.js';
+import {
+  ActivityAction,
+  personNameLabel,
+} from '../../../activity/infrastructure/http/activity-action.decorator.js';
 import { CreateRoleUseCase } from '../../application/use-cases/create-role.use-case.js';
 import { DeleteRoleUseCase } from '../../application/use-cases/delete-role.use-case.js';
 import { GetRoleUseCase } from '../../application/use-cases/get-role.use-case.js';
@@ -33,6 +37,11 @@ export class RolesController {
 
   @Post()
   @RequirePermissions(rolesPermissions.create)
+  @ActivityAction({
+    action: 'roles.create',
+    subjectType: 'role',
+    subjectLabel: personNameLabel,
+  })
   @ApiOperation({ summary: 'Create a role with any subset of the permission catalog' })
   @ApiCreatedResponse({ type: RoleResponseDto })
   @ApiBadRequestResponse({ description: 'Invalid name or unknown permission key.' })
@@ -71,6 +80,12 @@ export class RolesController {
 
   @Patch(':id')
   @RequirePermissions(rolesPermissions.update)
+  @ActivityAction({
+    action: 'roles.update',
+    subjectType: 'role',
+    subjectParam: 'id',
+    subjectLabel: personNameLabel,
+  })
   @ApiOperation({ summary: 'Update a role (partial; the built-in admin role is protected)' })
   @ApiOkResponse({ type: RoleResponseDto })
   @ApiBadRequestResponse({ description: 'Invalid payload, unknown permission or a protection rule.' })
@@ -90,6 +105,11 @@ export class RolesController {
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   @RequirePermissions(rolesPermissions.delete)
+  @ActivityAction({
+    action: 'roles.delete',
+    subjectType: 'role',
+    subjectParam: 'id',
+  })
   @ApiOperation({ summary: 'Delete a role (the built-in admin role and assigned roles are protected)' })
   @ApiNoContentResponse({ description: 'The role was deleted.' })
   @ApiNotFoundResponse({ description: 'No role with this id exists.' })

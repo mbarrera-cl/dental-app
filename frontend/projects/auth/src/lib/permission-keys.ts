@@ -22,6 +22,11 @@ export const PERMISSION_KEYS = {
     read: 'settings:read',
     update: 'settings:update',
   },
+  activity: {
+    read: 'activity:read',
+    readAll: 'activity:read-all',
+    purge: 'activity:purge',
+  },
   clinical: {
     read: 'clinical:read',
     create: 'clinical:create',
