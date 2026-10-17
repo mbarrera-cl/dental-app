@@ -16,8 +16,7 @@ import { HasPermissionDirective, PERMISSION_KEYS } from 'auth';
 import { HlmBadge } from '@ui/badge';
 import { HlmButton } from '@ui/button';
 import { HlmSkeleton } from '@ui/skeleton';
-import { ageInYears, mapApiError, type Patient } from 'data-access';
-import { ClinicNameApi } from '../clinic-name-api';
+import { BrandingApi, ageInYears, mapApiError, type Patient } from 'data-access';
 import { ClinicalRecordStore } from '../clinical-record.store';
 
 /**
@@ -54,7 +53,7 @@ import { ClinicalRecordStore } from '../clinical-record.store';
 })
 export class PatientDetailPage {
   private readonly transloco = inject(TranslocoService);
-  private readonly clinicName = inject(ClinicNameApi);
+  private readonly branding = inject(BrandingApi);
 
   /** Exposed for the template; shared with the tabs through the route. */
   protected readonly store = inject(ClinicalRecordStore);
@@ -69,8 +68,8 @@ export class PatientDetailPage {
   });
 
   constructor() {
-    this.clinicName.clinicName().subscribe({
-      next: (name) => this.establecimiento.set(name),
+    this.branding.get().subscribe({
+      next: (snapshot) => this.establecimiento.set(snapshot.branding?.name ?? null),
       // The header is decoration: a missing clinic name never blocks the ficha.
       error: () => undefined,
     });
