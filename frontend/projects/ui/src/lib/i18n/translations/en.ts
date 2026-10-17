@@ -1251,6 +1251,7 @@ export const EN = {
     preview: 'Preview · simulated data',
     chat: 'Chat',
     conversations: 'Conversations',
+    backToConversations: 'Back to conversations',
     newConversation: 'New conversation',
     searchPlaceholder: 'Search conversations…',
     emptyConversations: 'There are no conversations yet.',

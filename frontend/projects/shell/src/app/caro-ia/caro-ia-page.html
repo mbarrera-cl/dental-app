@@ -1,417 +1,307 @@
-<section class="flex min-h-[calc(100dvh-7rem)] flex-col gap-4" data-testid="caro-ia-page">
-  <header class="flex flex-wrap items-start justify-between gap-3">
-    <div class="flex min-w-0 items-center gap-3">
-      <button
-        hlmBtn
-        variant="ghost"
-        size="icon"
-        type="button"
-        class="shrink-0"
-        [attr.aria-label]="'caroIa.conversations' | transloco"
-        (click)="openSidebar()"
-      >
-        <ng-icon name="lucideMenu" />
-      </button>
-      <span class="bg-primary/10 text-primary flex size-11 shrink-0 items-center justify-center rounded-2xl">
-        <ng-icon name="lucideSparkles" class="text-xl" />
-      </span>
-      <div class="grid min-w-0 gap-0.5">
-        <div class="flex flex-wrap items-center gap-2">
-          <h1 class="text-xl font-semibold tracking-tight">{{ 'caroIa.title' | transloco }}</h1>
-          <span hlmBadge variant="outline" class="border-amber-500/40 text-amber-600 dark:text-amber-400">
-            {{ 'caroIa.preview' | transloco }}
-          </span>
-        </div>
-        <p class="text-muted-foreground truncate text-sm">{{ 'caroIa.subtitle' | transloco }}</p>
-      </div>
-    </div>
-
-    <div class="flex flex-wrap items-center gap-2">
-      <div class="bg-muted/50 flex items-center rounded-lg border p-0.5">
-        <button
-          hlmBtn
-          type="button"
-          size="sm"
-          [variant]="view() === 'chat' ? 'secondary' : 'ghost'"
-          (click)="toggleView('chat')"
-        >
-          <ng-icon name="lucideMessageSquare" />
-          {{ 'caroIa.chat' | transloco }}
-        </button>
-        <button
-          hlmBtn
-          type="button"
-          size="sm"
-          [variant]="view() === 'table' ? 'secondary' : 'ghost'"
-          (click)="toggleView('table')"
-        >
-          <ng-icon name="lucideTable" />
-          {{ 'caroIa.conversations' | transloco }}
-        </button>
-      </div>
-      <button hlmBtn type="button" size="sm" (click)="newConversation()" data-testid="caro-new">
-        <ng-icon name="lucidePlus" />
-        {{ 'caroIa.newConversation' | transloco }}
-      </button>
-    </div>
-  </header>
-
-  <div class="flex min-h-0 flex-1 gap-4">
-    <!-- Drawer de conversaciones -->
-    @if (sidebarOpen()) {
-      <div class="fixed inset-0 z-40 bg-black/40" (click)="closeSidebar()"></div>
-      <aside class="bg-background fixed inset-y-0 start-0 z-50 flex w-80 max-w-[85vw] flex-col border-e shadow-xl">
-        <div class="flex items-center justify-between border-b p-2">
-          <span class="px-2 text-sm font-semibold">{{ 'caroIa.conversations' | transloco }}</span>
-          <button hlmBtn variant="ghost" size="icon-sm" type="button" (click)="closeSidebar()">
-            <ng-icon name="lucideX" />
-          </button>
-        </div>
-        <div class="border-b p-2">
+<section class="flex h-full min-h-0 flex-col overflow-hidden p-4" data-testid="caro-ia-page">
+  @if (view() === 'table') {
+    <div class="bg-card flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border">
+      <div class="flex flex-wrap items-center justify-between gap-2 border-b p-3">
+        <div class="relative w-full sm:w-72">
+          <ng-icon
+            name="lucideSearch"
+            class="text-muted-foreground pointer-events-none absolute start-2.5 top-2.5 text-sm"
+          />
           <input
             hlmInput
             type="search"
+            class="ps-8"
             [placeholder]="'caroIa.searchPlaceholder' | transloco"
             [value]="search()"
             (input)="setSearch($event)"
           />
         </div>
-        <pk-conversation-list
-          [class]="'min-h-0 flex-1'"
-          [conversations]="conversationItems()"
-          [activeId]="store.activeId()"
-          [query]="search()"
-          [todayLabel]="groupLabels().today"
-          [yesterdayLabel]="groupLabels().yesterday"
-          [last7Label]="groupLabels().last7"
-          [olderLabel]="groupLabels().older"
-          [renameLabel]="t('caroIa.table.rename')"
-          [deleteLabel]="t('caroIa.table.delete')"
-          [actionsLabel]="'caroIa.table.actions' | transloco"
-          [renameAria]="'caroIa.table.renamePrompt' | transloco"
-          (selected)="selectConversation($event)"
-          (renamed)="rename($event)"
-          (deleted)="remove($event)"
-        >
-          <p pkConversationListEmpty class="text-muted-foreground px-2 py-6 text-center text-sm">
-            {{ 'caroIa.emptyConversations' | transloco }}
-          </p>
-        </pk-conversation-list>
-        <div class="border-t p-2">
-          <button hlmBtn variant="outline" type="button" class="w-full justify-start" (click)="newConversation()">
-            <ng-icon name="lucidePlus" />
-            {{ 'caroIa.newConversation' | transloco }}
-          </button>
-        </div>
-      </aside>
-    }
+        <button hlmBtn type="button" size="sm" (click)="newConversation()" data-testid="caro-new">
+          <ng-icon name="lucidePlus" />
+          {{ 'caroIa.newConversation' | transloco }}
+        </button>
+      </div>
 
-    <main class="flex min-h-0 min-w-0 flex-1 flex-col">
-      @if (view() === 'table') {
-        <div class="bg-card flex min-h-0 flex-1 flex-col rounded-xl border">
-          <div class="flex flex-wrap items-center justify-between gap-2 border-b p-3">
-            <div>
-              <h2 class="text-base font-semibold">{{ 'caroIa.table.title' | transloco }}</h2>
-              <p class="text-muted-foreground text-xs">{{ 'caroIa.table.subtitle' | transloco }}</p>
-            </div>
-            <div class="relative w-full sm:w-64">
-              <ng-icon name="lucideSearch" class="text-muted-foreground pointer-events-none absolute start-2.5 top-2.5 text-sm" />
-              <input
-                hlmInput
-                type="search"
-                class="ps-8"
-                [placeholder]="'caroIa.searchPlaceholder' | transloco"
-                [value]="search()"
-                (input)="setSearch($event)"
-              />
-            </div>
-          </div>
-
-          @if (filteredConversations().length === 0) {
-            <p class="text-muted-foreground px-4 py-12 text-center text-sm">
-              {{ 'caroIa.emptyConversations' | transloco }}
-            </p>
-          } @else {
-            <div class="hidden overflow-x-auto md:block">
-              <table class="w-full table-fixed text-sm">
-                <thead class="text-muted-foreground border-b text-left text-xs uppercase tracking-wide">
-                  <tr>
-                    <th class="w-[30%] px-4 py-3 font-medium">{{ 'caroIa.table.conversation' | transloco }}</th>
-                    <th class="w-[38%] px-4 py-3 font-medium">{{ 'caroIa.table.preview' | transloco }}</th>
-                    <th class="w-[14%] px-4 py-3 font-medium">{{ 'caroIa.table.updated' | transloco }}</th>
-                    <th class="w-[8%] px-4 py-3 text-end font-medium">{{ 'caroIa.table.messages' | transloco }}</th>
-                    <th class="w-[10%] px-4 py-3 text-end font-medium">{{ 'caroIa.table.actions' | transloco }}</th>
-                  </tr>
-                </thead>
-                <tbody class="divide-y">
-                  @for (conversation of filteredConversations(); track conversation.id) {
-                    <tr class="hover:bg-muted/40">
-                      <td class="w-[30%] px-4 py-3">
-                        <button type="button" class="block w-full truncate text-start font-medium hover:underline" (click)="selectConversation(conversation.id)">
-                          {{ conversation.title }}
-                        </button>
-                      </td>
-                      <td class="text-muted-foreground w-[38%] px-4 py-3">
-                        <span class="block truncate">{{ conversation.preview ?? '—' }}</span>
-                      </td>
-                      <td class="text-muted-foreground w-[14%] whitespace-nowrap px-4 py-3">{{ relative(conversation.updatedAt) }}</td>
-                      <td class="w-[8%] px-4 py-3 text-end tabular-nums">{{ conversation.messageCount }}</td>
-                      <td class="w-[10%] px-4 py-3">
-                        <div class="flex items-center justify-end gap-1">
-                          <button hlmBtn variant="ghost" size="icon-sm" type="button" [attr.aria-label]="'caroIa.table.open' | transloco" (click)="selectConversation(conversation.id)">
-                            <ng-icon name="lucideMessageSquare" />
-                          </button>
-                          <button hlmBtn variant="ghost" size="icon-sm" type="button" [attr.aria-label]="'caroIa.table.rename' | transloco" (click)="tableRename(conversation)">
-                            <ng-icon name="lucidePencil" />
-                          </button>
-                          <button hlmBtn variant="ghost" size="icon-sm" type="button" class="text-destructive" [attr.aria-label]="'caroIa.table.delete' | transloco" (click)="tableDelete(conversation)">
-                            <ng-icon name="lucideTrash2" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  }
-                </tbody>
-              </table>
-            </div>
-
-            <div class="grid gap-2 p-3 md:hidden">
+      @if (filteredConversations().length === 0) {
+        <p class="text-muted-foreground flex-1 overflow-y-auto px-4 py-12 text-center text-sm">
+          {{ 'caroIa.emptyConversations' | transloco }}
+        </p>
+      } @else {
+        <div class="hidden min-h-0 flex-1 overflow-auto md:block">
+          <table class="w-full table-fixed text-sm">
+            <thead class="text-muted-foreground bg-card sticky top-0 z-10 border-b text-left text-xs uppercase tracking-wide">
+              <tr>
+                <th class="w-[30%] px-4 py-3 font-medium">{{ 'caroIa.table.conversation' | transloco }}</th>
+                <th class="w-[38%] px-4 py-3 font-medium">{{ 'caroIa.table.preview' | transloco }}</th>
+                <th class="w-[14%] px-4 py-3 font-medium">{{ 'caroIa.table.updated' | transloco }}</th>
+                <th class="w-[8%] px-4 py-3 text-end font-medium">{{ 'caroIa.table.messages' | transloco }}</th>
+                <th class="w-[10%] px-4 py-3 text-end font-medium">{{ 'caroIa.table.actions' | transloco }}</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y">
               @for (conversation of filteredConversations(); track conversation.id) {
-                <div class="bg-background flex items-start gap-3 rounded-lg border p-3">
-                  <span class="bg-primary/10 text-primary flex size-9 shrink-0 items-center justify-center rounded-full">
-                    <ng-icon name="lucideMessageSquare" />
-                  </span>
-                  <div class="min-w-0 flex-1">
-                    <button type="button" class="block w-full truncate text-start text-sm font-medium" (click)="selectConversation(conversation.id)">
+                <tr class="hover:bg-muted/40">
+                  <td class="w-[30%] px-4 py-3">
+                    <button type="button" class="block w-full truncate text-start font-medium hover:underline" (click)="selectConversation(conversation.id)">
                       {{ conversation.title }}
                     </button>
-                    <p class="text-muted-foreground truncate text-xs">{{ conversation.preview ?? '—' }}</p>
-                    <p class="text-muted-foreground mt-1 text-[11px]">
-                      {{ relative(conversation.updatedAt) }} · {{ conversation.messageCount }} {{ 'caroIa.table.messages' | transloco }}
-                    </p>
-                  </div>
-                  <div class="flex flex-col gap-1">
-                    <button hlmBtn variant="ghost" size="icon-sm" type="button" (click)="tableRename(conversation)">
-                      <ng-icon name="lucidePencil" />
-                    </button>
-                    <button hlmBtn variant="ghost" size="icon-sm" type="button" class="text-destructive" (click)="tableDelete(conversation)">
-                      <ng-icon name="lucideTrash2" />
-                    </button>
-                  </div>
-                </div>
+                  </td>
+                  <td class="text-muted-foreground w-[38%] px-4 py-3">
+                    <span class="block truncate">{{ conversation.preview ?? '—' }}</span>
+                  </td>
+                  <td class="text-muted-foreground w-[14%] whitespace-nowrap px-4 py-3">{{ relative(conversation.updatedAt) }}</td>
+                  <td class="w-[8%] px-4 py-3 text-end tabular-nums">{{ conversation.messageCount }}</td>
+                  <td class="w-[10%] px-4 py-3">
+                    <div class="flex items-center justify-end gap-1">
+                      <button hlmBtn variant="ghost" size="icon-sm" type="button" [attr.aria-label]="'caroIa.table.open' | transloco" (click)="selectConversation(conversation.id)">
+                        <ng-icon name="lucideMessageSquare" />
+                      </button>
+                      <button hlmBtn variant="ghost" size="icon-sm" type="button" [attr.aria-label]="'caroIa.table.rename' | transloco" (click)="tableRename(conversation)">
+                        <ng-icon name="lucidePencil" />
+                      </button>
+                      <button hlmBtn variant="ghost" size="icon-sm" type="button" class="text-destructive" [attr.aria-label]="'caroIa.table.delete' | transloco" (click)="tableDelete(conversation)">
+                        <ng-icon name="lucideTrash2" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
               }
+            </tbody>
+          </table>
+        </div>
+
+        <div class="grid min-h-0 flex-1 gap-2 overflow-y-auto p-3 md:hidden">
+          @for (conversation of filteredConversations(); track conversation.id) {
+            <div class="bg-background flex items-start gap-3 rounded-lg border p-3">
+              <span class="bg-primary/10 text-primary flex size-9 shrink-0 items-center justify-center rounded-full">
+                <ng-icon name="lucideMessageSquare" />
+              </span>
+              <div class="min-w-0 flex-1">
+                <button type="button" class="block w-full truncate text-start text-sm font-medium" (click)="selectConversation(conversation.id)">
+                  {{ conversation.title }}
+                </button>
+                <p class="text-muted-foreground truncate text-xs">{{ conversation.preview ?? '—' }}</p>
+                <p class="text-muted-foreground mt-1 text-[11px]">
+                  {{ relative(conversation.updatedAt) }} · {{ conversation.messageCount }} {{ 'caroIa.table.messages' | transloco }}
+                </p>
+              </div>
+              <div class="flex flex-col gap-1">
+                <button hlmBtn variant="ghost" size="icon-sm" type="button" (click)="tableRename(conversation)">
+                  <ng-icon name="lucidePencil" />
+                </button>
+                <button hlmBtn variant="ghost" size="icon-sm" type="button" class="text-destructive" (click)="tableDelete(conversation)">
+                  <ng-icon name="lucideTrash2" />
+                </button>
+              </div>
             </div>
           }
         </div>
-      } @else {
-        @if (store.activeConversation(); as conversation) {
-          <div class="mb-2 flex items-center justify-between gap-2">
-            <div class="min-w-0">
-              <h2 class="truncate text-base font-semibold">{{ conversation.title }}</h2>
-              <p class="text-muted-foreground text-xs">
-                {{ conversation.messageCount }} {{ 'caroIa.table.messages' | transloco }} ·
-                DeepSeek · MCP
-              </p>
-            </div>
-          </div>
-        }
+      }
+    </div>
+  } @else {
+    <div class="mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col">
+      <div class="flex items-center gap-2 pb-2">
+        <button hlmBtn variant="ghost" size="sm" type="button" (click)="backToConversations()">
+          <ng-icon name="lucideArrowLeft" />
+          {{ 'caroIa.backToConversations' | transloco }}
+        </button>
+      </div>
 
-        <pk-chat-container-root class="bg-card min-h-0 flex-1 rounded-xl border px-3 py-5 sm:px-6">
-          <pk-chat-container-content class="mx-auto w-full max-w-3xl gap-6">
-            @if (store.loadingMessages()) {
-              <div class="grid gap-4 py-8">
-                @for (row of [0, 1, 2]; track row) {
-                  <div class="flex gap-3">
-                    <div class="bg-muted size-8 shrink-0 animate-pulse rounded-full"></div>
-                    <div class="grid flex-1 gap-2">
-                      <div class="bg-muted h-3 w-1/2 animate-pulse rounded"></div>
-                      <div class="bg-muted h-3 w-3/4 animate-pulse rounded"></div>
-                    </div>
+      <pk-chat-container-root class="bg-card min-h-0 flex-1 rounded-xl border px-3 py-5 sm:px-6">
+        <pk-chat-container-content class="mx-auto w-full max-w-3xl gap-6">
+          @if (store.loadingMessages()) {
+            <div class="grid gap-4 py-8">
+              @for (row of [0, 1, 2]; track row) {
+                <div class="flex gap-3">
+                  <div class="bg-muted size-8 shrink-0 animate-pulse rounded-full"></div>
+                  <div class="grid flex-1 gap-2">
+                    <div class="bg-muted h-3 w-1/2 animate-pulse rounded"></div>
+                    <div class="bg-muted h-3 w-3/4 animate-pulse rounded"></div>
                   </div>
+                </div>
+              }
+            </div>
+          } @else if (store.messages().length === 0) {
+            <div class="flex flex-col items-center gap-4 px-4 py-12 text-center sm:py-20">
+              <span class="bg-primary/10 text-primary flex size-14 items-center justify-center rounded-2xl">
+                <ng-icon name="lucideSparkles" class="text-2xl" />
+              </span>
+              <div class="grid gap-1">
+                <h2 class="text-xl font-semibold">{{ 'caroIa.emptyChatTitle' | transloco }}</h2>
+                <p class="text-muted-foreground max-w-md text-sm">{{ 'caroIa.emptyChatHint' | transloco }}</p>
+              </div>
+              <div class="flex max-w-2xl flex-wrap justify-center gap-2">
+                @for (suggestion of suggestions(); track suggestion) {
+                  <pk-prompt-suggestion
+                    [content]="suggestion"
+                    variant="outline"
+                    size="sm"
+                    (clicked)="useSuggestion(suggestion)"
+                  />
                 }
               </div>
-            } @else if (store.messages().length === 0) {
-              <div class="flex flex-col items-center gap-4 px-4 py-12 text-center sm:py-20">
-                <span class="bg-primary/10 text-primary flex size-14 items-center justify-center rounded-2xl">
-                  <ng-icon name="lucideSparkles" class="text-2xl" />
-                </span>
-                <div class="grid gap-1">
-                  <h2 class="text-xl font-semibold">{{ 'caroIa.emptyChatTitle' | transloco }}</h2>
-                  <p class="text-muted-foreground max-w-md text-sm">{{ 'caroIa.emptyChatHint' | transloco }}</p>
-                </div>
-                <div class="flex max-w-2xl flex-wrap justify-center gap-2">
-                  @for (suggestion of suggestions(); track suggestion) {
-                    <pk-prompt-suggestion
-                      [content]="suggestion"
-                      variant="outline"
-                      size="sm"
-                      (clicked)="useSuggestion(suggestion)"
-                    />
+            </div>
+          } @else {
+            @for (message of store.messages(); track message.id) {
+              @if (message.role === 'user') {
+                <pk-user-turn>
+                  <span class="whitespace-pre-wrap">{{ message.content }}</span>
+                  @if (message.attachments.length > 0) {
+                    <div class="mt-2 flex flex-wrap gap-1.5">
+                      @for (attachment of message.attachments; track attachment.id) {
+                        <span hlmBadge variant="secondary" class="gap-1">
+                          <ng-icon name="lucideFileText" />
+                          {{ attachment.filename }}
+                        </span>
+                      }
+                    </div>
                   }
-                </div>
-              </div>
-            } @else {
-              @for (message of store.messages(); track message.id) {
-                @if (message.role === 'user') {
-                  <pk-user-turn>
-                    <span class="whitespace-pre-wrap">{{ message.content }}</span>
-                    @if (message.attachments.length > 0) {
-                      <div class="mt-2 flex flex-wrap gap-1.5">
-                        @for (attachment of message.attachments; track attachment.id) {
-                          <span hlmBadge variant="secondary" class="gap-1">
-                            <ng-icon name="lucideFileText" />
-                            {{ attachment.filename }}
-                          </span>
-                        }
-                      </div>
-                    }
-                  </pk-user-turn>
-                } @else {
-                  <pk-assistant-turn
-                    [modelName]="'CaroIA · DeepSeek'"
-                    [streaming]="store.isStreaming(message.id)"
-                    [copyText]="message.content"
-                  >
-                    @if (message.toolCalls.length > 0) {
-                      <div class="mb-3 flex flex-wrap gap-1.5">
-                        @for (tool of message.toolCalls; track tool.id) {
-                          <span hlmBadge variant="outline" class="gap-1.5">
-                            @if (tool.state === 'running') {
-                              <hlm-spinner class="text-[length:--spacing(3)]" />
-                            } @else if (tool.state === 'success') {
-                              <ng-icon name="lucideCheck" class="text-emerald-600 dark:text-emerald-400" />
-                            } @else {
-                              <ng-icon name="lucideTriangleAlert" class="text-destructive" />
-                            }
-                            {{ tool.label }}
-                          </span>
-                        }
-                      </div>
-                    }
+                </pk-user-turn>
+              } @else {
+                <pk-assistant-turn
+                  [modelName]="'CaroIA · DeepSeek'"
+                  [streaming]="store.isStreaming(message.id)"
+                  [copyText]="message.content"
+                >
+                  @if (message.toolCalls.length > 0) {
+                    <div class="mb-3 flex flex-wrap gap-1.5">
+                      @for (tool of message.toolCalls; track tool.id) {
+                        <span hlmBadge variant="outline" class="gap-1.5">
+                          @if (tool.state === 'running') {
+                            <hlm-spinner class="text-[length:--spacing(3)]" />
+                          } @else if (tool.state === 'success') {
+                            <ng-icon name="lucideCheck" class="text-emerald-600 dark:text-emerald-400" />
+                          } @else {
+                            <ng-icon name="lucideTriangleAlert" class="text-destructive" />
+                          }
+                          {{ tool.label }}
+                        </span>
+                      }
+                    </div>
+                  }
 
-                    <pk-markdown [class]="'pk-markdown'" [content]="message.content" />
+                  <pk-markdown [class]="'pk-markdown'" [content]="message.content" />
 
-                    @for (approval of message.approvals; track approval.id) {
-                      <div class="mt-4">
-                        @if (approval.status === 'pending') {
-                          <pk-approval
-                            [title]="approval.title"
-                            [description]="approval.summary"
-                            [parameters]="approvalParameters(approval)"
-                            [approveLabel]="'caroIa.approval.approve' | transloco"
-                            [rejectLabel]="'caroIa.approval.reject' | transloco"
-                            [pending]="store.approving()"
-                            (approved)="store.decideApproval(approval.id, 'approve')"
-                            (rejected)="store.decideApproval(approval.id, 'reject')"
-                          />
-                        } @else {
-                          <span
-                            hlmBadge
-                            [variant]="approval.status === 'approved' ? 'default' : 'destructive'"
-                          >
-                            {{ approvalStatusLabel(approval) }}
-                          </span>
-                        }
-                      </div>
-                    }
+                  @for (approval of message.approvals; track approval.id) {
+                    <div class="mt-4">
+                      @if (approval.status === 'pending') {
+                        <pk-approval
+                          [title]="approval.title"
+                          [description]="approval.summary"
+                          [parameters]="approvalParameters(approval)"
+                          [approveLabel]="'caroIa.approval.approve' | transloco"
+                          [rejectLabel]="'caroIa.approval.reject' | transloco"
+                          [pending]="store.approving()"
+                          (approved)="store.decideApproval(approval.id, 'approve')"
+                          (rejected)="store.decideApproval(approval.id, 'reject')"
+                        />
+                      } @else {
+                        <span
+                          hlmBadge
+                          [variant]="approval.status === 'approved' ? 'default' : 'destructive'"
+                        >
+                          {{ approvalStatusLabel(approval) }}
+                        </span>
+                      }
+                    </div>
+                  }
 
-                    @if (message.citations.length > 0) {
-                      <div class="mt-3 flex flex-wrap gap-1.5">
-                        @for (citation of message.citations; track citation.toolCallId) {
-                          <span hlmBadge variant="secondary" class="gap-1 text-[10px]">
-                            <ng-icon name="lucideDatabase" />
-                            {{ citation.label }}
-                          </span>
-                        }
-                      </div>
-                    }
-                  </pk-assistant-turn>
-                }
+                  @if (message.citations.length > 0) {
+                    <div class="mt-3 flex flex-wrap gap-1.5">
+                      @for (citation of message.citations; track citation.toolCallId) {
+                        <span hlmBadge variant="secondary" class="gap-1 text-[10px]">
+                          <ng-icon name="lucideDatabase" />
+                          {{ citation.label }}
+                        </span>
+                      }
+                    </div>
+                  }
+                </pk-assistant-turn>
               }
             }
-            <pk-chat-container-scroll-anchor />
-          </pk-chat-container-content>
-        </pk-chat-container-root>
+          }
+          <pk-chat-container-scroll-anchor />
+        </pk-chat-container-content>
+      </pk-chat-container-root>
 
-        @if (store.transcribing()) {
-          <div class="text-muted-foreground mt-2 flex items-center gap-2 text-xs">
-            <hlm-spinner class="text-[length:--spacing(3)]" />
-            {{ 'caroIa.audio.transcribing' | transloco }}
-          </div>
-        }
-
-        @if (audioError(); as error) {
-          <p class="text-destructive mt-2 text-xs" role="alert">{{ error }}</p>
-        }
-
-        @if (store.error(); as error) {
-          <div class="border-destructive/30 bg-destructive/5 text-destructive mt-2 flex items-center gap-2 rounded-lg border px-3 py-2 text-sm" role="alert">
-            <ng-icon name="lucideTriangleAlert" class="shrink-0" />
-            <p class="flex-1">{{ error }}</p>
-            <button hlmBtn variant="ghost" size="icon-sm" type="button" (click)="store.dismissError()">
-              <ng-icon name="lucideX" />
-            </button>
-          </div>
-        }
-
-        <div class="bg-background mt-3 rounded-2xl border px-3 pt-2 pb-3 shadow-sm">
-          <pk-composer
-            [(value)]="composerValue"
-            [placeholder]="'caroIa.placeholder' | transloco"
-            [label]="'caroIa.placeholder' | transloco"
-            [busy]="store.sending()"
-            [sendBlocked]="store.uploading() || store.transcribing()"
-            [attachable]="true"
-            [accept]="'.pdf,.docx,.xlsx,.csv,.txt,.md,.png,.jpg,.jpeg,audio/*'"
-            [maxHeight]="180"
-            (submitted)="onSubmit($event)"
-            (stopped)="store.stop()"
-            (filesPicked)="onFiles($event)"
-          >
-            @if (store.attachments().length > 0) {
-              <div pkComposerTop class="mb-2 flex flex-wrap gap-1.5">
-                @for (attachment of store.attachments(); track attachment.id) {
-                  <span hlmBadge variant="secondary" class="gap-1.5 py-1">
-                    @if (attachment.status === 'uploading' || attachment.status === 'processing') {
-                      <hlm-spinner class="text-[length:--spacing(3)]" />
-                    } @else {
-                      <ng-icon
-                        [name]="isAudio(attachment) ? 'lucideFileText' : 'lucideFileText'"
-                        class="text-muted-foreground"
-                      />
-                    }
-                    <span class="max-w-40 truncate">{{ attachment.filename }}</span>
-                    <span class="text-muted-foreground text-[10px]">{{ formatSize(attachment.size) }}</span>
-                    <button
-                      type="button"
-                      class="hover:text-foreground text-muted-foreground"
-                      [attr.aria-label]="'caroIa.attachments.remove' | transloco"
-                      (click)="store.removeAttachment(attachment.id)"
-                    >
-                      <ng-icon name="lucideX" class="text-[length:--spacing(3)]" />
-                    </button>
-                  </span>
-                }
-              </div>
-            }
-            <div pkComposerStart class="flex items-center">
-              <app-caro-audio-recorder
-                [disabled]="store.sending()"
-                [startLabel]="'caroIa.audio.record' | transloco"
-                [stopLabel]="'caroIa.audio.stop' | transloco"
-                [unsupportedMessage]="'caroIa.audio.unsupported' | transloco"
-                [permissionMessage]="'caroIa.audio.permission' | transloco"
-                (recorded)="onAudio($event)"
-                (failed)="audioError.set($event)"
-              />
-            </div>
-          </pk-composer>
+      @if (store.transcribing()) {
+        <div class="text-muted-foreground mt-2 flex items-center gap-2 text-xs">
+          <hlm-spinner class="text-[length:--spacing(3)]" />
+          {{ 'caroIa.audio.transcribing' | transloco }}
         </div>
-        <p class="text-muted-foreground mt-2 flex items-center justify-center gap-1.5 text-center text-[11px]">
-          <ng-icon name="lucideDatabase" />
-          {{ 'caroIa.footer' | transloco }}
-        </p>
       }
-    </main>
-  </div>
+
+      @if (audioError(); as error) {
+        <p class="text-destructive mt-2 text-xs" role="alert">{{ error }}</p>
+      }
+
+      @if (store.error(); as error) {
+        <div class="border-destructive/30 bg-destructive/5 text-destructive mt-2 flex items-center gap-2 rounded-lg border px-3 py-2 text-sm" role="alert">
+          <ng-icon name="lucideTriangleAlert" class="shrink-0" />
+          <p class="flex-1">{{ error }}</p>
+          <button hlmBtn variant="ghost" size="icon-sm" type="button" (click)="store.dismissError()">
+            <ng-icon name="lucideX" />
+          </button>
+        </div>
+      }
+
+      <div class="bg-background mt-3 rounded-2xl border px-3 pt-2 pb-3 shadow-sm">
+        <pk-composer
+          [(value)]="composerValue"
+          [placeholder]="'caroIa.placeholder' | transloco"
+          [label]="'caroIa.placeholder' | transloco"
+          [busy]="store.sending()"
+          [sendBlocked]="store.uploading() || store.transcribing()"
+          [attachable]="true"
+          [accept]="'.pdf,.docx,.xlsx,.csv,.txt,.md,.png,.jpg,.jpeg,audio/*'"
+          [maxHeight]="180"
+          (submitted)="onSubmit($event)"
+          (stopped)="store.stop()"
+          (filesPicked)="onFiles($event)"
+        >
+          @if (store.attachments().length > 0) {
+            <div pkComposerTop class="mb-2 flex flex-wrap gap-1.5">
+              @for (attachment of store.attachments(); track attachment.id) {
+                <span hlmBadge variant="secondary" class="gap-1.5 py-1">
+                  @if (attachment.status === 'uploading' || attachment.status === 'processing') {
+                    <hlm-spinner class="text-[length:--spacing(3)]" />
+                  } @else {
+                    <ng-icon
+                      [name]="isAudio(attachment) ? 'lucideFileText' : 'lucideFileText'"
+                      class="text-muted-foreground"
+                    />
+                  }
+                  <span class="max-w-40 truncate">{{ attachment.filename }}</span>
+                  <span class="text-muted-foreground text-[10px]">{{ formatSize(attachment.size) }}</span>
+                  <button
+                    type="button"
+                    class="hover:text-foreground text-muted-foreground"
+                    [attr.aria-label]="'caroIa.attachments.remove' | transloco"
+                    (click)="store.removeAttachment(attachment.id)"
+                  >
+                    <ng-icon name="lucideX" class="text-[length:--spacing(3)]" />
+                  </button>
+                </span>
+              }
+            </div>
+          }
+          <div pkComposerStart class="flex items-center">
+            <app-caro-audio-recorder
+              [disabled]="store.sending()"
+              [startLabel]="'caroIa.audio.record' | transloco"
+              [stopLabel]="'caroIa.audio.stop' | transloco"
+              [unsupportedMessage]="'caroIa.audio.unsupported' | transloco"
+              [permissionMessage]="'caroIa.audio.permission' | transloco"
+              (recorded)="onAudio($event)"
+              (failed)="audioError.set($event)"
+            />
+          </div>
+        </pk-composer>
+      </div>
+      <p class="text-muted-foreground mt-2 flex items-center justify-center gap-1.5 text-center text-[11px]">
+        <ng-icon name="lucideDatabase" />
+        {{ 'caroIa.footer' | transloco }}
+      </p>
+    </div>
+  }
 </section>

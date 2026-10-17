@@ -1264,6 +1264,7 @@ export const ES = {
     preview: 'Vista previa · datos simulados',
     chat: 'Chat',
     conversations: 'Conversaciones',
+    backToConversations: 'Volver a conversaciones',
     newConversation: 'Nueva conversación',
     searchPlaceholder: 'Buscar conversaciones…',
     emptyConversations: 'Todavía no hay conversaciones.',

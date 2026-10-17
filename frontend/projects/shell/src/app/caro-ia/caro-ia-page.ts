@@ -10,16 +10,15 @@ import {
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
+  lucideArrowLeft,
   lucideCheck,
   lucideDatabase,
   lucideFileText,
-  lucideMenu,
   lucideMessageSquare,
   lucidePencil,
   lucidePlus,
   lucideSearch,
   lucideSparkles,
-  lucideTable,
   lucideTrash2,
   lucideTriangleAlert,
   lucideX,
@@ -35,11 +34,6 @@ import {
   PkChatContainerScrollAnchor,
 } from '@ui/prompt-kit/chat-container';
 import { PkAssistantTurn, PkUserTurn } from '@ui/prompt-kit/chat-turn';
-import {
-  PkConversationList,
-  type Conversation,
-  type ConversationRename,
-} from '@ui/prompt-kit/conversation-list';
 import { PkComposer } from '@ui/prompt-kit/composer';
 import { PkMarkdown } from '@ui/prompt-kit/markdown';
 import { PkApproval } from '@ui/prompt-kit/approval';
@@ -52,9 +46,9 @@ import { CaroIaStore } from './caro-ia.store';
 type CaroIaView = 'chat' | 'table';
 
 /**
- * Página CaroIA (rama UI): chat estilo Gemini/DeepSeek con `ngx-prompt-kit`,
- * conversaciones simuladas, adjuntos, audio y aprobaciones. La rama backend
- * sustituye el gateway simulado por HTTP/SSE sin tocar esta página.
+ * Página CaroIA (rama UI). La vista inicial es la tabla de conversaciones; el
+ * chat se abre al seleccionar una fila o crear una conversación. Sin cabecera
+ * propia: la tabla/chat ocupan el alto completo del shell y scrollean dentro.
  */
 @Component({
   selector: 'app-caro-ia-page',
@@ -65,7 +59,6 @@ type CaroIaView = 'chat' | 'table';
     HlmButton,
     HlmInput,
     HlmSpinner,
-    PkConversationList,
     PkChatContainerRoot,
     PkChatContainerContent,
     PkChatContainerScrollAnchor,
@@ -79,16 +72,15 @@ type CaroIaView = 'chat' | 'table';
   ],
   providers: [
     provideIcons({
+      lucideArrowLeft,
       lucideCheck,
-          lucideDatabase,
+      lucideDatabase,
       lucideFileText,
-      lucideMenu,
       lucideMessageSquare,
       lucidePencil,
       lucidePlus,
       lucideSearch,
       lucideSparkles,
-      lucideTable,
       lucideTrash2,
       lucideTriangleAlert,
       lucideX,
@@ -101,8 +93,7 @@ export class CaroIaPage implements OnInit {
   private readonly transloco = inject(TranslocoService);
   protected readonly store = inject(CaroIaStore);
 
-  protected readonly view = signal<CaroIaView>('chat');
-  protected readonly sidebarOpen = signal(false);
+  protected readonly view = signal<CaroIaView>('table');
   protected readonly composerValue = signal('');
   protected readonly search = signal('');
   protected readonly audioError = signal<string | null>(null);
@@ -110,15 +101,6 @@ export class CaroIaPage implements OnInit {
   protected readonly language = toSignal(this.transloco.langChanges$, {
     initialValue: this.transloco.getActiveLang(),
   });
-
-  protected readonly conversationItems = computed<Conversation[]>(() =>
-    this.store.conversations().map((conversation) => ({
-      id: conversation.id,
-      title: conversation.title,
-      preview: conversation.preview ?? '',
-      updatedAt: conversation.updatedAt,
-    })),
-  );
 
   protected readonly filteredConversations = computed<CaroConversation[]>(() => {
     const query = this.search().trim().toLowerCase();
@@ -141,17 +123,6 @@ export class CaroIaPage implements OnInit {
     ];
   });
 
-  protected readonly groupLabels = computed(() => {
-    this.language();
-
-    return {
-      today: this.t('caroIa.groups.today'),
-      yesterday: this.t('caroIa.groups.yesterday'),
-      last7: this.t('caroIa.groups.last7'),
-      older: this.t('caroIa.groups.older'),
-    };
-  });
-
   ngOnInit(): void {
     this.store.loadConversations();
   }
@@ -159,26 +130,17 @@ export class CaroIaPage implements OnInit {
   protected newConversation(): void {
     this.store.create();
     this.view.set('chat');
-    this.sidebarOpen.set(false);
     queueMicrotask(() => this.composer()?.focus());
   }
 
   protected selectConversation(id: string): void {
     this.store.open(id);
     this.view.set('chat');
-    this.sidebarOpen.set(false);
   }
 
-  protected rename(event: ConversationRename): void {
-    this.store.rename(event.id, event.title);
-  }
-
-  protected remove(id: string): void {
-    if (!window.confirm(this.t('caroIa.table.deleteConfirm'))) {
-      return;
-    }
-
-    this.store.remove(id);
+  protected backToConversations(): void {
+    this.view.set('table');
+    this.store.dismissError();
   }
 
   protected onSubmit(content: string): void {
@@ -209,19 +171,6 @@ export class CaroIaPage implements OnInit {
       },
       error: () => this.audioError.set(this.t('caroIa.audio.error')),
     });
-  }
-
-  protected toggleView(view: CaroIaView): void {
-    this.view.set(view);
-    this.sidebarOpen.set(false);
-  }
-
-  protected openSidebar(): void {
-    this.sidebarOpen.set(true);
-  }
-
-  protected closeSidebar(): void {
-    this.sidebarOpen.set(false);
   }
 
   protected setSearch(event: Event): void {
