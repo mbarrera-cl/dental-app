@@ -13,7 +13,15 @@ What ships working today:
 - **Patient records (ficha)** — the Chilean fields done right: validated RUT as
   the business key (módulo 11 check digit, normalized to `12345678-5`),
   region/commune address, FONASA ⇄ ISAPRE coverage, emergency contact. Full CRUD
-  plus lookup by RUT.
+  plus lookup by RUT, and a sequential **N° de Historia Clínica** (`HC-000001`)
+  assigned on creation.
+- **Dental clinical record (ficha clínica, HCU-form.033)** — the SNS-MSP dental
+  history: header autofilled from the patient, age category, motivo/enfermedad
+  actual, antecedentes, signos vitales and examen estomatognático; an
+  **append-only odontogram** (permanent 18–48 + primary 55–85, 5 surfaces + root,
+  red = pending / blue = completed, recession/mobility grades, void-with-audit)
+  and the **derived indices** (CPO/ceo, simplified oral hygiene) recomputed
+  server-side from the findings.
 - **Authentication & RBAC** — JWT access tokens plus a rotating refresh token in
   an httpOnly cookie, configurable roles and per-user permissions, and a
   runtime-configurable password policy with history.
@@ -22,10 +30,9 @@ What ships working today:
 - **Dashboard** — live summary: total patients and the most recent ones.
 - **Settings** — typed, runtime-configurable settings.
 
-Coming next: the **interactive odontogram** (FDI dental chart — 5 surfaces + root
-per tooth, pending/completed findings) mounted inside the patient record, fed by
-a unified clinical timeline and an auto-generated treatment plan. See
-[Roadmap](#roadmap).
+Coming next: the **treatment plan + clinical timeline** (the audit events are
+already recorded), radiographs, an auto-generated PDF of the HCU form and the
+digital-signature locking UI. See [Roadmap](#roadmap).
 
 ## Stack
 
@@ -96,6 +103,7 @@ src/
 └── modules/                         # One folder per bounded context
     ├── apikeys/                     # Programmatic API keys (scoped to their owner)
     ├── auth/                        # Login, refresh rotation, logout, password flows
+    ├── clinical/                    # Dental clinical record (ficha HCU): odontogram + indices
     ├── patients/                    # Dental patients (Chilean RUT + health data)
     │   ├── domain/                  # Patient entity, Rut/Telefono/Previsión VOs …
     │   ├── application/             # PatientRepositoryPort + use cases (+ specs)
@@ -194,6 +202,7 @@ Permissions are grouped in categories (one per module, plus a UI-only
 | ----------- | ------------------------------------------------------------------------------------------------------------ |
 | `users`     | `users:read` · `users:create` · `users:update` · `users:delete` · `users:reset-password` · `users:permissions` |
 | `patients`  | `patients:read` · `patients:create` · `patients:update` · `patients:delete`                                   |
+| `clinical`  | `clinical:read` · `clinical:create` · `clinical:update`                                                       |
 | `roles`     | `roles:read` · `roles:create` · `roles:update` · `roles:delete`                                               |
 | `settings`  | `settings:read` · `settings:update`                                                                           |
 | `apikeys`   | `apikeys:self` · `apikeys:read` · `apikeys:manage`                                                            |
@@ -444,6 +453,45 @@ npm run seed:patients         # 100 Chilean patients (deterministic valid RUTs)
 npm run seed:patients -- 50   # custom count
 ```
 
+#### Dental clinical record (ficha dental, HCU-form.033)
+
+The record is opened per patient (`POST /patients/:id/clinical-record`, one per
+patient) and everything else hangs from the record id. The odontogram is an
+**append-only log**: findings are never edited in place, mistakes are voided
+with actor + timestamp, and the current chart is a projection of the latest
+non-voided action per tooth, surfaces and symbol. The derived indices never
+store state either — they are recomputed from the findings on every read.
+
+| Method | Path                                              | Success | Failure                                                                    |
+| ------ | ------------------------------------------------- | ------- | -------------------------------------------------------------------------- |
+| POST   | `/patients/:patientId/clinical-record`            | `201`   | `400` invalid payload · `404` unknown patient · `409` record already open  |
+| GET    | `/patients/:patientId/clinical-record`            | `200`   | `404` unknown patient or no record yet                                     |
+| GET    | `/clinical-records/:id`                           | `200`   | `404` unknown record                                                       |
+| PATCH  | `/clinical-records/:id`                           | `200`   | `400` invalid/empty payload · `404` unknown · `423` finalized              |
+| GET    | `/clinical-records/:id/findings`                  | `200`   | `404` unknown record                                                       |
+| POST   | `/clinical-records/:id/findings`                  | `201`   | `400` invalid finding · `404` unknown · `423` finalized                    |
+| POST   | `/clinical-records/:id/findings/:findingId/void`  | `201`   | `404` unknown · `409` already voided · `423` finalized                     |
+| GET    | `/clinical-records/:id/indices`                   | `200`   | `404` unknown record                                                       |
+| GET    | `/clinical-records/:id/events`                    | `200`   | `404` unknown record                                                       |
+
+```bash
+# Open the ficha of a patient (categoria is optional — suggested from the age)
+curl -s -X POST http://localhost:3000/patients/<id>/clinical-record \
+  -H 'Content-Type: application/json' \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{"categoria": "mayor-20"}'
+
+# Record a caries on the occlusal surface of tooth 36 (red, pending)
+curl -s -X POST http://localhost:3000/clinical-records/<recordId>/findings \
+  -H 'Content-Type: application/json' \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{"tooth": 36, "surfaces": ["O"], "symbol": "caries", "recesion": 1}'
+
+# Derived CPO/ceo + hygiene totals (never stored)
+curl -s http://localhost:3000/clinical-records/<recordId>/indices \
+  -H "Authorization: Bearer $TOKEN"
+```
+
 ## Database
 
 - **Driver:** `node:sqlite` (built into Node — nothing to install). The single
@@ -453,7 +501,8 @@ npm run seed:patients -- 50   # custom count
   The directory is created on first boot; WAL mode is enabled.
 - **Schema:** `SqliteDatabase.ensureSchema` creates all tables with
   `CREATE TABLE IF NOT EXISTS` — `users`, `roles`, `user_roles`, `user_permissions`,
-  `refresh_tokens`, `password_history`, `api_keys`, `patients`, `settings` and
+  `refresh_tokens`, `password_history`, `api_keys`, `patients`,
+  `clinical_records`, `clinical_findings`, `clinical_events`, `settings` and
   `bootstrap_state` — replace with real migrations when the schema grows.
 - **Error translation:** SQLite's `UNIQUE constraint failed` (errcode `2067`) is
   translated into the matching domain error *in the adapter*
@@ -475,7 +524,7 @@ is built and served independently:
 | App         | Port | Role   | Contents                                                                          |
 | ----------- | ---- | ------ | --------------------------------------------------------------------------------- |
 | `shell`     | 4200 | host   | Layout, login, navigation, language switcher, account (own API keys)              |
-| `patients`  | 4203 | remote | Full patient CRUD: list + search, create, edit, delete + RUT form                 |
+| `patients`  | 4203 | remote | Patient CRUD (list + search, RUT form) + **ficha clínica**: record form, odontogram and indices tabs |
 | `users`     | 4201 | remote | Account management: roles, status, direct permissions, password resets            |
 | `dashboard` | 4202 | remote | Live summary: total patients + the 5 most recent                                  |
 | `admin`     | 4204 | remote | Admin panel: role editor with the permission matrix, dynamic settings, API keys   |
@@ -486,10 +535,12 @@ Shared code lives in three libraries:
   with the spartan CLI and imported through path aliases (`@ui/button`, `@ui/dialog`,
   `@ui/table`, …), plus the Tailwind v4 theme and the i18n dictionaries.
 - **`projects/data-access`** — typed HTTP clients (`UsersApi`, `PatientsApi`,
-  `AuthApi`, `RolesApi`, `SettingsApi`, `PermissionsApi`, `ApiKeysApi`), the
-  RUT/phone helpers that mirror the backend value objects (módulo 11
-  validation, canonical formatting) and `mapApiError`, which translates backend
-  error names (`PatientAlreadyExistsError`, …) into i18n keys.
+  `ClinicalApi`, `AuthApi`, `RolesApi`, `SettingsApi`, `PermissionsApi`,
+  `ApiKeysApi`), the domain models shared by the remotes — including the ficha
+  clínica constants and chart projection (`clinical.model.ts`) — the RUT/phone
+  helpers that mirror the backend value objects (módulo 11 validation, canonical
+  formatting) and `mapApiError`, which translates backend error names
+  (`PatientAlreadyExistsError`, `ClinicalRecordLockedError`, …) into i18n keys.
 - **`projects/auth`** — session store (signals), JWT interceptor with single-flight
   refresh-and-retry, route/permission guards and the permission matrix shared by
   the admin views.
@@ -544,18 +595,17 @@ in `projects/shell/src/main.ts` and add the lazy route in `app.routes.ts`.
 
 ## Roadmap
 
-The next milestone turns the patient record into the clinical workspace:
+The ficha clínica already covers sections 1–9 of the HCU form (record,
+odontogram and indices). What follows:
 
-1. **Ficha del paciente + historial clínico** — route `/patients/:id` with tabs
-   (Datos / Historial / Odontograma / Plan) and a unified, paginated clinical event
-   feed (record changes today; chart actions later).
-2. **Odontograma interactivo** — the FDI chart: adult (32) and primary (20)
-   dentition, a per-tooth SVG with 5 surfaces + root, red = pending / blue =
-   completed findings, and the classic symbols (absent ✕, endodontics sigmoid,
-   crown/post circle). Designed to be instantiated only inside the patient record.
-3. **Plan de tratamiento y timeline dental** — every chart action generates a
-   treatment-plan entry and a clinical event; double-clicking a tooth shows its
-   history.
+1. **Plan de tratamiento y timeline dental** — every chart action already
+   records a clinical event (`GET /clinical-records/:id/events`); the next step
+   is the treatment-plan entries and the paginated timeline viewer (double-click
+   a tooth to see its history).
+2. **Radiografías** — imaging attached to the record (X-ray upload + viewer).
+3. **Cierre de la ficha** — digital signature with the locking UI (the
+   `finalizada` status is already enforced by the API with `423`) and an
+   auto-generated PDF of the HCU form.
 
 ## Swapping the persistence adapter
 
@@ -611,14 +661,16 @@ Guidelines when writing adapters:
 - **Adapter integration** (`sqlite-user.repository.spec.ts`,
   `sqlite-patient.repository.spec.ts`) — runs the real SQLite adapters against a
   `:memory:` database, including error translation.
-- **REST e2e** (`test/**/*.e2e-spec.ts` — auth, users, patients, identity and
-  API keys) — boots the real `AppModule` through `configureApp` and swaps the
-  `SqliteDatabase` provider for a fresh `:memory:` instance per test
-  (`overrideProvider`), so pipes, filters, routing, guards and SQL are all
-  exercised over HTTP without touching the file database. The auth spec covers
-  login → refresh rotation → replay rejection, lockout, password policy and
-  `must_change_password`; the API keys spec covers the `X-Api-Key` lifecycle
-  (create → use → rotate → revoke), scope intersection and cross-user rules.
+- **REST e2e** (`test/**/*.e2e-spec.ts` — auth, users, patients, identity,
+  API keys and the clinical record) — boots the real `AppModule` through
+  `configureApp` and swaps the `SqliteDatabase` provider for a fresh `:memory:`
+  instance per test (`overrideProvider`), so pipes, filters, routing, guards and
+  SQL are all exercised over HTTP without touching the file database. The auth
+  spec covers login → refresh rotation → replay rejection, lockout, password
+  policy and `must_change_password`; the API keys spec covers the `X-Api-Key`
+  lifecycle (create → use → rotate → revoke), scope intersection and cross-user
+  rules; the clinical spec covers the record lifecycle, the append-only
+  odontogram with void + lock (`423`) and the derived indices.
 
 ## Conventions & decisions
 
