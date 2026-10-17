@@ -1,5 +1,6 @@
 import { dashboardCategory } from '../../../shared/security/permissions.js';
 import { apiKeysPermissions } from '../../apikeys/permissions.js';
+import { caroIaPermissions } from '../../caro-ia/permissions.js';
 import { patientsPermissions } from '../../patients/permissions.js';
 import { quotesPermissions } from '../../quotes/permissions.js';
 import { rolesPermissions } from '../../roles/permissions.js';
@@ -47,6 +48,12 @@ export const DEFAULT_MENU: readonly DefaultMenuEntry[] = [
     icon: 'lucideFileText',
     routeKey: 'quotes',
     requiredPermission: quotesPermissions.read,
+  },
+  {
+    kind: 'item',
+    icon: 'lucideSparkles',
+    routeKey: 'caroIa',
+    requiredPermission: caroIaPermissions.use,
   },
   {
     kind: 'group',

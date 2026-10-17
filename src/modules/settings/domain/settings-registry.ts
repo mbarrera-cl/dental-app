@@ -12,6 +12,7 @@ export const SETTING_GROUPS: readonly SettingGroup[] = [
   { id: 'quotes', description: 'Quotations (Arancel UCO) behaviour' },
   { id: 'activity', description: 'Activity trail: capture, privacy, retention and panel' },
   { id: 'mcp', description: 'Model Context Protocol server (tools and safety limits)' },
+  { id: 'caroIa', description: 'CaroIA assistant (chat, audio and write approvals)' },
 ];
 
 /** The source of truth for every configurable value in the system. */
@@ -477,6 +478,58 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
     type: 'boolean',
     default: true,
     description: 'Require confirm: true for approve, reject, delete and restore tools',
+  },
+  {
+    key: 'caroIa.allowWrites',
+    group: 'caroIa',
+    type: 'boolean',
+    default: false,
+    description: 'Allow CaroIA to propose write actions that require human approval',
+  },
+  {
+    key: 'caroIa.retentionDays',
+    group: 'caroIa',
+    type: 'number',
+    default: 0,
+    min: 0,
+    max: 3650,
+    description: 'Delete conversations older than this many days (0 = keep forever)',
+  },
+  {
+    key: 'caroIa.maxMessageLength',
+    group: 'caroIa',
+    type: 'number',
+    default: 4000,
+    min: 100,
+    max: 20_000,
+    description: 'Maximum characters in one typed or transcribed message',
+  },
+  {
+    key: 'caroIa.messageRateLimitPerMinute',
+    group: 'caroIa',
+    type: 'number',
+    default: 20,
+    min: 1,
+    max: 120,
+    description: 'Maximum CaroIA messages per user per minute',
+  },
+  {
+    key: 'caroIa.maxAudioSeconds',
+    group: 'caroIa',
+    type: 'number',
+    default: 120,
+    min: 10,
+    max: 600,
+    description: 'Maximum audio duration accepted for transcription',
+  },
+  {
+    key: 'caroIa.maxAudioBytes',
+    group: 'caroIa',
+    type: 'number',
+    default: 10_485_760,
+    min: 1_048_576,
+    max: 26_214_400,
+    description: 'Maximum audio file size accepted for transcription (bytes)',
   },
 ];
 

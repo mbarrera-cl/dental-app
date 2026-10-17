@@ -25,7 +25,8 @@ export type SettingGroupId =
   | 'clinic'
   | 'quotes'
   | 'activity'
-  | 'mcp';
+  | 'mcp'
+  | 'caroIa';
 
 export interface SettingGroup {
   readonly id: SettingGroupId;

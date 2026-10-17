@@ -3,6 +3,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { ActivityModule } from './modules/activity/activity.module.js';
 import { ApiKeysModule } from './modules/apikeys/apikeys.module.js';
 import { AuthModule } from './modules/auth/auth.module.js';
+import { CaroIaModule } from './modules/caro-ia/caro-ia.module.js';
 import { ClinicModule } from './modules/clinic/clinic.module.js';
 import { ClinicalModule } from './modules/clinical/clinical.module.js';
 import { NavigationModule } from './modules/navigation/navigation.module.js';
@@ -45,6 +46,7 @@ import { SecurityModule } from './shared/security/security.module.js';
     UcoModule,
     QuotesModule,
     McpModule,
+    CaroIaModule,
   ],
   providers: [
     IdentityBootstrapService,

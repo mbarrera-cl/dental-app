@@ -50,6 +50,20 @@
       </a>
 
       <div class="ms-auto flex items-center gap-2">
+        @if (store.isAuthenticated() && store.has(keys.caroIa.use)) {
+          <a
+            hlmBtn
+            variant="outline"
+            size="sm"
+            routerLink="/caro-ia"
+            data-testid="caro-ia-header-link"
+            class="border-primary/40 bg-primary/5 text-primary hover:bg-primary/10 gap-1.5 shadow-xs"
+            [attr.aria-label]="'caroIa.title' | transloco"
+          >
+            <ng-icon name="lucideSparkles" class="text-[length:--spacing(4)]" />
+            <span class="hidden sm:inline">CaroIA</span>
+          </a>
+        }
         @if (store.isAuthenticated() && store.has(keys.activity.read)) {
           <app-activity-menu />
         }

@@ -7,6 +7,7 @@ import { QuotesModule } from '../quotes/quotes.module.js';
 import { SettingsModule } from '../settings/settings.module.js';
 import { UcoModule } from '../uco/uco.module.js';
 import { McpToolRunner } from './application/base/mcp-tool-runner.js';
+import { McpToolCatalog } from './application/catalog/mcp-tool-catalog.js';
 import { ActivityFacade } from './application/facades/activity.facade.js';
 import { PatientsFacade } from './application/facades/patients.facade.js';
 import { QuotesFacade } from './application/facades/quotes.facade.js';
@@ -43,11 +44,17 @@ import { mcpStrategy } from './mcp.strategy.js';
   providers: [
     McpEnabledGuard,
     McpToolRunner,
+    McpToolCatalog,
+    QuotesTools,
+    PatientsTools,
+    UcoTools,
+    ActivityTools,
     PatientsFacade,
     UcoFacade,
     QuotesFacade,
     ActivityFacade,
     { provide: MCP_STRATEGY, useValue: mcpStrategy },
   ],
+  exports: [McpToolCatalog],
 })
 export class McpModule {}

@@ -26,17 +26,48 @@ describe('CaroIaStore', () => {
     vi.advanceTimersByTime(200);
   }
 
-  it('loads the seeded conversations and opens the first one', () => {
+  function openFirst(): void {
+    load();
+    const first = store.conversations()[0];
+    expect(first).toBeDefined();
+    store.open(first!.id);
+    vi.advanceTimersByTime(200);
+  }
+
+  it('loads the seeded conversations without opening one', () => {
     load();
 
     expect(store.conversations()).toHaveLength(5);
+    expect(store.activeId()).toBeNull();
+    expect(store.messages()).toHaveLength(0);
+  });
+
+  it('opens a conversation when the user selects it', () => {
+    openFirst();
+
     expect(store.activeId()).not.toBeNull();
     expect(store.messages().length).toBeGreaterThan(0);
     expect(store.activeConversation()?.title).toContain('COT-2026-0001');
   });
 
-  it('streams an answer with a tool call and closes the turn', () => {
+  it('keeps a draft until the first send creates the conversation', () => {
     load();
+    const before = store.conversations().length;
+
+    store.startDraft();
+    expect(store.activeId()).toBeNull();
+    expect(store.messages()).toHaveLength(0);
+
+    store.send('Resume el presupuesto COT-2026-0001');
+    vi.runAllTimers();
+
+    expect(store.conversations()).toHaveLength(before + 1);
+    expect(store.activeConversation()?.title).toBe('Resume el presupuesto COT-2026-0001');
+    expect(store.messages().length).toBe(2);
+  });
+
+  it('streams an answer with a tool call and closes the turn', () => {
+    openFirst();
     const before = store.messages().length;
 
     store.send('Resume el presupuesto COT-2026-0001');
@@ -53,7 +84,7 @@ describe('CaroIaStore', () => {
   });
 
   it('pauses on a write and resolves the approval when approved', () => {
-    load();
+    openFirst();
     const approval = store
       .messages()
       .flatMap((message) => message.approvals)

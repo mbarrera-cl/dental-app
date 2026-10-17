@@ -80,6 +80,12 @@ export const NAVIGATION_ROUTES: readonly NavigationRoute[] = [
     icon: 'lucideFileText',
   },
   {
+    key: 'caroIa',
+    path: '/caro-ia',
+    label: 'shell.navCaroIa',
+    icon: 'lucideSparkles',
+  },
+  {
     key: 'admin.uco',
     path: '/admin/uco',
     label: 'shell.navAdminUco',

@@ -39,7 +39,7 @@ import { PkMarkdown } from '@ui/prompt-kit/markdown';
 import { PkApproval } from '@ui/prompt-kit/approval';
 import { PkPromptSuggestion } from '@ui/prompt-kit/prompt-suggestion';
 import { formatRelativeTime } from 'ui';
-import type { CaroAttachment, CaroConversation, CaroPendingApproval } from 'data-access';
+import type { CaroConversation, CaroPendingApproval } from 'data-access';
 import { CaroAudioRecorder } from './caro-audio-recorder';
 import { CaroIaStore } from './caro-ia.store';
 
@@ -128,7 +128,7 @@ export class CaroIaPage implements OnInit {
   }
 
   protected newConversation(): void {
-    this.store.create();
+    this.store.startDraft();
     this.view.set('chat');
     queueMicrotask(() => this.composer()?.focus());
   }
@@ -139,14 +139,13 @@ export class CaroIaPage implements OnInit {
   }
 
   protected backToConversations(): void {
+    this.store.stop();
     this.view.set('table');
     this.store.dismissError();
   }
 
   protected onSubmit(content: string): void {
-    const attachmentIds = this.store.readyAttachments().map((attachment) => attachment.id);
-
-    this.store.send(content, attachmentIds);
+    this.store.send(content);
     this.composerValue.set('');
   }
 
@@ -154,15 +153,9 @@ export class CaroIaPage implements OnInit {
     this.onSubmit(content);
   }
 
-  protected onFiles(files: File[]): void {
-    files.forEach((file) => this.store.upload(file));
-  }
-
   protected onAudio(blob: Blob): void {
     this.audioError.set(null);
-    const file = new File([blob], 'audio.webm', { type: blob.type || 'audio/webm' });
 
-    this.store.upload(file);
     this.store.transcribe(blob).subscribe({
       next: (transcription) => {
         this.composerValue.update((value) =>
@@ -195,28 +188,12 @@ export class CaroIaPage implements OnInit {
     return formatRelativeTime(iso, this.language());
   }
 
-  protected formatSize(bytes: number): string {
-    if (bytes < 1024) {
-      return `${bytes} B`;
-    }
-
-    if (bytes < 1024 * 1024) {
-      return `${(bytes / 1024).toFixed(0)} KB`;
-    }
-
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  }
-
   protected approvalParameters(approval: CaroPendingApproval) {
     return approval.parameters;
   }
 
   protected approvalStatusLabel(approval: CaroPendingApproval): string {
     return this.t(`caroIa.approval.status.${approval.status}`);
-  }
-
-  protected isAudio(attachment: CaroAttachment): boolean {
-    return attachment.kind === 'audio';
   }
 
   protected t(key: string): string {

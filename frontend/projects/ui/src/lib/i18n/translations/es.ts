@@ -114,6 +114,7 @@ export const ES = {
     navMenu: 'Menú',
     navClinic: 'Clínica',
     navQuotes: 'Cotizaciones',
+    navCaroIa: 'CaroIA',
     navAdminUco: 'Arancel UCO',
     mainMenu: 'Menú de navegación',
     openMenu: 'Abrir menú',
@@ -789,6 +790,7 @@ export const ES = {
       settings: 'Configuración',
       activity: 'Actividad',
       apikeys: 'Claves de API',
+      caroIa: 'CaroIA',
       dashboard: 'Dashboard',
     },
     items: {
@@ -818,6 +820,7 @@ export const ES = {
       'apikeys:read': 'Listar claves de cualquier usuario',
       'apikeys:manage': 'Crear, rotar y revocar claves de cualquier usuario',
       'dashboard:read': 'Ver el dashboard',
+      'caroIa:use': 'Usar CaroIA y sus conversaciones',
     },
   },
   admin: {
@@ -964,6 +967,7 @@ export const ES = {
       apiKeys: 'Claves de API',
       activity: 'Actividad',
       mcp: 'MCP',
+      caroIa: 'CaroIA',
     },
     items: {
       passwordPolicy: {
@@ -1018,6 +1022,14 @@ export const ES = {
         writeRateLimitPerMinute: 'Límite de escrituras por minuto y clave',
         redactPii: 'Enmascarar RUT, email y teléfono en las respuestas',
         requireConfirmation: 'Exigir confirmación humana en acciones sensibles',
+      },
+      caroIa: {
+        allowWrites: 'Permitir que CaroIA proponga escrituras con aprobación',
+        retentionDays: 'Días de retención (0 = para siempre)',
+        maxMessageLength: 'Longitud máxima de un mensaje',
+        messageRateLimitPerMinute: 'Mensajes por minuto y usuario',
+        maxAudioSeconds: 'Duración máxima del audio (segundos)',
+        maxAudioBytes: 'Tamaño máximo del audio (bytes)',
       },
     },
     toasts: {
@@ -1361,6 +1373,7 @@ export const ES = {
       apikeys: 'Claves de API',
       activity: 'Actividad',
       mcp: 'MCP',
+      caroIa: 'CaroIA',
     },
     actions: {
       generic: 'Realizó una acción en {{module}}',
@@ -1413,6 +1426,10 @@ export const ES = {
       'mcp.hexa_quotes_delete': 'Envió un presupuesto a la papelera por MCP',
       'mcp.hexa_quotes_restore': 'Restauró un presupuesto por MCP',
       'mcp.hexa_activity_list': 'Consultó la actividad por MCP',
+      'caroIa.message': 'Conversó con CaroIA',
+      'caroIa.transcribe': 'Transcribió audio con CaroIA',
+      'caroIa.approval.approve': 'Aprobó una escritura de CaroIA',
+      'caroIa.approval.reject': 'Rechazó una escritura de CaroIA',
     },
     purge: {
       action: 'Purgar historial',

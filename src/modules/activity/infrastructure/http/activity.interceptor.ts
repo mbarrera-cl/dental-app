@@ -23,6 +23,7 @@ const MUTATION_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 const MODULE_BY_CONTROLLER: Readonly<Record<string, string>> = {
   ApiKeys: 'apikeys',
   Auth: 'auth',
+  CaroIa: 'caroIa',
   Clinic: 'clinic',
   Clinical: 'clinical',
   Navigation: 'navigation',

@@ -1,9 +1,13 @@
-# CaroIA — vista previa de UI (rama `feat/caro-ia-ui`)
+# CaroIA — backend y chat integrado
 
-CaroIA es el asistente de presupuestos de Hexa. Esta rama implementa **solo la
-experiencia de usuario**, con un gateway simulado; el backend real (MCP,
-DeepSeek, Deepgram, persistencia y aprobaciones) llega en
-`feat/caro-ia-backend`.
+CaroIA es el asistente de presupuestos de Hexa. La rama
+`feat/caro-ia-backend` parte de `feat/caro-ia-ui` y sustituye el gateway
+simulado por el backend real: DeepSeek, catálogo MCP, persistencia,
+aprobaciones humanas y transcripción Deepgram.
+
+En esta fase CaroIA procesa **texto escrito y audio dictado**. No acepta
+adjuntos (PDF, DOCX, imágenes, etc.): el audio se transcribe, se descarta y
+solo la transcripción se envía al modelo.
 
 ---
 
@@ -14,121 +18,178 @@ cd /Users/mbarrera/hexa
 MCP_ENABLED=true npm run dev:all
 ```
 
-1. Abre `http://localhost:4200` e inicia sesión.
-2. Entra directamente a `http://localhost:4200/caro-ia`.
-   - Todavía **no hay ítem en el menú lateral**: el permiso `caroIa:use` y el
-     seed del menú se agregan en la rama backend.
-3. La cabecera muestra el badge **“Vista previa · datos simulados”**.
+Abre `http://localhost:4200/caro-ia` o usa el botón **CaroIA** de la cabecera,
+junto al icono de actividad. El ítem también aparece en el menú lateral si el
+usuario tiene `caroIa:use`.
 
-Credenciales de desarrollo: `admin@hexa.local` / `Admin123!`.
+### Variables de entorno (solo servidor)
+
+| Variable | Por defecto | Uso |
+| --- | --- | --- |
+| `DEEPSEEK_API_KEY` | — | Obligatoria para responder. Nunca va al frontend ni a la base de datos. |
+| `DEEPSEEK_MODEL` | `deepseek-chat` | Modelo de chat. |
+| `DEEPSEEK_API_URL` | `https://api.deepseek.com` | Base URL compatible con OpenAI. |
+| `DEEPGRAM_API_KEY` | — | Obligatoria para transcribir audio. |
+| `DEEPGRAM_MODEL` | `nova-3` | Modelo pre-recorded. |
+| `DEEPGRAM_LANGUAGE` | `es` | Idioma de transcripción. |
+| `DEEPGRAM_API_URL` | `https://api.deepgram.com` | Base URL de Deepgram. |
+| `CARO_IA_STREAM_DELAY_MS` | `6` | Retardo entre deltas SSE (0 en pruebas). |
+
+> La clave de DeepSeek que se compartió durante el desarrollo debe rotarse
+> antes de usarla. No se guarda en el repositorio, la base de datos ni el
+> navegador.
+
+Si falta una clave, la UI muestra un error controlado; no se inventa una
+respuesta.
 
 ---
 
 ## Qué incluye
 
-- **Chat estilo Gemini/DeepSeek** con `ngx-prompt-kit`:
-  - `pk-conversation-list`, `pk-chat-container`, `pk-user-turn`,
-    `pk-assistant-turn`, `pk-markdown`, `pk-composer`, `pk-prompt-suggestion`
-    y `pk-approval`.
-- **Conversaciones simuladas**: agrupadas por Hoy/Ayer/Últimos 7 días/Anteriores,
-  búsqueda, renombrar y eliminar.
-- **Streaming simulado** con tool calls (`pk-tool` reemplazado por chips
-  propios), citas y respuesta markdown.
-- **Aprobaciones de escritura**: la conversación incluye un presupuesto por
-  crear; al aprobar se simula la creación de `COT-2026-0007`.
-- **Negativa fuera de alcance**: preguntas como “¿qué clima hace?” devuelven la
-  negativa fija (“solo uso el MCP”).
-- **Adjuntos**: botón de archivo del composer con chips de subida/estado
-  (simulados). Formatos previstos: PDF, DOCX, XLSX, CSV, TXT, MD, imágenes y
-  audio.
-- **Audio**: botón de micrófono (`MediaRecorder`), temporizador y transcripción
-  simulada que se inserta en el composer. La integración real con **Deepgram**
-  se hace en la rama backend.
-- **Tabla de conversaciones** como vista inicial (`/caro-ia`): título, último
-  mensaje, actualizada, nº de mensajes y acciones. Ocupa todo el ancho y
-  trunca los títulos largos con puntos suspensivos.
-- **Chat** a pantalla completa, sin cabecera propia ni scroll de página: se
-  abre al seleccionar una fila o crear una conversación, y solo scrollea el
-  historial. El botón “Volver a conversaciones” regresa a la tabla.
-- **i18n ES/EN** y diseño responsive (tabla/tarjetas, composer fijo).
+- **Tabla de conversaciones como vista inicial**, a todo el ancho y con títulos
+  largos truncados con `…`.
+- **Chat a pantalla completa**, sin scroll de página: solo scrollea el
+  historial; composer y botón “Volver a conversaciones” siempre visibles.
+- **Conversaciones privadas por usuario**. El administrador tampoco puede ver
+  las conversaciones de otra persona (`404`).
+- **Texto y audio**: el micrófono transcribe con Deepgram y coloca el texto en
+  el composer. El audio no se persiste.
+- **Sin adjuntos**: el clip está oculto y el backend rechaza `attachmentIds`.
+- **Streaming SSE**: deltas del asistente, chips de tools, citas y tarjetas de
+  aprobación (`pk-approval`).
+- **Solo MCP**: el modelo debe usar tools; el verificador reemplaza por una
+  negativa cualquier respuesta sin evidencia MCP.
+- **Escrituras con aprobación**: el modelo propone; el backend guarda los
+  argumentos exactos y no ejecuta hasta que el usuario aprueba. La aprobación
+  expira, es de un solo uso y se valida contra el usuario y la conversación.
+- **Título determinista**: la primera pregunta se usa como título (máximo 80
+  caracteres). La conversación se crea recién en el primer envío; “Nueva
+  conversación” abre un borrador.
+- **Auditoría**: envíos, transcripciones y decisiones de aprobación quedan en
+  el historial de actividad (`caroIa.*`), sin guardar contenido sensible.
 
 ---
 
-## Contrato para el backend
+## Arquitectura
 
-La UI depende solo de `CaroIaGateway` (`projects/data-access/src/lib/caro-ia.gateway.ts`):
+```
+src/modules/caro-ia/
+├── application/
+│   ├── caro-ia.service.ts        # turno, streaming, aprobaciones, audio
+│   ├── caro-ia.repository.port.ts
+│   ├── caro-ia-verifier.ts       # verificador siempre activo
+│   ├── caro-ia-retention.service.ts
+│   ├── deepseek.client.ts        # puerto + HTTP
+│   └── deepgram.client.ts        # puerto + HTTP
+├── domain/                       # modelos y errores
+├── infrastructure/
+│   ├── adapters/persistence/     # SQLite
+│   └── http/                     # REST + SSE + multipart
+└── caro-ia.module.ts
 
-```ts
-list(query?)            → CaroConversation[]
-get(id)                 → CaroConversationDetail
-create(input?)          → CaroConversation
-rename(id, title)       → CaroConversation
-remove(id)              → void
-send(conversationId, { content, attachmentIds }) → Observable<CaroStreamEvent>
-uploadAttachment(conversationId, file) → CaroAttachment
-transcribeAudio(audio)  → CaroTranscription
-decideApproval(conversationId, approvalId, decision) → Observable<CaroStreamEvent>
+src/modules/mcp/application/catalog/mcp-tool-catalog.ts
 ```
 
-Eventos SSE esperados: `message.delta`, `tool.start`, `tool.result`,
-`approval.required`, `attachment.processed`, `message.done`, `error`.
+`McpToolCatalog` reutiliza las tools MCP existentes, ejecutándolas con el
+`Principal` del usuario (no con una API key global). Mantiene permisos,
+redacción de PII, rate limit de escrituras y auditoría MCP.
 
-La rama backend solo debe:
-
-1. Implementar `CaroIaHttpGateway` con HTTP + SSE.
-2. Cambiar el provider en `frontend/projects/shell/src/app/app.config.ts`.
-3. Añadir `caroIa:use`, `permissionGuard` en la ruta y el ítem de menú.
+La respuesta de DeepSeek se solicita sin stream al proveedor y el backend
+emite los deltas SSE. Esto simplifica el flujo de tool calls y aprobaciones
+sin cambiar el contrato de la UI.
 
 ---
 
-## Estructura
+## API
 
-```
-frontend/projects/data-access/src/lib/
-├── caro-ia.model.ts        # tipos, eventos y agrupación por fecha
-└── caro-ia.gateway.ts      # puerto de la UI
+Todas las rutas requieren sesión y el permiso `caroIa:use`.
 
-frontend/projects/shell/src/app/caro-ia/
-├── caro-ia-page.ts/html    # tabla inicial + chat full-height
-├── caro-ia.store.ts        # estado, streaming, adjuntos, aprobaciones
-├── caro-ia.mock.ts         # gateway simulado y fixtures
-├── caro-audio-recorder.ts  # MediaRecorder + temporizador
-└── caro-ia.store.spec.ts   # pruebas del store
-
-frontend/projects/ui/src/lib/prompt-kit/   # componentes generados (código propio)
+```text
+GET    /caro-ia/conversations
+POST   /caro-ia/conversations
+GET    /caro-ia/conversations/:id
+PATCH  /caro-ia/conversations/:id
+DELETE /caro-ia/conversations/:id
+POST   /caro-ia/conversations/:id/messages
+POST   /caro-ia/conversations/:id/approvals/:approvalId
+POST   /caro-ia/transcribe
 ```
 
-Los componentes de prompt-kit se generaron con `ng add`/`ng generate` y se
-adaptaron a Hexa:
+Los dos endpoints de conversación devuelven **SSE** (`text/event-stream`):
 
-- imports `@spartan-ng/helm/*` → `@ui/*`;
-- textos de la lista de conversaciones parametrizados (ES/EN);
-- `<pk-markdown>` sin imágenes externas (`FORBID_TAGS: ['img']`) para evitar
-  fugas por URLs de imágenes;
-- estilos de tablas/listas en `projects/shell/src/styles.css`.
+```text
+message.delta
+tool.start
+tool.result
+approval.required
+message.done
+error
+```
+
+`POST /caro-ia/transcribe` recibe `multipart/form-data` con el campo `audio` y
+devuelve `{ text, confidence, durationSeconds }`.
+
+---
+
+## Persistencia
+
+Tablas en SQLite (creadas por `ensureSchema`):
+
+- `caro_conversations` — dueño, título, fechas, borrado lógico.
+- `caro_messages` — rol, contenido, tool calls y citas (JSON).
+- `caro_approvals` — tool, argumentos exactos, resumen, estado y expiración.
+
+No hay tabla de adjuntos. El borrado de una conversación es lógico; la
+retención opcional elimina físicamente las conversaciones antiguas y sus
+mensajes/aprobaciones en cascada.
+
+---
+
+## Permisos y configuración
+
+Permiso nuevo: **`caroIa:use`**. El rol `admin` lo recibe automáticamente al
+sincronizar el catálogo; el menú existente recibe el ítem CaroIA al arrancar.
+
+Settings (`Administración → Configuración → CaroIA`):
+
+| Clave | Defecto | Uso |
+| --- | --- | --- |
+| `caroIa.allowWrites` | `false` | Permite proponer escrituras (siempre requieren aprobación). |
+| `caroIa.retentionDays` | `0` | Retención; `0` conserva para siempre. |
+| `caroIa.maxMessageLength` | `4000` | Máximo de caracteres por mensaje. |
+| `caroIa.messageRateLimitPerMinute` | `20` | Límite por usuario. |
+| `caroIa.maxAudioSeconds` | `120` | Duración máxima del audio. |
+| `caroIa.maxAudioBytes` | `10485760` | Tamaño máximo del audio. |
+
+Una escritura requiere, además, `mcp.allowWrites`, el permiso MCP de la tool y
+la aprobación humana. El MCP sigue siendo la única fuente de datos.
 
 ---
 
 ## Tests
 
 ```bash
+# Backend
+npm test
+npx vitest run test/caro-ia.e2e-spec.ts --config ./vitest.config.e2e.ts
+npx vitest run test/mcp.e2e-spec.ts --config ./vitest.config.e2e.ts
+
+# Frontend
 cd frontend
 npx ng test shell --watch=false
 npx ng test data-access --watch=false
 npx ng test ui --watch=false
 ```
 
-El store cubre: carga de conversaciones, streaming con tool call, aprobación,
-transcripción y CRUD.
+La suite de CaroIA cubre CRUD, stream de lectura con evidencia, creación de
+aprobación y ejecución tras aprobar, rechazo de adjuntos, audio transcrito sin
+persistencia y aislamiento entre usuarios/admin.
 
 ---
 
-## Pendiente en `feat/caro-ia-backend`
+## Diferido
 
-- Catálogo MCP interno y orquestador DeepSeek (`tool_choice: 'required'`,
-  `no_answer`, verificador siempre activo).
-- Persistencia de conversaciones/mensajes/adjuntos/aprobaciones.
-- Deepgram STT y extracción local de archivos.
-- Guardrails configurables, rate limits y auditoría.
-- Permiso `caroIa:use`, menú lateral y `permissionGuard`.
-- Sustitución del gateway simulado y pruebas e2e reales.
+- Adjuntos PDF/DOCX/XLSX/CSV/imágenes, OCR y almacenamiento/descarga.
+- Streaming nativo de DeepSeek (hoy se hace chunking en el backend).
+- Reproductor de audio y audio almacenado.
+- OAuth 2.1 para proveedores (la autenticación actual es sesión/API keys).

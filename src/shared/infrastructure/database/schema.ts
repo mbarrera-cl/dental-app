@@ -376,6 +376,58 @@ export function ensureSchema(db: SqliteDatabase): void {
   // Written by the `activity` module. Append-only by design: the only write
   // paths are the recorder and the (audited) retention/purge job. `actor_id`
   // intentionally has no foreign key so history survives user deletion.
+  // CaroIA persists only conversations, messages and approvals. Audio is
+  // transcribed transiently and attachments are not supported in this phase.
+  connection.exec(`
+    CREATE TABLE IF NOT EXISTS caro_conversations (
+      id         TEXT PRIMARY KEY,
+      user_id    TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      title      TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      deleted_at TEXT
+    );
+  `);
+
+  connection.exec(`
+    CREATE TABLE IF NOT EXISTS caro_messages (
+      id              TEXT PRIMARY KEY,
+      conversation_id TEXT NOT NULL REFERENCES caro_conversations(id) ON DELETE CASCADE,
+      role            TEXT NOT NULL,
+      content         TEXT NOT NULL DEFAULT '',
+      tool_calls      TEXT NOT NULL DEFAULT '[]',
+      citations       TEXT NOT NULL DEFAULT '[]',
+      created_at      TEXT NOT NULL
+    );
+  `);
+
+  connection.exec(`
+    CREATE TABLE IF NOT EXISTS caro_approvals (
+      id              TEXT PRIMARY KEY,
+      conversation_id TEXT NOT NULL REFERENCES caro_conversations(id) ON DELETE CASCADE,
+      message_id      TEXT NOT NULL REFERENCES caro_messages(id) ON DELETE CASCADE,
+      tool            TEXT NOT NULL,
+      title           TEXT NOT NULL,
+      summary         TEXT NOT NULL,
+      parameters      TEXT NOT NULL DEFAULT '[]',
+      arguments       TEXT NOT NULL,
+      status          TEXT NOT NULL DEFAULT 'pending',
+      expires_at      TEXT NOT NULL,
+      decided_at      TEXT,
+      decided_by      TEXT,
+      created_at      TEXT NOT NULL
+    );
+  `);
+
+  connection.exec(`
+    CREATE INDEX IF NOT EXISTS idx_caro_conversations_user
+      ON caro_conversations (user_id, updated_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_caro_messages_conversation
+      ON caro_messages (conversation_id, created_at);
+    CREATE INDEX IF NOT EXISTS idx_caro_approvals_pending
+      ON caro_approvals (conversation_id, status, expires_at);
+  `);
+
   connection.exec(`
     CREATE TABLE IF NOT EXISTS activity_log (
       id            TEXT PRIMARY KEY,

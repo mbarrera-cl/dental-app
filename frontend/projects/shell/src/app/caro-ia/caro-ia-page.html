@@ -253,40 +253,12 @@
           [placeholder]="'caroIa.placeholder' | transloco"
           [label]="'caroIa.placeholder' | transloco"
           [busy]="store.sending()"
-          [sendBlocked]="store.uploading() || store.transcribing()"
-          [attachable]="true"
-          [accept]="'.pdf,.docx,.xlsx,.csv,.txt,.md,.png,.jpg,.jpeg,audio/*'"
+          [sendBlocked]="store.transcribing()"
+          [attachable]="false"
           [maxHeight]="180"
           (submitted)="onSubmit($event)"
           (stopped)="store.stop()"
-          (filesPicked)="onFiles($event)"
         >
-          @if (store.attachments().length > 0) {
-            <div pkComposerTop class="mb-2 flex flex-wrap gap-1.5">
-              @for (attachment of store.attachments(); track attachment.id) {
-                <span hlmBadge variant="secondary" class="gap-1.5 py-1">
-                  @if (attachment.status === 'uploading' || attachment.status === 'processing') {
-                    <hlm-spinner class="text-[length:--spacing(3)]" />
-                  } @else {
-                    <ng-icon
-                      [name]="isAudio(attachment) ? 'lucideFileText' : 'lucideFileText'"
-                      class="text-muted-foreground"
-                    />
-                  }
-                  <span class="max-w-40 truncate">{{ attachment.filename }}</span>
-                  <span class="text-muted-foreground text-[10px]">{{ formatSize(attachment.size) }}</span>
-                  <button
-                    type="button"
-                    class="hover:text-foreground text-muted-foreground"
-                    [attr.aria-label]="'caroIa.attachments.remove' | transloco"
-                    (click)="store.removeAttachment(attachment.id)"
-                  >
-                    <ng-icon name="lucideX" class="text-[length:--spacing(3)]" />
-                  </button>
-                </span>
-              }
-            </div>
-          }
           <div pkComposerStart class="flex items-center">
             <app-caro-audio-recorder
               [disabled]="store.sending()"

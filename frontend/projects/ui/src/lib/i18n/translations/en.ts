@@ -105,6 +105,7 @@ export const EN = {
     navMenu: 'Menu',
     navClinic: 'Clinic',
     navQuotes: 'Quotations',
+    navCaroIa: 'CaroIA',
     navAdminUco: 'UCO fee',
     mainMenu: 'Navigation menu',
     openMenu: 'Open menu',
@@ -779,6 +780,7 @@ export const EN = {
       settings: 'Settings',
       activity: 'Activity',
       apikeys: 'API keys',
+      caroIa: 'CaroIA',
       dashboard: 'Dashboard',
     },
     items: {
@@ -808,6 +810,7 @@ export const EN = {
       'apikeys:read': 'List API keys of any user',
       'apikeys:manage': 'Create, rotate and revoke API keys of any user',
       'dashboard:read': 'View the dashboard',
+      'caroIa:use': 'Use CaroIA and its conversations',
     },
   },
   admin: {
@@ -952,6 +955,7 @@ export const EN = {
       apiKeys: 'API keys',
       activity: 'Activity',
       mcp: 'MCP',
+      caroIa: 'CaroIA',
     },
     items: {
       passwordPolicy: {
@@ -1006,6 +1010,14 @@ export const EN = {
         writeRateLimitPerMinute: 'Write calls per minute and API key',
         redactPii: 'Mask RUT, email and phone in tool output',
         requireConfirmation: 'Require human confirmation for sensitive actions',
+      },
+      caroIa: {
+        allowWrites: 'Allow CaroIA to propose writes that require approval',
+        retentionDays: 'Retention days (0 = keep forever)',
+        maxMessageLength: 'Maximum message length',
+        messageRateLimitPerMinute: 'Messages per minute and user',
+        maxAudioSeconds: 'Maximum audio duration (seconds)',
+        maxAudioBytes: 'Maximum audio size (bytes)',
       },
     },
     toasts: {
@@ -1348,6 +1360,7 @@ export const EN = {
       apikeys: 'API keys',
       activity: 'Activity',
       mcp: 'MCP',
+      caroIa: 'CaroIA',
     },
     actions: {
       generic: 'Performed an action in {{module}}',
@@ -1400,6 +1413,10 @@ export const EN = {
       'mcp.hexa_quotes_delete': 'Trashed a quotation via MCP',
       'mcp.hexa_quotes_restore': 'Restored a quotation via MCP',
       'mcp.hexa_activity_list': 'Read the activity trail via MCP',
+      'caroIa.message': 'Chatted with CaroIA',
+      'caroIa.transcribe': 'Transcribed audio with CaroIA',
+      'caroIa.approval.approve': 'Approved a CaroIA write',
+      'caroIa.approval.reject': 'Rejected a CaroIA write',
     },
     purge: {
       action: 'Purge trail',

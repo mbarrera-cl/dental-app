@@ -30,6 +30,7 @@ export class CaroIaStore {
   private readonly approvingSignal = signal(false);
   private readonly streamingIdSignal = signal<string | null>(null);
   private streamSubscription: Subscription | null = null;
+  private openToken = 0;
 
   readonly conversations = this.conversationsSignal.asReadonly();
   readonly activeId = this.activeIdSignal.asReadonly();
@@ -63,13 +64,7 @@ export class CaroIaStore {
     this.errorSignal.set(null);
 
     this.gateway.list().subscribe({
-      next: (conversations) => {
-        this.conversationsSignal.set(conversations);
-
-        if (this.activeIdSignal() === null && conversations.length > 0) {
-          this.open(conversations[0]!.id);
-        }
-      },
+      next: (conversations) => this.conversationsSignal.set(conversations),
       error: () => {
         this.errorSignal.set('No se pudieron cargar las conversaciones.');
         this.loadingSignal.set(false);
@@ -83,6 +78,8 @@ export class CaroIaStore {
       return;
     }
 
+    this.stop();
+    const token = ++this.openToken;
     this.activeIdSignal.set(id);
     this.messagesSignal.set([]);
     this.loadingMessagesSignal.set(true);
@@ -91,15 +88,38 @@ export class CaroIaStore {
 
     this.gateway.get(id).subscribe({
       next: (detail) => {
+        if (token !== this.openToken || this.activeIdSignal() !== id) {
+          return;
+        }
+
         this.messagesSignal.set(detail.messages);
         this.mergeConversation(detail.conversation);
       },
       error: () => {
+        if (token !== this.openToken) {
+          return;
+        }
+
         this.errorSignal.set('No se pudo cargar la conversación.');
         this.loadingMessagesSignal.set(false);
       },
-      complete: () => this.loadingMessagesSignal.set(false),
+      complete: () => {
+        if (token === this.openToken) {
+          this.loadingMessagesSignal.set(false);
+        }
+      },
     });
+  }
+
+  /** Opens an unsaved draft; the conversation is created on the first send. */
+  startDraft(): void {
+    this.stop();
+    this.openToken += 1;
+    this.activeIdSignal.set(null);
+    this.messagesSignal.set([]);
+    this.loadingMessagesSignal.set(false);
+    this.errorSignal.set(null);
+    this.attachmentsSignal.set([]);
   }
 
   create(title?: string): void {
@@ -128,14 +148,9 @@ export class CaroIaStore {
         this.conversationsSignal.update((rows) => rows.filter((row) => row.id !== id));
 
         if (this.activeIdSignal() === id) {
-          const next = this.conversationsSignal()[0];
-
-          if (next === undefined) {
-            this.activeIdSignal.set(null);
-            this.messagesSignal.set([]);
-          } else {
-            this.open(next.id);
-          }
+          this.stop();
+          this.activeIdSignal.set(null);
+          this.messagesSignal.set([]);
         }
       },
       error: () => this.errorSignal.set('No se pudo borrar la conversación.'),
@@ -152,7 +167,7 @@ export class CaroIaStore {
     const activeId = this.activeIdSignal();
 
     if (activeId === null) {
-      this.gateway.create().subscribe({
+      this.gateway.create({ title: titleFromContent(text) }).subscribe({
         next: (conversation) => {
           this.conversationsSignal.update((rows) => [conversation, ...rows]);
           this.activeIdSignal.set(conversation.id);
@@ -169,10 +184,25 @@ export class CaroIaStore {
   }
 
   stop(): void {
+    const streamingId = this.streamingIdSignal();
     this.streamSubscription?.unsubscribe();
     this.streamSubscription = null;
     this.sendingSignal.set(false);
     this.streamingIdSignal.set(null);
+
+    if (streamingId !== null) {
+      this.messagesSignal.update((messages) =>
+        messages.filter(
+          (message) =>
+            !(
+              message.id === streamingId &&
+              message.content === '' &&
+              message.approvals.length === 0 &&
+              message.toolCalls.length === 0
+            ),
+        ),
+      );
+    }
   }
 
   upload(file: File): void {
@@ -263,6 +293,7 @@ export class CaroIaStore {
   }
 
   private sendTo(conversationId: string, content: string, attachmentIds: string[]): void {
+    this.stop();
     const selectedIds =
       attachmentIds.length > 0
         ? attachmentIds
@@ -445,4 +476,14 @@ export class CaroIaStore {
         : [conversation, ...rows];
     });
   }
+}
+
+function titleFromContent(content: string): string {
+  const normalized = content.replace(/\s+/g, ' ').trim();
+
+  if (normalized === '') {
+    return 'Nueva conversación';
+  }
+
+  return normalized.length <= 80 ? normalized : `${normalized.slice(0, 79).trimEnd()}…`;
 }

@@ -8,6 +8,7 @@ import {
 } from './permissions.js';
 import { activityCategory } from '../../modules/activity/permissions.js';
 import { apiKeysCategory } from '../../modules/apikeys/permissions.js';
+import { caroIaCategory } from '../../modules/caro-ia/permissions.js';
 import { clinicalCategory } from '../../modules/clinical/permissions.js';
 import { patientsCategory } from '../../modules/patients/permissions.js';
 import { quotesCategory } from '../../modules/quotes/permissions.js';
@@ -67,6 +68,7 @@ describe('permission catalog', () => {
       usersCategory,
       patientsCategory,
       clinicalCategory,
+      caroIaCategory,
       rolesCategory,
       settingsCategory,
       apiKeysCategory,
