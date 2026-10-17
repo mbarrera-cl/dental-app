@@ -80,7 +80,7 @@ const USERS: User[] = [
 /** Protected members of the page, reachable from the spec (like api-keys-page.spec). */
 interface PageHandle {
   form: FormGroup;
-  formRoles: { set(value: readonly string[]): void };
+  formRoles: { (): readonly string[]; set(value: readonly string[]): void };
   formStatus: { set(value: 'active' | 'disabled'): void };
   resetMode: { set(value: 'typed' | 'generate'): void };
   resetValue: { set(value: string): void };
@@ -92,6 +92,7 @@ interface PageHandle {
   openReset(user: User): void;
   openPermissions(user: User): void;
   askDelete(user: User): void;
+  onRolesSelected(roleIds: readonly string[] | null | undefined): void;
   submitForm(): void;
   submitReset(): void;
   savePermissions(): void;
@@ -265,6 +266,33 @@ describe('UsersPage', () => {
     });
 
     request.flush({ ...USERS[0], name: 'Ada King' });
+    http.expectOne(USERS_URL).flush(USERS);
+  });
+
+  it('assigns roles picked from the searchable selector', () => {
+    const fixture = render();
+    const page = handle(fixture);
+
+    page.openEdit(USERS[0]);
+    fixture.detectChanges();
+    http.expectOne(ROLES_URL).flush([ADMIN_ROLE, EDITOR_ROLE]);
+
+    page.onRolesSelected(['role-admin', 'role-editor']);
+    expect(page.formRoles()).toEqual(['role-admin', 'role-editor']);
+
+    // The `[value]` binding echoes the selection back: equal content must not
+    // replace the array (otherwise the binding and the event would loop).
+    const current = page.formRoles();
+    page.onRolesSelected(['role-editor', 'role-admin']);
+    expect(page.formRoles()).toBe(current);
+
+    page.form.setValue({ name: 'Ada Lovelace', email: 'ada@example.com', password: '' });
+    page.submitForm();
+
+    const request = http.expectOne(`${USERS_URL}/user-1`);
+    expect(request.request.body.roles).toEqual(['role-admin', 'role-editor']);
+
+    request.flush(USERS[0]);
     http.expectOne(USERS_URL).flush(USERS);
   });
 

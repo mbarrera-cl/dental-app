@@ -283,22 +283,36 @@
             {{ 'common.loading' | transloco }}
           </p>
         } @else if (rolesStatus() === 'ready') {
-          <div class="grid gap-1.5 sm:grid-cols-2">
-            @for (role of roles(); track role.id) {
-              <label class="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  class="accent-primary size-4"
-                  [checked]="isFormRoleSelected(role.id)"
-                  (change)="toggleFormRole(role.id)"
-                  [attr.data-testid]="'form-role-' + role.id"
-                />
-                <span class="truncate">{{ role.name }}</span>
-              </label>
-            } @empty {
-              <p class="text-muted-foreground text-sm">{{ 'users.noRoles' | transloco }}</p>
-            }
-          </div>
+          <hlm-combobox-multiple
+            [value]="formRoles()"
+            (valueChange)="onRolesSelected($event)"
+            [itemToString]="roleLabel"
+            [closeOnSelect]="false"
+            data-testid="user-form-roles-select"
+          >
+            <div hlmComboboxChips>
+              @for (roleId of formRoles(); track roleId) {
+                <hlm-combobox-chip [value]="roleId" [attr.data-testid]="'form-role-chip-' + roleId">
+                  {{ roleLabel(roleId) }}
+                </hlm-combobox-chip>
+              }
+              <input
+                hlmComboboxChipInput
+                [placeholder]="'users.form.rolesSearch' | transloco"
+                [attr.aria-label]="'users.form.rolesSearch' | transloco"
+              />
+            </div>
+            <hlm-combobox-content *hlmComboboxPortal>
+              <hlm-combobox-empty>{{ 'users.form.rolesEmpty' | transloco }}</hlm-combobox-empty>
+              <div hlmComboboxList>
+                @for (role of roles(); track role.id) {
+                  <hlm-combobox-item [value]="role.id" [attr.data-testid]="'form-role-' + role.id">
+                    {{ role.name }}
+                  </hlm-combobox-item>
+                }
+              </div>
+            </hlm-combobox-content>
+          </hlm-combobox-multiple>
         } @else if (rolesStatus() === 'unavailable') {
           <p class="text-muted-foreground text-xs" data-testid="roles-unavailable">
             {{ 'users.form.rolesUnavailable' | transloco }}

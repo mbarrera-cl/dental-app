@@ -34,6 +34,17 @@ import {
 import { HlmBadge } from '@ui/badge';
 import { HlmButton } from '@ui/button';
 import {
+  HlmComboboxChip,
+  HlmComboboxChipInput,
+  HlmComboboxChips,
+  HlmComboboxContent,
+  HlmComboboxEmpty,
+  HlmComboboxItem,
+  HlmComboboxList,
+  HlmComboboxMultiple,
+  HlmComboboxPortal,
+} from '@ui/combobox';
+import {
   HlmDialog,
   HlmDialogClose,
   HlmDialogContent,
@@ -88,6 +99,15 @@ const STATUS_VARIANT: Record<UserStatus, 'secondary' | 'outline'> = {
     HlmInput,
     HlmLabel,
     HlmBadge,
+    HlmComboboxMultiple,
+    HlmComboboxChips,
+    HlmComboboxChipInput,
+    HlmComboboxChip,
+    HlmComboboxContent,
+    HlmComboboxPortal,
+    HlmComboboxList,
+    HlmComboboxItem,
+    HlmComboboxEmpty,
     HlmSkeleton,
     HlmSpinner,
     HlmTableContainer,
@@ -178,7 +198,7 @@ export class UsersPage {
   protected readonly editing = signal<User | null>(null);
   protected readonly saving = signal(false);
   protected readonly passwordVisible = signal(false);
-  protected readonly formRoles = signal<readonly string[]>([]);
+  protected readonly formRoles = signal<string[]>([]);
   protected readonly formStatus = signal<UserStatus>('active');
   protected readonly form = new FormGroup({
     name: new FormControl('', {
@@ -321,16 +341,23 @@ export class UsersPage {
     return 'errors.invalidEmail';
   }
 
-  protected isFormRoleSelected(roleId: string): boolean {
-    return this.formRoles().includes(roleId);
-  }
+  /** Label lookup shared by the chips and the combobox filter. */
+  protected readonly roleLabel = (roleId: string): string =>
+    this.roles().find((role) => role.id === roleId)?.name ?? roleId;
 
-  protected toggleFormRole(roleId: string): void {
-    this.formRoles.update((current) =>
-      current.includes(roleId)
-        ? current.filter((id) => id !== roleId)
-        : [...current, roleId],
-    );
+  /**
+   * The combobox owns the selection while it is open: writes are mirrored
+   * into `formRoles`, and the equality guard stops the feedback loop of the
+   * `[value]` binding writing the same array back into the control.
+   */
+  protected onRolesSelected(roleIds: readonly string[] | null | undefined): void {
+    const next = [...(roleIds ?? [])];
+    const current = this.formRoles();
+    const unchanged = next.length === current.length && next.every((id) => current.includes(id));
+
+    if (!unchanged) {
+      this.formRoles.set(next);
+    }
   }
 
   protected submitForm(): void {

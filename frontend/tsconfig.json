@@ -26,7 +26,8 @@
       "@ui/skeleton": ["./projects/ui/src/lib/skeleton/src/index.ts"],
       "@ui/spinner": ["./projects/ui/src/lib/spinner/src/index.ts"],
       "@ui/sonner": ["./projects/ui/src/lib/sonner/src/index.ts"],
-      "@ui/card": ["./projects/ui/src/lib/card/src/index.ts"]
+      "@ui/card": ["./projects/ui/src/lib/card/src/index.ts"],
+      "@ui/combobox": ["./projects/ui/src/lib/combobox/src/index.ts"]
     }
   },
   "angularCompilerOptions": {
