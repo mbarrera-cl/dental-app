@@ -10,6 +10,7 @@ import { activityCategory } from '../../../modules/activity/permissions.js';
 import { patientsCategory } from '../../../modules/patients/permissions.js';
 import { consentsCategory } from '../../../modules/consents/permissions.js';
 import { prescriptionsCategory } from '../../../modules/prescriptions/permissions.js';
+import { ucoCategory } from '../../../modules/uco/permissions.js';
 import { usersCategory } from '../../../modules/users/permissions.js';
 import { allPermissionKeys, dashboardCategory } from '../../security/permissions.js';
 import { PasswordHasher } from '../../security/password-hasher.js';
@@ -23,6 +24,14 @@ const DEFAULT_ADMIN_PASSWORD = 'Admin123!';
 const DEFAULT_ROLES_SEEDED_MARKER = 'default-roles-seeded';
 const DENTIST_ROLE_NAME = 'dentista';
 const DENTIST_ROLE_SEEDED_MARKER = 'dentist-role-seeded';
+const DENTIST_UCO_SEEDED_MARKER = 'dentist-uco-permissions-seeded';
+
+/**
+ * UCO catalog permissions granted to the built-in dentist role. Kept apart so
+ * a one-time migration can add them to databases whose `dentista` role was
+ * seeded before the catalog was part of its defaults.
+ */
+const DENTIST_UCO_PERMISSIONS = [ucoCategory.keys.read, ucoCategory.keys.manage];
 
 /** Permissions of the built-in dentist role. */
 export const DENTIST_PERMISSIONS = [
@@ -36,6 +45,7 @@ export const DENTIST_PERMISSIONS = [
   prescriptionsCategory.keys.create,
   consentsCategory.keys.read,
   consentsCategory.keys.record,
+  ...DENTIST_UCO_PERMISSIONS,
 ];
 
 /** Permissions of the seeded `viewer` role (read-only demo role). */
@@ -63,7 +73,9 @@ const EDITOR_PERMISSIONS = [
  * 1. Keeps the built-in `admin` role in sync with the permission catalog, so
  *    a permission added by a new module is granted automatically on deploy.
  * 2. Seeds the built-in `dentista` role once — a marker in `bootstrap_state`
- *    means the administrator is then in charge: its edits stick.
+ *    means the administrator is then in charge: its edits stick. Databases
+ *    whose dentist role predates the UCO catalog permissions get them added
+ *    once (`dentist-uco-permissions-seeded`).
  * 3. Seeds the demo roles (`editor`, `viewer`) once — a marker in
  *    `bootstrap_state` means deleting them later is respected.
  * 4. Guarantees an active administrator account (`ADMIN_EMAIL` /
@@ -83,6 +95,7 @@ export class IdentityBootstrapService implements OnApplicationBootstrap {
   async onApplicationBootstrap(): Promise<void> {
     await this.syncAdminRole();
     await this.ensureDentistRole();
+    await this.backfillDentistUcoPermissions();
     await this.seedDefaultRolesOnce();
     await this.ensureAdminUser();
   }
@@ -129,7 +142,7 @@ export class IdentityBootstrapService implements OnApplicationBootstrap {
       await this.roles.save(
         Role.create({
           name: DENTIST_ROLE_NAME,
-          description: 'Dentist: appointment calendar and patient access.',
+          description: 'Dentist: appointment calendar, patients and the UCO fee catalog.',
           permissions: DENTIST_PERMISSIONS,
           builtIn: true,
         }),
@@ -152,6 +165,33 @@ export class IdentityBootstrapService implements OnApplicationBootstrap {
     }
 
     await this.setState(DENTIST_ROLE_SEEDED_MARKER);
+  }
+
+  /**
+   * One-time migration for databases that already ran the seed-once step but
+   * whose `dentista` role predates the UCO catalog permissions. They are added
+   * once; later administrator edits are respected, like `ensureDentistRole`.
+   */
+  private async backfillDentistUcoPermissions(): Promise<void> {
+    if (await this.hasState(DENTIST_UCO_SEEDED_MARKER)) {
+      return;
+    }
+
+    const existing = await this.roles.findByName(DENTIST_ROLE_NAME);
+
+    if (existing !== null) {
+      const missing = DENTIST_UCO_PERMISSIONS.filter((key) => !existing.hasPermission(key));
+
+      if (missing.length > 0) {
+        existing.changePermissions([...existing.permissions, ...missing]);
+        await this.roles.update(existing);
+        this.logger.log(
+          `Granted the UCO catalog permissions to the existing "${DENTIST_ROLE_NAME}" role (${missing.length})`,
+        );
+      }
+    }
+
+    await this.setState(DENTIST_UCO_SEEDED_MARKER);
   }
 
   private async seedDefaultRolesOnce(): Promise<void> {

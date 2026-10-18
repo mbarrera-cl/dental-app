@@ -688,6 +688,10 @@ document. Editing a sanctioned quote requires duplicating it into a new version
 The A4 document (`/quotes/:id/print`) prints with the clinic identity from the
 settings.
 
+Permissions: `uco:read` browses the catalog and `uco:manage` mutates it. The
+built-in `dentista` role includes both, so the clinical team can keep the
+arancel up to date.
+
 ## Agenda de horas
 
 Detalle técnico: [`docs/agenda.md`](docs/agenda.md).
@@ -699,7 +703,8 @@ overlap.
 
 - **Permissions:** `agenda:read`, `agenda:create`, `agenda:update`,
   `agenda:cancel`; `agenda:professional` marks an active user as selectable
-  professional. The built-in `dentista` role is seeded/updated on boot.
+  professional. The built-in `dentista` role is seeded once (agenda, patients,
+  prescriptions, consents and the UCO catalog).
 - **Endpoints:** `GET /agenda/config`, `GET /agenda/professionals`,
   `GET /agenda/appointments?from&to`, `GET /agenda/appointments/:id`,
   `GET /agenda/conflicts`, `POST /agenda/appointments`,

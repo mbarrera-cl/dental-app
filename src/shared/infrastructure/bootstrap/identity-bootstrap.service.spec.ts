@@ -106,6 +106,30 @@ describe('IdentityBootstrapService', () => {
     expect(edited.permissions).not.toContain(removed);
   });
 
+  it('grants the UCO catalog permissions to a dentist role seeded before them', async () => {
+    await roles.save(
+      Role.create({
+        name: 'dentista',
+        description: 'Dentist role pre-UCO',
+        permissions: ['agenda:read', 'patients:read'],
+        builtIn: true,
+      }),
+    );
+    // The role already went through the seed-once step; only the UCO catalog
+    // permissions are missing.
+    await database.execute(
+      'INSERT INTO bootstrap_state (key, value) VALUES ($1, $2)',
+      ['dentist-role-seeded', new Date().toISOString()],
+    );
+
+    await service.onApplicationBootstrap();
+
+    const dentist = (await roles.findByName('dentista'))!;
+    expect(dentist.permissions).toContain('uco:read');
+    expect(dentist.permissions).toContain('uco:manage');
+    expect(dentist.permissions).toContain('agenda:read');
+  });
+
   it('seeds editor and viewer once and assigns viewer to users without roles', async () => {
     const ada = User.create({ email: 'ada@example.com', name: 'Ada' });
     await users.save(ada);
