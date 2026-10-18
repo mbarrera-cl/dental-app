@@ -1,8 +1,14 @@
-<section class="flex flex-col gap-6">
+<section class="flex flex-col gap-6" data-testid="dashboard-page">
   <header class="flex flex-wrap items-end justify-between gap-4">
     <div class="grid gap-1">
       <h2 class="text-2xl font-semibold tracking-tight">{{ 'dashboard.title' | transloco }}</h2>
       <p class="text-muted-foreground text-sm">{{ 'dashboard.subtitle' | transloco }}</p>
+      @if (lastUpdated(); as updated) {
+        <p class="text-muted-foreground text-xs" data-testid="dashboard-updated">
+          {{ 'dashboard.updated' | transloco }}:
+          {{ formatDateTime(updated.toISOString()) }}
+        </p>
+      }
     </div>
     <button hlmBtn variant="outline" (click)="load()" [disabled]="loading()">
       <ng-icon name="lucideRefreshCw" />
@@ -11,65 +17,344 @@
   </header>
 
   @if (loadError(); as errorKey) {
-    <div class="border-destructive/30 bg-destructive/5 text-destructive flex items-center gap-3 rounded-lg border px-4 py-3 text-sm">
+    <div
+      class="border-destructive/30 bg-destructive/5 text-destructive flex items-center gap-3 rounded-lg border px-4 py-3 text-sm"
+      data-testid="dashboard-error"
+    >
       <ng-icon name="lucideTriangleAlert" class="shrink-0" />
       <p class="flex-1">{{ errorKey | transloco }}</p>
       <button hlmBtn variant="outline" size="sm" (click)="load()">{{ 'common.retry' | transloco }}</button>
     </div>
   }
 
-  <div class="grid gap-4 md:grid-cols-5">
-    <div hlmCard class="md:col-span-2">
+  <!-- KPIs -->
+  <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <div hlmCard data-testid="dashboard-kpi-outstanding">
       <div hlmCardHeader>
-        <p hlmCardDescription>{{ 'dashboard.total' | transloco }}</p>
-        <h3 hlmCardTitle class="text-4xl font-semibold tabular-nums tracking-tight">
+        <p hlmCardDescription class="flex items-center gap-2">
+          <ng-icon name="lucideWallet" class="size-4" />
+          {{ 'dashboard.outstanding' | transloco }}
+        </p>
+        <h3 hlmCardTitle class="text-3xl font-semibold tabular-nums tracking-tight">
           @if (loading()) {
-            <span hlmSkeleton class="inline-block h-10 w-20 align-middle"></span>
+            <span hlmSkeleton class="inline-block h-8 w-24 align-middle"></span>
           } @else {
-            {{ total() }}
+            {{ formatMoney(summary()?.cash?.outstanding ?? 0) }}
           }
         </h3>
       </div>
-      <div hlmCardContent class="text-muted-foreground text-sm">
-        {{ 'dashboard.totalDescription' | transloco }}
+      <div hlmCardContent class="text-muted-foreground flex items-center justify-between gap-2 text-xs">
+        <span>{{ 'dashboard.outstandingDescription' | transloco }}</span>
+        <a hlmBtn variant="ghost" size="sm" routerLink="/patients/caja">
+          {{ 'dashboard.openCashDesk' | transloco }}
+          <ng-icon name="lucideArrowRight" />
+        </a>
       </div>
     </div>
 
-    <div hlmCard class="md:col-span-3">
+    <div hlmCard data-testid="dashboard-kpi-collections">
       <div hlmCardHeader>
-        <h3 hlmCardTitle>{{ 'dashboard.latest' | transloco }}</h3>
-        <p hlmCardDescription>{{ 'dashboard.latestDescription' | transloco }}</p>
+        <p hlmCardDescription class="flex items-center gap-2">
+          <ng-icon name="lucideBadgeDollarSign" class="size-4" />
+          {{ 'dashboard.collectionsToday' | transloco }}
+        </p>
+        <h3 hlmCardTitle class="text-3xl font-semibold tabular-nums tracking-tight">
+          @if (loading()) {
+            <span hlmSkeleton class="inline-block h-8 w-24 align-middle"></span>
+          } @else {
+            {{ formatMoney(collectionsToday()) }}
+          }
+        </h3>
       </div>
+      <div hlmCardContent class="text-muted-foreground flex items-center justify-between gap-2 text-xs">
+        <span>{{ 'dashboard.collectionsTodayDescription' | transloco }}</span>
+        <a hlmBtn variant="ghost" size="sm" routerLink="/patients/caja">
+          {{ 'dashboard.openCashDesk' | transloco }}
+          <ng-icon name="lucideArrowRight" />
+        </a>
+      </div>
+    </div>
 
-      <div hlmCardContent class="grid gap-4">
+    <div hlmCard data-testid="dashboard-kpi-appointments">
+      <div hlmCardHeader>
+        <p hlmCardDescription class="flex items-center gap-2">
+          <ng-icon name="lucideCalendarClock" class="size-4" />
+          {{ 'dashboard.appointmentsToday' | transloco }}
+        </p>
+        <h3 hlmCardTitle class="text-3xl font-semibold tabular-nums tracking-tight">
+          @if (loading()) {
+            <span hlmSkeleton class="inline-block h-8 w-16 align-middle"></span>
+          } @else {
+            {{ formatNumber(appointmentsToday()) }}
+          }
+        </h3>
+      </div>
+      <div hlmCardContent class="text-muted-foreground flex items-center justify-between gap-2 text-xs">
+        <span>
+          {{ 'dashboard.cancelledMonth' | transloco }}: {{ formatNumber(summary()?.agenda?.cancelledMonth ?? 0) }}
+        </span>
+        <a hlmBtn variant="ghost" size="sm" routerLink="/agenda">
+          {{ 'dashboard.openAgenda' | transloco }}
+          <ng-icon name="lucideArrowRight" />
+        </a>
+      </div>
+    </div>
+
+    <div hlmCard data-testid="dashboard-kpi-approved">
+      <div hlmCardHeader>
+        <p hlmCardDescription class="flex items-center gap-2">
+          <ng-icon name="lucideTrendingUp" class="size-4" />
+          {{ 'dashboard.approvedMonth' | transloco }}
+        </p>
+        <h3 hlmCardTitle class="text-3xl font-semibold tabular-nums tracking-tight">
+          @if (loading()) {
+            <span hlmSkeleton class="inline-block h-8 w-24 align-middle"></span>
+          } @else {
+            {{ formatMoney(summary()?.quotes?.approvedMonth ?? 0) }}
+          }
+        </h3>
+      </div>
+      <div hlmCardContent class="text-muted-foreground flex items-center justify-between gap-2 text-xs">
+        <span>
+          {{ 'dashboard.conversion' | transloco }}: {{ conversionPercent() }} ·
+          {{ 'dashboard.expiringSoon' | transloco }}: {{ formatNumber(summary()?.quotes?.expiringSoon ?? 0) }}
+        </span>
+        <a hlmBtn variant="ghost" size="sm" routerLink="/quotes">
+          {{ 'dashboard.openQuotes' | transloco }}
+          <ng-icon name="lucideArrowRight" />
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Charts -->
+  <div class="grid gap-4 lg:grid-cols-3">
+    <div hlmCard>
+      <div hlmCardHeader>
+        <h3 hlmCardTitle>{{ 'dashboard.charts.cash' | transloco }}</h3>
+        <p hlmCardDescription>{{ 'dashboard.charts.cashDescription' | transloco }}</p>
+      </div>
+      <div hlmCardContent class="w-full">
+        @if (loading()) {
+          <div hlmSkeleton class="h-56 w-full"></div>
+        } @else if (cashChart(); as options) {
+          <tanstack-chart hlmChart class="block w-full" [options]="options" data-testid="dashboard-chart-cash" />
+        }
+      </div>
+    </div>
+
+    <div hlmCard>
+      <div hlmCardHeader>
+        <h3 hlmCardTitle>{{ 'dashboard.charts.funnel' | transloco }}</h3>
+        <p hlmCardDescription>{{ 'dashboard.charts.funnelDescription' | transloco }}</p>
+      </div>
+      <div hlmCardContent class="w-full">
+        @if (loading()) {
+          <div hlmSkeleton class="h-56 w-full"></div>
+        } @else if (funnelChart(); as options) {
+          <tanstack-chart hlmChart class="block w-full" [options]="options" data-testid="dashboard-chart-funnel" />
+        }
+      </div>
+    </div>
+
+    <div hlmCard>
+      <div hlmCardHeader>
+        <h3 hlmCardTitle>{{ 'dashboard.charts.prevision' | transloco }}</h3>
+        <p hlmCardDescription>{{ 'dashboard.charts.previsionDescription' | transloco }}</p>
+      </div>
+      <div hlmCardContent class="w-full">
+        @if (loading()) {
+          <div hlmSkeleton class="h-56 w-full"></div>
+        } @else if (previsionChart(); as options) {
+          <tanstack-chart hlmChart class="block w-full" [options]="options" data-testid="dashboard-chart-prevision" />
+        }
+      </div>
+    </div>
+  </div>
+
+  <!-- Operational lists -->
+  <div class="grid gap-4 lg:grid-cols-2">
+    <div hlmCard data-testid="dashboard-debtors">
+      <div hlmCardHeader>
+        <h3 hlmCardTitle>{{ 'dashboard.debtors.title' | transloco }}</h3>
+        <p hlmCardDescription>{{ 'dashboard.debtors.description' | transloco }}</p>
+      </div>
+      <div hlmCardContent class="grid gap-3">
         @if (loading()) {
           @for (row of skeletonRows; track row) {
             <div class="flex items-center justify-between gap-3">
-              <div class="grid gap-1">
-                <div hlmSkeleton class="h-4 w-32"></div>
-                <div hlmSkeleton class="h-3 w-44"></div>
-              </div>
-              <div hlmSkeleton class="h-3 w-24"></div>
+              <div hlmSkeleton class="h-4 w-40"></div>
+              <div hlmSkeleton class="h-4 w-20"></div>
             </div>
           }
-        } @else if (latest().length === 0) {
-          <p class="text-muted-foreground text-sm">{{ 'dashboard.empty' | transloco }}</p>
+        } @else if ((summary()?.cash?.topDebtors?.length ?? 0) === 0) {
+          <p class="text-muted-foreground text-sm">{{ 'dashboard.debtors.empty' | transloco }}</p>
         } @else {
-          @for (patient of latest(); track patient.id) {
+          @for (debtor of summary()?.cash?.topDebtors ?? []; track debtor.patientId) {
             <div class="flex items-center justify-between gap-3">
-              <div class="grid gap-0.5">
-                <span class="text-sm font-medium">{{ nombreCompleto(patient) }}</span>
-                <span class="text-muted-foreground font-mono text-xs">{{ formatRut(patient.rut) }}</span>
-              </div>
-              <span class="text-muted-foreground shrink-0 text-xs">{{ previsionLabel(patient) }}</span>
+              <a class="text-sm font-medium hover:underline" [routerLink]="['/patients', debtor.patientId]">
+                {{ debtor.patientName }}
+              </a>
+              <span class="text-sm font-medium tabular-nums">{{ formatMoney(debtor.balance) }}</span>
             </div>
           }
         }
       </div>
+    </div>
 
-      <div hlmCardFooter>
+    <div hlmCard data-testid="dashboard-next-appointments">
+      <div hlmCardHeader>
+        <h3 hlmCardTitle>{{ 'dashboard.nextAppointments.title' | transloco }}</h3>
+        <p hlmCardDescription>{{ 'dashboard.nextAppointments.description' | transloco }}</p>
+      </div>
+      <div hlmCardContent class="grid gap-3">
+        @if (loading()) {
+          @for (row of skeletonRows; track row) {
+            <div class="flex items-center justify-between gap-3">
+              <div class="grid gap-1">
+                <div hlmSkeleton class="h-4 w-40"></div>
+                <div hlmSkeleton class="h-3 w-28"></div>
+              </div>
+              <div hlmSkeleton class="h-4 w-24"></div>
+            </div>
+          }
+        } @else if ((summary()?.agenda?.next?.length ?? 0) === 0) {
+          <p class="text-muted-foreground text-sm">{{ 'dashboard.nextAppointments.empty' | transloco }}</p>
+        } @else {
+          @for (appointment of summary()?.agenda?.next ?? []; track appointment.id) {
+            <div class="flex items-center justify-between gap-3">
+              <div class="grid gap-0.5">
+                <span class="text-sm font-medium">{{ appointment.patientName }}</span>
+                <span class="text-muted-foreground text-xs">
+                  {{ appointment.professionalName }}
+                  @if (appointment.reason) {
+                    · {{ appointment.reason }}
+                  }
+                </span>
+              </div>
+              <span class="text-muted-foreground shrink-0 text-xs tabular-nums">
+                {{ formatDateTime(appointment.startsAt) }}
+              </span>
+            </div>
+          }
+        }
+      </div>
+      <div hlmCardContent class="pt-0">
+        <a hlmBtn variant="outline" size="sm" routerLink="/agenda" class="w-full">
+          {{ 'dashboard.openAgenda' | transloco }}
+          <ng-icon name="lucideArrowRight" />
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent activity -->
+  <div hlmCard data-testid="dashboard-activity">
+    <div hlmCardHeader>
+      <h3 hlmCardTitle class="flex items-center gap-2">
+        <ng-icon name="lucideHistory" class="size-4" />
+        {{ 'dashboard.activity.title' | transloco }}
+      </h3>
+      <p hlmCardDescription>{{ 'dashboard.activity.description' | transloco }}</p>
+    </div>
+    <div hlmCardContent class="grid gap-3">
+      @if (loading()) {
+        @for (row of skeletonRows; track row) {
+          <div class="flex items-center justify-between gap-3">
+            <div hlmSkeleton class="h-4 w-56"></div>
+            <div hlmSkeleton class="h-3 w-32"></div>
+          </div>
+        }
+      } @else if ((summary()?.recentActivity?.length ?? 0) === 0) {
+        <p class="text-muted-foreground text-sm">{{ 'dashboard.activity.empty' | transloco }}</p>
+      } @else {
+        @for (entry of summary()?.recentActivity ?? []; track entry.at + entry.action + (entry.subject ?? '')) {
+          <div class="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+            <div class="flex min-w-0 items-center gap-2">
+              <span class="text-muted-foreground font-mono text-xs">{{ entry.action }}</span>
+              @if (entry.subject) {
+                <span class="truncate text-sm">{{ entry.subject }}</span>
+              }
+            </div>
+            <span class="text-muted-foreground shrink-0 text-xs">
+              {{ entry.actor ?? '—' }} · {{ formatDateTime(entry.at) }}
+            </span>
+          </div>
+        }
+      }
+    </div>
+    <div hlmCardContent class="pt-0">
+      <a hlmBtn variant="outline" size="sm" routerLink="/activity" class="w-full">
+        {{ 'dashboard.openActivity' | transloco }}
+        <ng-icon name="lucideArrowRight" />
+      </a>
+    </div>
+  </div>
+
+  <!-- Existing patient panels: newest records -->
+  <div class="grid gap-4 lg:grid-cols-2">
+    <div hlmCard data-testid="dashboard-patients">
+      <div hlmCardHeader>
+        <h3 hlmCardTitle class="flex items-center gap-2">
+          <ng-icon name="lucideUsers" class="size-4" />
+          {{ 'dashboard.patients' | transloco }}
+        </h3>
+        <p hlmCardDescription>{{ 'dashboard.patientsDescription' | transloco }}</p>
+      </div>
+      <div hlmCardContent class="grid gap-2">
+        @if (loading()) {
+          <div hlmSkeleton class="h-4 w-40"></div>
+        } @else {
+          <p class="text-sm">
+            {{ 'dashboard.totalPatients' | transloco }}:
+            <span class="font-semibold" data-testid="dashboard-patients-total">
+              {{ formatNumber(summary()?.patients?.total ?? 0) }}
+            </span>
+          </p>
+          <p class="text-muted-foreground text-sm">
+            {{ 'dashboard.newPatients' | transloco }}:
+            {{ formatNumber(summary()?.patients?.newLast30Days ?? 0) }}
+          </p>
+        }
+      </div>
+      <div hlmCardContent class="pt-0">
         <a hlmBtn variant="outline" size="sm" routerLink="/patients" class="w-full">
           {{ 'dashboard.viewAll' | transloco }}
+          <ng-icon name="lucideArrowRight" />
+        </a>
+      </div>
+    </div>
+
+    <div hlmCard data-testid="dashboard-agenda-month">
+      <div hlmCardHeader>
+        <h3 hlmCardTitle class="flex items-center gap-2">
+          <ng-icon name="lucideFileText" class="size-4" />
+          {{ 'dashboard.agendaMonth' | transloco }}
+        </h3>
+        <p hlmCardDescription>{{ 'dashboard.agendaMonthDescription' | transloco }}</p>
+      </div>
+      <div hlmCardContent class="grid gap-2">
+        @if (loading()) {
+          <div hlmSkeleton class="h-4 w-40"></div>
+        } @else {
+          <p class="text-sm">
+            {{ 'dashboard.totalMonth' | transloco }}:
+            <span class="font-semibold">{{ formatNumber(summary()?.agenda?.totalMonth ?? 0) }}</span>
+          </p>
+          <p class="text-muted-foreground text-sm">
+            {{ 'dashboard.cancelledMonth' | transloco }}:
+            {{ formatNumber(summary()?.agenda?.cancelledMonth ?? 0) }}
+          </p>
+          @for (entry of summary()?.agenda?.today ?? []; track entry.status) {
+            <p class="text-muted-foreground text-sm">
+              {{ appointmentStatusLabel(entry.status) | transloco }}: {{ formatNumber(entry.count) }}
+            </p>
+          }
+        }
+      </div>
+      <div hlmCardContent class="pt-0">
+        <a hlmBtn variant="outline" size="sm" routerLink="/agenda" class="w-full">
+          {{ 'dashboard.openAgenda' | transloco }}
           <ng-icon name="lucideArrowRight" />
         </a>
       </div>

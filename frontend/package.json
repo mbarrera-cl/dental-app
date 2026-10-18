@@ -32,6 +32,8 @@
     "@ng-icons/core": "^32.2.0",
     "@ng-icons/lucide": "^32.2.0",
     "@spartan-ng/brain": "^1.8.0",
+    "@tanstack/angular-charts": "^1.1.0",
+    "@tanstack/charts": "^1.1.0",
     "@types/katex": "^0.16.8",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",

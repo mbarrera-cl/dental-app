@@ -57,6 +57,9 @@
       "@ui/card": [
         "./projects/ui/src/lib/card/src/index.ts"
       ],
+      "@ui/chart": [
+        "./projects/ui/src/lib/chart/src/index.ts"
+      ],
       "@ui/combobox": [
         "./projects/ui/src/lib/combobox/src/index.ts"
       ],

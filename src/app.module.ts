@@ -8,6 +8,7 @@ import { CaroIaModule } from './modules/caro-ia/caro-ia.module.js';
 import { ClinicModule } from './modules/clinic/clinic.module.js';
 import { ClinicalModule } from './modules/clinical/clinical.module.js';
 import { ConsentsModule } from './modules/consents/consents.module.js';
+import { DashboardModule } from './modules/dashboard/dashboard.module.js';
 import { NavigationModule } from './modules/navigation/navigation.module.js';
 import { PatientsModule } from './modules/patients/patients.module.js';
 import { McpModule } from './modules/mcp/mcp.module.js';
@@ -54,6 +55,7 @@ import { HealthController } from './shared/infrastructure/http/health.controller
     UcoModule,
     QuotesModule,
     PaymentsModule,
+    DashboardModule,
     McpModule,
     CaroIaModule,
   ],

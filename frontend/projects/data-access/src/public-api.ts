@@ -38,6 +38,8 @@ export * from './lib/uco.model';
 export * from './lib/uco-api';
 export * from './lib/quote.model';
 export * from './lib/quotes-api';
+export * from './lib/dashboard-api';
+export * from './lib/dashboard.model';
 export * from './lib/payment.model';
 export * from './lib/payments-api';
 export * from './lib/region';
