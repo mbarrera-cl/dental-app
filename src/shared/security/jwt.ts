@@ -3,6 +3,13 @@ import { Injectable, Logger } from '@nestjs/common';
 
 export const JWT_SECRET_ENV = 'JWT_SECRET';
 
+/**
+ * Minimum accepted secret length in production. HS256 keys should carry at
+ * least 256 bits of entropy; 32 base64 characters is the practical floor used
+ * to reject obvious placeholders while still accepting `openssl rand -base64 48`.
+ */
+export const JWT_SECRET_MIN_LENGTH = 32;
+
 /** Documented development fallback; production must set `JWT_SECRET`. */
 const DEV_SECRET = 'hexa-dev-secret-do-not-use-in-production';
 
@@ -29,6 +36,26 @@ export class JwtService {
   constructor() {
     const configured = process.env[JWT_SECRET_ENV]?.trim();
 
+    // In production a missing or placeholder secret would let anyone forge
+    // tokens, so the process must fail fast instead of only warning.
+    if (process.env.NODE_ENV === 'production') {
+      if (configured === undefined || configured === '') {
+        throw new Error(
+          `${JWT_SECRET_ENV} must be set in production (generate one with: openssl rand -base64 48)`,
+        );
+      }
+
+      if (configured === DEV_SECRET || configured.length < JWT_SECRET_MIN_LENGTH) {
+        throw new Error(
+          `${JWT_SECRET_ENV} is too weak: use at least ${JWT_SECRET_MIN_LENGTH} characters and never the development secret`,
+        );
+      }
+
+      this.secret = configured;
+
+      return;
+    }
+
     if (configured !== undefined && configured !== '') {
       this.secret = configured;
 
@@ -36,13 +63,9 @@ export class JwtService {
     }
 
     this.secret = DEV_SECRET;
-
-    const message = `${JWT_SECRET_ENV} is not set — using the built-in development secret`;
-    if (process.env.NODE_ENV === 'production') {
-      this.logger.warn(`${message}. Set ${JWT_SECRET_ENV} in production!`);
-    } else {
-      this.logger.log(message);
-    }
+    this.logger.log(
+      `${JWT_SECRET_ENV} is not set — using the built-in development secret`,
+    );
   }
 
   signAccessToken(userId: string, ttlSeconds: number, now: Date = new Date()): string {

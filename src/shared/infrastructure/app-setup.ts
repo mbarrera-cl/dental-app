@@ -28,7 +28,10 @@ function resolveCorsOrigins(): string[] {
 }
 
 export interface AppSetupOptions {
-  /** Mount the OpenAPI docs at /docs. Enabled by default, disabled in e2e tests. */
+  /**
+   * Mount the OpenAPI docs at /docs. Defaults to enabled outside production
+   * and disabled in production and e2e tests.
+   */
   swagger?: boolean;
 }
 
@@ -51,7 +54,10 @@ export function configureApp(app: INestApplication, options: AppSetupOptions = {
 
   app.useGlobalFilters(new DomainExceptionFilter());
 
-  if (options.swagger !== false) {
+  // Exposing the full route/DTO surface in production is an information leak.
+  const swaggerEnabled = options.swagger ?? process.env.NODE_ENV !== 'production';
+
+  if (swaggerEnabled) {
     const config = new DocumentBuilder()
       .setTitle('Hexagonal NestJS API')
       .setDescription(

@@ -31,20 +31,27 @@ export class DomainExceptionFilter implements ExceptionFilter<DomainError> {
 
   catch(exception: DomainError, host: ArgumentsHost): void {
     const status = STATUS_BY_KIND[exception.kind];
+    const response = host.switchToHttp().getResponse<Response>();
 
+    // Unexpected errors may carry internal details (SQL, paths, stack hints).
+    // Log them server-side and return a generic payload to the client.
     if (status === HttpStatus.INTERNAL_SERVER_ERROR) {
       this.logger.error(exception.message, exception.stack);
+
+      response.status(status).json({
+        statusCode: status,
+        error: 'InternalServerError',
+        message: 'Internal server error',
+      });
+
+      return;
     }
 
-    host
-      .switchToHttp()
-      .getResponse<Response>()
-      .status(status)
-      .json({
-        statusCode: status,
-        error: exception.name,
-        message: exception.message,
-        ...(exception.details === undefined ? {} : { details: exception.details }),
-      });
+    response.status(status).json({
+      statusCode: status,
+      error: exception.name,
+      message: exception.message,
+      ...(exception.details === undefined ? {} : { details: exception.details }),
+    });
   }
 }

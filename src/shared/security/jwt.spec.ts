@@ -41,3 +41,57 @@ describe('JwtService', () => {
     expect(service.verifyAccessToken(token)).toBeNull();
   });
 });
+
+describe('JwtService production secret hardening', () => {
+  const originalNodeEnv = process.env.NODE_ENV;
+  const originalSecret = process.env.JWT_SECRET;
+
+  afterEach(() => {
+    if (originalNodeEnv === undefined) {
+      delete process.env.NODE_ENV;
+    } else {
+      process.env.NODE_ENV = originalNodeEnv;
+    }
+
+    if (originalSecret === undefined) {
+      delete process.env.JWT_SECRET;
+    } else {
+      process.env.JWT_SECRET = originalSecret;
+    }
+  });
+
+  it('refuses to start in production without JWT_SECRET', () => {
+    process.env.NODE_ENV = 'production';
+    delete process.env.JWT_SECRET;
+
+    expect(() => new JwtService()).toThrow(/must be set in production/);
+  });
+
+  it('refuses to start in production with the development secret', () => {
+    process.env.NODE_ENV = 'production';
+    process.env.JWT_SECRET = 'hexa-dev-secret-do-not-use-in-production';
+
+    expect(() => new JwtService()).toThrow(/too weak/);
+  });
+
+  it('refuses to start in production with a short secret', () => {
+    process.env.NODE_ENV = 'production';
+    process.env.JWT_SECRET = 'short';
+
+    expect(() => new JwtService()).toThrow(/too weak/);
+  });
+
+  it('accepts a strong secret in production', () => {
+    process.env.NODE_ENV = 'production';
+    process.env.JWT_SECRET = 'a'.repeat(48);
+
+    expect(() => new JwtService()).not.toThrow();
+  });
+
+  it('keeps the development fallback outside production', () => {
+    process.env.NODE_ENV = 'test';
+    delete process.env.JWT_SECRET;
+
+    expect(() => new JwtService()).not.toThrow();
+  });
+});
