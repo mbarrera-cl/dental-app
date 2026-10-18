@@ -1,5 +1,14 @@
 # hexa — dental clinic platform
 
+<p align="center">
+  <img alt="NestJS" src="https://img.shields.io/badge/NestJS-12-E0234E?logo=nestjs&logoColor=white">
+  <img alt="Angular" src="https://img.shields.io/badge/Angular-22-DD0031?logo=angular&logoColor=white">
+  <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white">
+  <img alt="PostgreSQL" src="https://img.shields.io/badge/PostgreSQL-18-4169E1?logo=postgresql&logoColor=white">
+  <img alt="Vitest" src="https://img.shields.io/badge/tests-Vitest-6E9F18?logo=vitest&logoColor=white">
+  <img alt="Architecture" src="https://img.shields.io/badge/architecture-hexagonal-7C3AED">
+</p>
+
 hexa is a dental clinic management platform for the Chilean market. The backend
 is a production-minded **NestJS 12 API built with hexagonal architecture**
 (ports & adapters): the business logic lives in the center, completely
@@ -34,7 +43,27 @@ Coming next: the **treatment plan + clinical timeline** (the audit events are
 already recorded), radiographs, an auto-generated PDF of the HCU form and the
 digital-signature locking UI. See [Roadmap](#roadmap).
 
-## Stack
+## 📸 Screenshots
+
+The UI ships in Spanish for the Chilean market (English is one click away in
+the header). All screens live in `docs/screenshots/`.
+
+| | |
+| --- | --- |
+| <img src="docs/screenshots/login.png" alt="Login" width="100%"> | <img src="docs/screenshots/dashboard.png" alt="Dashboard" width="100%"> |
+| **Login** — JWT session + rotating refresh cookie | **Dashboard** — live clinic summary |
+| <img src="docs/screenshots/pacientes.png" alt="Pacientes" width="100%"> | <img src="docs/screenshots/ficha.png" alt="Ficha clínica" width="100%"> |
+| **Pacientes** — search by name or RUT | **Ficha clínica (HCU)** — header autofilled from the patient |
+| <img src="docs/screenshots/odontograma.png" alt="Odontograma" width="100%"> | <img src="docs/screenshots/indicadores.png" alt="Indicadores" width="100%"> |
+| **Odontograma** — append-only chart, red = pending, blue = done | **Indicadores** — CPO/ceo + hygiene indices, derived server-side |
+| <img src="docs/screenshots/usuarios.png" alt="Usuarios" width="100%"> | <img src="docs/screenshots/roles.png" alt="Roles" width="100%"> |
+| **Usuarios** — staff accounts, status and password resets | **Roles** — data-driven roles over the permission matrix |
+| <img src="docs/screenshots/agenda.png" alt="Agenda" width="100%"> | <img src="docs/screenshots/cotizaciones.png" alt="Cotizaciones" width="100%"> |
+| **Agenda** — appointment calendar with conflict warnings | **Cotizaciones** — UCO-priced quotations, per-line acceptance |
+| <img src="docs/screenshots/cotizacion.png" alt="Editor de cotización" width="100%"> | <img src="docs/screenshots/swagger.png" alt="Swagger" width="100%"> |
+| **Editor de cotización** — live totals, versions and A4 print | **Swagger UI** — full OpenAPI reference at `/docs` |
+
+## 🧱 Stack
 
 | Concern            | Choice                                             |
 | ------------------ | -------------------------------------------------- |
@@ -48,7 +77,7 @@ digital-signature locking UI. See [Roadmap](#roadmap).
 | Linting/formatting | oxlint (type-aware) + Prettier                     |
 | Frontend           | Angular 22 · Native Federation · spartan/ui · Transloco |
 
-## The architecture
+## 🏗️ The architecture
 
 ```
               ┌───────────────────────────────────────────────────┐
@@ -85,7 +114,7 @@ digital-signature locking UI. See [Roadmap](#roadmap).
   - This is the only layer aware of NestJS specifics like modules, pipes, filters —
     and the only layer that gets deleted/replaced when technology changes.
 
-## Directory layout
+## 🗂️ Directory layout
 
 ```
 src/
@@ -121,7 +150,7 @@ src/
             └── http/                # UsersController + request/response DTOs
 ```
 
-## Request flow: `POST /users`
+## 🔄 Request flow: `POST /users`
 
 0. The global `JwtAuthGuard` authenticates the request (Bearer access token) and
    the permissions guard checks `users:create` — a request without a valid session
@@ -145,7 +174,7 @@ enforces the FONASA ⇄ ISAPRE invariants, `PatientAlreadyExistsError` becomes a
 `409 Conflict`, and the PostgreSQL adapter translates the `UNIQUE` violation on `rut` the
 same way.
 
-## Getting started
+## 🚀 Getting started
 
 Requires **Node.js 24+** and **Docker** (local PostgreSQL/pgAdmin).
 
@@ -168,7 +197,7 @@ Override the allow-list with a comma-separated env var:
 `CORS_ORIGIN=https://app.example.com,https://admin.example.com` (credentials
 are enabled, so `*` is not allowed).
 
-## Authentication & RBAC
+## 🔐 Authentication & RBAC
 
 - **Access token** — JWT (HS256) signed with `JWT_SECRET` (a dev fallback is used
   outside production), sent as `Authorization: Bearer <token>`. The frontend keeps
@@ -542,7 +571,7 @@ curl -s http://localhost:3000/clinical-records/<recordId>/indices \
   -H "Authorization: Bearer $TOKEN"
 ```
 
-## Database
+## 🗄️ Database
 
 PostgreSQL is the only runtime database. SQLite is used **exclusively** by the
 one-time migration script that imports an old `data/hexa.sqlite` file; the API
@@ -595,7 +624,7 @@ marker. It refuses to overwrite a database that already has users.
   # SELECT rut, nombres, apellido_paterno FROM patients;
   ```
 
-## Frontend — Angular 22 microfrontends
+## 🖥️ Frontend — Angular 22 microfrontends
 
 The `frontend/` folder contains an Angular 22 workspace with a **shell** (host)
 and four **remotes** composed at runtime with **Native Federation** — each app
@@ -675,7 +704,7 @@ ng g @angular-architects/native-federation:init --project <name> --port <port>
 Then: expose `./routes` in the new `federation.config.mjs`, register the remote URL
 in `projects/shell/src/main.ts` and add the lazy route in `app.routes.ts`.
 
-## Quotations (cotizaciones) and the UCO fee catalog
+## 🧾 Quotations (cotizaciones) and the UCO fee catalog
 
 The `quotes` module prices dental work over the **Arancel UCO**: a catalog of
 procedures measured in UCO units (`/uco`, seeded with a reference list and
@@ -692,7 +721,7 @@ Permissions: `uco:read` browses the catalog and `uco:manage` mutates it. The
 built-in `dentista` role includes both, so the clinical team can keep the
 arancel up to date.
 
-## Agenda de horas
+## 📅 Agenda de horas
 
 Detalle técnico: [`docs/agenda.md`](docs/agenda.md).
 
@@ -737,7 +766,7 @@ overlap.
 | `agenda.confirmationSubject` | `Hora {{estado}} · {{fecha}} {{hora}}` | Email subject |
 | `agenda.confirmationHtml` | default template | Sanitized HTML body |
 
-## Roadmap
+## 🗺️ Roadmap
 
 The ficha clínica already covers sections 1–9 of the HCU form (record,
 odontogram and indices). What follows:
@@ -751,7 +780,7 @@ odontogram and indices). What follows:
    `finalizada` status is already enforced by the API with `423`) and an
    auto-generated PDF of the HCU form.
 
-## Swapping the persistence adapter
+## 🔁 Swapping the persistence adapter
 
 `UserRepositoryPort` is the seam. To move to Postgres/MongoDB/anything, add an adapter
 that extends the port and rebind it in the composition root — no other file changes:
@@ -786,7 +815,7 @@ Guidelines when writing adapters:
 - Keep ORM and driver imports inside `infrastructure/`.
 - `InMemoryUserRepository` stays around as a fast test double for use case unit tests.
 
-## Adding a new use case
+## ➕ Adding a new use case
 
 1. (If needed) extend the port and its adapters with the persistence operations.
 2. Create `application/use-cases/<name>.use-case.ts` with a command/query interface
@@ -797,7 +826,7 @@ Guidelines when writing adapters:
    authenticated user.
 5. Unit test it without Nest: `new TheUseCase(realAdapterOrFake)`.
 
-## Testing strategy
+## 🧪 Testing strategy
 
 - **Domain & use cases** (`src/**/*.spec.ts`) — plain classes, no Nest container, no
   HTTP, no database. Fast and deterministic; the in-memory adapter doubles as a test
@@ -823,7 +852,7 @@ npm test
 npm run test:e2e
 ```
 
-## Conventions & decisions
+## 📐 Conventions & decisions
 
 - **Ports are abstract classes.** They double as DI tokens (`provide: UserRepositoryPort`),
   so no string/symbol token registries are needed.
