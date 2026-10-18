@@ -543,6 +543,17 @@ export const ES = {
       indicatorsSaved: 'Indicadores guardados.',
       findingAdded: 'Hallazgo registrado.',
       findingVoided: 'Hallazgo anulado.',
+      finalized: 'Ficha cerrada y sellada.',
+    },
+    finalize: {
+      action: 'Cerrar ficha',
+      dialogTitle: '¿Cerrar la ficha clínica?',
+      dialogDescription:
+        'Al cerrar la ficha se sella con un código de integridad y queda bloqueada: ya no se podrá editar, agregar hallazgos ni anularlos.',
+      confirm: 'Cerrar y sellar',
+    },
+    readonly: {
+      notice: 'Esta ficha está finalizada y sellada: ya no se puede editar.',
     },
     form: {
       categoria: 'Categoría',

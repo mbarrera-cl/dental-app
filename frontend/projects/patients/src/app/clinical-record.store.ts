@@ -175,6 +175,17 @@ export class ClinicalRecordStore {
     );
   }
 
+  /** Seals the ficha; the returned record carries the locked status. */
+  finalizeRecord(): Observable<ClinicalRecord> {
+    return this.clinicalApi.finalize(this.requireRecordId()).pipe(
+      tap({
+        next: (record) => {
+          this.record.set(record);
+        },
+      }),
+    );
+  }
+
   reloadFindings(): void {
     const recordId = this.recordId();
 

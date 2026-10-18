@@ -32,6 +32,20 @@
           <span hlmBadge [variant]="record.status === 'finalizada' ? 'secondary' : 'outline'">
             {{ 'clinical.status.' + record.status | transloco }}
           </span>
+          @if (record.status === 'borrador') {
+            <ng-container *hasPermission="permissionKeys.clinical.update">
+              <button
+                hlmBtn
+                variant="outline"
+                size="sm"
+                (click)="askFinalize()"
+                data-testid="clinical-finalize"
+              >
+                <ng-icon name="lucideLock" />
+                {{ 'clinical.finalize.action' | transloco }}
+              </button>
+            </ng-container>
+          }
         }
       </div>
     </div>
@@ -203,3 +217,31 @@
     }
   }
 </section>
+
+<!-- Finalize confirmation: seals the ficha with an integrity hash and locks it. -->
+<hlm-alert-dialog
+  [state]="finalizeOpen() ? 'open' : 'closed'"
+  (stateChanged)="onFinalizeStateChanged($event)"
+>
+  <hlm-alert-dialog-content *hlmAlertDialogPortal="let ctx">
+    <hlm-alert-dialog-header>
+      <h2 hlmAlertDialogTitle>{{ 'clinical.finalize.dialogTitle' | transloco }}</h2>
+      <p hlmAlertDialogDescription>
+        {{ 'clinical.finalize.dialogDescription' | transloco }}
+      </p>
+    </hlm-alert-dialog-header>
+    <hlm-alert-dialog-footer>
+      <button hlmAlertDialogCancel [disabled]="finalizing()">
+        {{ 'common.cancel' | transloco }}
+      </button>
+      <button
+        hlmAlertDialogAction
+        [disabled]="finalizing()"
+        (click)="confirmFinalize()"
+        data-testid="clinical-finalize-confirm"
+      >
+        {{ 'clinical.finalize.confirm' | transloco }}
+      </button>
+    </hlm-alert-dialog-footer>
+  </hlm-alert-dialog-content>
+</hlm-alert-dialog>

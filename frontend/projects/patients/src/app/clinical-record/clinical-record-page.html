@@ -1,4 +1,14 @@
 <form [formGroup]="form" (ngSubmit)="save()" class="grid gap-6" novalidate>
+  @if (finalized()) {
+    <div
+      class="text-muted-foreground flex items-center gap-3 rounded-lg border bg-muted/40 px-4 py-3 text-sm"
+      data-testid="clinical-readonly-notice"
+    >
+      <ng-icon name="lucideLock" class="shrink-0" />
+      <p class="flex-1">{{ 'clinical.readonly.notice' | transloco }}</p>
+    </div>
+  }
+
   <div class="bg-card grid gap-4 rounded-lg border p-4 sm:grid-cols-2">
     <div class="grid gap-2">
       <label hlmLabel for="clinical-categoria">{{ 'clinical.form.categoria' | transloco }}</label>
@@ -226,10 +236,12 @@
     </div>
   </section>
 
-  <div class="flex justify-end">
-    <button hlmBtn type="submit" [disabled]="saving()" data-testid="clinical-save">
-      <ng-icon name="lucideSave" />
-      {{ (saving() ? 'clinical.form.saving' : 'clinical.form.save') | transloco }}
-    </button>
-  </div>
+  @if (!finalized()) {
+    <div class="flex justify-end">
+      <button hlmBtn type="submit" [disabled]="saving()" data-testid="clinical-save">
+        <ng-icon name="lucideSave" />
+        {{ (saving() ? 'clinical.form.saving' : 'clinical.form.save') | transloco }}
+      </button>
+    </div>
+  }
 </form>

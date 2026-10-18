@@ -82,6 +82,7 @@ function buildRecord(): ClinicalRecord {
     updatedAt: '2026-10-16T10:00:00.000Z',
     finalizedAt: null,
     finalizedBy: null,
+    integrityHash: null,
   };
 }
 

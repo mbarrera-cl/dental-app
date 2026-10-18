@@ -533,6 +533,17 @@ export const EN = {
       indicatorsSaved: 'Indicators saved.',
       findingAdded: 'Finding recorded.',
       findingVoided: 'Finding voided.',
+      finalized: 'Record closed and sealed.',
+    },
+    finalize: {
+      action: 'Close record',
+      dialogTitle: 'Close the clinical record?',
+      dialogDescription:
+        'Closing seals the record with an integrity code and locks it: you will no longer be able to edit it, add findings or void them.',
+      confirm: 'Close and seal',
+    },
+    readonly: {
+      notice: 'This record is finalized and sealed: it can no longer be edited.',
     },
     form: {
       categoria: 'Category',

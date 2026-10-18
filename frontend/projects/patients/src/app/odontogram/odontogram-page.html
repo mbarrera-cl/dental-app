@@ -51,98 +51,108 @@
     </div>
 
     <aside class="bg-card grid content-start gap-4 rounded-lg border p-4">
-      <div class="flex items-center justify-between gap-2">
-        <h4 class="text-sm font-semibold">{{ 'clinical.odontogram.palette' | transloco }}</h4>
-        @if (symbol() !== null) {
-          <button hlmBtn variant="ghost" size="sm" (click)="selectSymbol(symbol()!)">
-            {{ 'clinical.odontogram.clearSelection' | transloco }}
-          </button>
-        }
-      </div>
-
-      <div class="flex flex-wrap gap-1.5">
-        @for (option of pendingSymbols; track option) {
-          <button
-            type="button"
-            class="flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium"
-            [class]="
-              symbol() === option
-                ? 'border-primary bg-primary/10 text-foreground'
-                : 'border-input text-muted-foreground hover:text-foreground'
-            "
-            [attr.data-testid]="'odontogram-symbol-' + option"
-            (click)="selectSymbol(option)"
-          >
-            <span class="size-2 rounded-full bg-red-300"></span>
-            {{ symbolLabelKey(option) | transloco }}
-          </button>
-        }
-      </div>
-
-      <div class="flex flex-wrap gap-1.5">
-        @for (option of doneSymbols; track option) {
-          <button
-            type="button"
-            class="flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium"
-            [class]="
-              symbol() === option
-                ? 'border-primary bg-primary/10 text-foreground'
-                : 'border-input text-muted-foreground hover:text-foreground'
-            "
-            [attr.data-testid]="'odontogram-symbol-' + option"
-            (click)="selectSymbol(option)"
-          >
-            <span class="size-2 rounded-full bg-blue-300"></span>
-            {{ symbolLabelKey(option) | transloco }}
-          </button>
-        }
-      </div>
-
-      <div class="grid grid-cols-2 gap-3">
-        <div class="grid gap-2">
-          <label hlmLabel for="odontogram-recesion">
-            {{ 'clinical.odontogram.recesion' | transloco }}
-          </label>
-          <select
-            id="odontogram-recesion"
-            class="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-9 w-full rounded-md border px-3 text-sm shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px]"
-            [value]="recesion() ?? ''"
-            (change)="recesion.set(readGrade($event))"
-          >
-            <option value="">{{ 'clinical.odontogram.gradeNone' | transloco }}</option>
-            @for (grade of grades; track grade) {
-              <option [value]="grade">{{ 'clinical.odontogram.grades.' + grade | transloco }}</option>
-            }
-          </select>
+      @if (finalized()) {
+        <div
+          class="text-muted-foreground flex items-center gap-3 rounded-md border bg-muted/40 px-3 py-2.5 text-sm"
+          data-testid="odontogram-readonly-notice"
+        >
+          <ng-icon name="lucideLock" class="shrink-0" />
+          <p class="flex-1">{{ 'clinical.readonly.notice' | transloco }}</p>
+        </div>
+      } @else {
+        <div class="flex items-center justify-between gap-2">
+          <h4 class="text-sm font-semibold">{{ 'clinical.odontogram.palette' | transloco }}</h4>
+          @if (symbol() !== null) {
+            <button hlmBtn variant="ghost" size="sm" (click)="selectSymbol(symbol()!)">
+              {{ 'clinical.odontogram.clearSelection' | transloco }}
+            </button>
+          }
         </div>
 
-        <div class="grid gap-2">
-          <label hlmLabel for="odontogram-movilidad">
-            {{ 'clinical.odontogram.movilidad' | transloco }}
-          </label>
-          <select
-            id="odontogram-movilidad"
-            class="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-9 w-full rounded-md border px-3 text-sm shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px]"
-            [value]="movilidad() ?? ''"
-            (change)="movilidad.set(readGrade($event))"
-          >
-            <option value="">{{ 'clinical.odontogram.gradeNone' | transloco }}</option>
-            @for (grade of grades; track grade) {
-              <option [value]="grade">{{ 'clinical.odontogram.grades.' + grade | transloco }}</option>
-            }
-          </select>
+        <div class="flex flex-wrap gap-1.5">
+          @for (option of pendingSymbols; track option) {
+            <button
+              type="button"
+              class="flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium"
+              [class]="
+                symbol() === option
+                  ? 'border-primary bg-primary/10 text-foreground'
+                  : 'border-input text-muted-foreground hover:text-foreground'
+              "
+              [attr.data-testid]="'odontogram-symbol-' + option"
+              (click)="selectSymbol(option)"
+            >
+              <span class="size-2 rounded-full bg-red-300"></span>
+              {{ symbolLabelKey(option) | transloco }}
+            </button>
+          }
         </div>
-      </div>
 
-      <button
-        hlmBtn
-        type="button"
-        [disabled]="symbol() === null || selectedTooth() === null || adding()"
-        (click)="addToSelectedTooth()"
-        data-testid="odontogram-add-whole-tooth"
-      >
-        {{ 'clinical.odontogram.addToTooth' | transloco: { tooth: selectedTooth() ?? '—' } }}
-      </button>
+        <div class="flex flex-wrap gap-1.5">
+          @for (option of doneSymbols; track option) {
+            <button
+              type="button"
+              class="flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium"
+              [class]="
+                symbol() === option
+                  ? 'border-primary bg-primary/10 text-foreground'
+                  : 'border-input text-muted-foreground hover:text-foreground'
+              "
+              [attr.data-testid]="'odontogram-symbol-' + option"
+              (click)="selectSymbol(option)"
+            >
+              <span class="size-2 rounded-full bg-blue-300"></span>
+              {{ symbolLabelKey(option) | transloco }}
+            </button>
+          }
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div class="grid gap-2">
+            <label hlmLabel for="odontogram-recesion">
+              {{ 'clinical.odontogram.recesion' | transloco }}
+            </label>
+            <select
+              id="odontogram-recesion"
+              class="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-9 w-full rounded-md border px-3 text-sm shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px]"
+              [value]="recesion() ?? ''"
+              (change)="recesion.set(readGrade($event))"
+            >
+              <option value="">{{ 'clinical.odontogram.gradeNone' | transloco }}</option>
+              @for (grade of grades; track grade) {
+                <option [value]="grade">{{ 'clinical.odontogram.grades.' + grade | transloco }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="grid gap-2">
+            <label hlmLabel for="odontogram-movilidad">
+              {{ 'clinical.odontogram.movilidad' | transloco }}
+            </label>
+            <select
+              id="odontogram-movilidad"
+              class="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-9 w-full rounded-md border px-3 text-sm shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px]"
+              [value]="movilidad() ?? ''"
+              (change)="movilidad.set(readGrade($event))"
+            >
+              <option value="">{{ 'clinical.odontogram.gradeNone' | transloco }}</option>
+              @for (grade of grades; track grade) {
+                <option [value]="grade">{{ 'clinical.odontogram.grades.' + grade | transloco }}</option>
+              }
+            </select>
+          </div>
+        </div>
+
+        <button
+          hlmBtn
+          type="button"
+          [disabled]="symbol() === null || selectedTooth() === null || adding()"
+          (click)="addToSelectedTooth()"
+          data-testid="odontogram-add-whole-tooth"
+        >
+          {{ 'clinical.odontogram.addToTooth' | transloco: { tooth: selectedTooth() ?? '—' } }}
+        </button>
+      }
     </aside>
   </div>
 
@@ -198,7 +208,7 @@
                 <span hlmBadge variant="outline">
                   {{ 'clinical.odontogram.history.voided' | transloco }}
                 </span>
-              } @else {
+              } @else if (!finalized()) {
                 <button
                   hlmBtn
                   variant="ghost"

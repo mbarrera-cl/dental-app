@@ -1,9 +1,9 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { lucideSave } from '@ng-icons/lucide';
+import { lucideLock, lucideSave } from '@ng-icons/lucide';
 import { toast } from '@spartan-ng/brain/sonner';
 import { HlmButton } from '@ui/button';
 import { HlmInput } from '@ui/input';
@@ -53,7 +53,7 @@ function buildHigiene(): FormGroup<Record<string, FormGroup<HigieneEntryGroup>>>
 @Component({
   selector: 'app-indices-page',
   imports: [ReactiveFormsModule, TranslocoPipe, NgIcon, HlmButton, HlmInput, HlmLabel],
-  providers: [provideIcons({ lucideSave })],
+  providers: [provideIcons({ lucideLock, lucideSave })],
   templateUrl: './indices-page.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -68,6 +68,8 @@ export class IndicesPage {
   protected readonly fluorosisLevels = GRADOS_FLUOROSIS;
 
   protected readonly saving = signal(false);
+  /** A finalized ficha is sealed: the form renders disabled and read-only. */
+  protected readonly finalized = computed(() => this.store.record()?.status === 'finalizada');
   /** Live column sums of the table, before saving (server totals on the side). */
   protected readonly liveTotals = signal<HigieneOralTotales>({
     placa: 0,
@@ -102,6 +104,10 @@ export class IndicesPage {
         maloclusion: record.indicadores.maloclusion ?? '',
         fluorosis: record.indicadores.fluorosis ?? '',
       });
+
+      if (record.status === 'finalizada') {
+        this.form.disable();
+      }
     }
 
     this.liveTotals.set(this.computeTotals());
@@ -122,6 +128,10 @@ export class IndicesPage {
   }
 
   protected save(): void {
+    if (this.finalized()) {
+      return;
+    }
+
     this.form.markAllAsTouched();
 
     if (this.form.invalid) {

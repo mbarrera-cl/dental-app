@@ -7,6 +7,7 @@ import type {
   ClinicalEvent,
   ClinicalFinding,
   ClinicalIndices,
+  ClinicalIntegrity,
   ClinicalRecord,
   CreateClinicalRecordPayload,
   UpdateClinicalRecordPayload,
@@ -83,6 +84,21 @@ export class ClinicalApi {
   listEvents(recordId: string): Observable<ClinicalEvent[]> {
     return this.http.get<ClinicalEvent[]>(
       `${this.baseUrl}/clinical-records/${encodeURIComponent(recordId)}/events`,
+    );
+  }
+
+  /** Seals the ficha with an integrity hash and locks it (423 on later edits). */
+  finalize(id: string): Observable<ClinicalRecord> {
+    return this.http.post<ClinicalRecord>(
+      `${this.baseUrl}/clinical-records/${encodeURIComponent(id)}/finalize`,
+      {},
+    );
+  }
+
+  /** Recomputes the integrity hash and compares it to the stored seal. */
+  getIntegrity(id: string): Observable<ClinicalIntegrity> {
+    return this.http.get<ClinicalIntegrity>(
+      `${this.baseUrl}/clinical-records/${encodeURIComponent(id)}/integrity`,
     );
   }
 }

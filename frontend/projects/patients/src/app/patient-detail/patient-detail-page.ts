@@ -11,6 +11,7 @@ import {
   lucideClipboardList,
   lucideFilePlus2,
   lucideFileText,
+  lucideLock,
   lucideRefreshCw,
   lucideShieldCheck,
   lucideSmile,
@@ -19,6 +20,7 @@ import {
 } from '@ng-icons/lucide';
 import { toast } from '@spartan-ng/brain/sonner';
 import { HasPermissionDirective, PERMISSION_KEYS } from 'auth';
+import { HlmAlertDialogImports } from '@ui/alert-dialog';
 import { HlmBadge } from '@ui/badge';
 import { HlmButton } from '@ui/button';
 import { HlmSkeleton } from '@ui/skeleton';
@@ -39,6 +41,7 @@ import { ClinicalRecordStore } from '../clinical-record.store';
     RouterLinkActive,
     TranslocoPipe,
     NgIcon,
+    HlmAlertDialogImports,
     HlmBadge,
     HlmButton,
     HlmSkeleton,
@@ -53,6 +56,7 @@ import { ClinicalRecordStore } from '../clinical-record.store';
       lucideClipboardList,
       lucideFilePlus2,
       lucideFileText,
+      lucideLock,
       lucideRefreshCw,
       lucideShieldCheck,
       lucideSmile,
@@ -146,6 +150,35 @@ export class PatientDetailPage {
         toast.success(this.transloco.translate('clinical.toasts.created')),
       error: (error: unknown) =>
         toast.error(this.transloco.translate(mapApiError(error))),
+    });
+  }
+
+  protected readonly finalizeOpen = signal(false);
+  protected readonly finalizing = signal(false);
+
+  protected askFinalize(): void {
+    this.finalizeOpen.set(true);
+  }
+
+  protected onFinalizeStateChanged(state: 'open' | 'closed'): void {
+    if (state === 'closed') {
+      this.finalizeOpen.set(false);
+    }
+  }
+
+  protected confirmFinalize(): void {
+    this.finalizing.set(true);
+
+    this.store.finalizeRecord().subscribe({
+      next: () => {
+        this.finalizing.set(false);
+        this.finalizeOpen.set(false);
+        toast.success(this.transloco.translate('clinical.toasts.finalized'));
+      },
+      error: (error: unknown) => {
+        this.finalizing.set(false);
+        toast.error(this.transloco.translate(mapApiError(error)));
+      },
     });
   }
 }

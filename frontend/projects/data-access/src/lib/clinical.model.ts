@@ -176,6 +176,18 @@ export interface ClinicalRecord {
   updatedAt: string;
   finalizedAt: string | null;
   finalizedBy: string | null;
+  /** SHA-256 integrity seal, set when the record is finalized. */
+  integrityHash: string | null;
+}
+
+/** Result of `GET /clinical-records/:id/integrity`. */
+export interface ClinicalIntegrity {
+  status: ClinicalRecordStatus;
+  finalized: boolean;
+  /** `null` while the record is still a draft (nothing to verify). */
+  valid: boolean | null;
+  storedHash: string | null;
+  computedHash: string;
 }
 
 export interface CreateClinicalRecordPayload {
@@ -270,6 +282,7 @@ export interface AddFindingPayload {
 export const CLINICAL_EVENT_ACTIONS = [
   'ficha-creada',
   'ficha-actualizada',
+  'ficha-finalizada',
   'hallazgo-agregado',
   'hallazgo-anulado',
 ] as const;
