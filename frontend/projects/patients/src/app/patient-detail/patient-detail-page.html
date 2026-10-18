@@ -153,6 +153,24 @@
           <ng-icon name="lucideActivity" />
           {{ 'clinical.tabs.indicators' | transloco }}
         </a>
+        <a
+          routerLink="plan"
+          routerLinkActive="border-primary text-foreground"
+          class="text-muted-foreground hover:text-foreground -mb-px flex items-center gap-2 border-b-2 border-transparent px-3 py-2 text-sm font-medium"
+          data-testid="clinical-tab-plan"
+        >
+          <ng-icon name="lucideListChecks" />
+          {{ 'clinical.tabs.plan' | transloco }}
+        </a>
+        <a
+          routerLink="historial"
+          routerLinkActive="border-primary text-foreground"
+          class="text-muted-foreground hover:text-foreground -mb-px flex items-center gap-2 border-b-2 border-transparent px-3 py-2 text-sm font-medium"
+          data-testid="clinical-tab-timeline"
+        >
+          <ng-icon name="lucideHistory" />
+          {{ 'clinical.tabs.timeline' | transloco }}
+        </a>
       }
       <a
         *hasPermission="permissionKeys.quotes.read"

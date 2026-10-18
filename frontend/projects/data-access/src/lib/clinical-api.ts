@@ -4,13 +4,17 @@ import { Observable } from 'rxjs';
 import { API_BASE_URL } from './api-base-url';
 import type {
   AddFindingPayload,
+  AddTreatmentPlanItemPayload,
   ClinicalEvent,
   ClinicalFinding,
   ClinicalIndices,
   ClinicalIntegrity,
   ClinicalRecord,
   CreateClinicalRecordPayload,
+  TreatmentPlan,
+  TreatmentPlanItem,
   UpdateClinicalRecordPayload,
+  UpdateTreatmentPlanItemPayload,
 } from './clinical.model';
 
 /**
@@ -99,6 +103,33 @@ export class ClinicalApi {
   getIntegrity(id: string): Observable<ClinicalIntegrity> {
     return this.http.get<ClinicalIntegrity>(
       `${this.baseUrl}/clinical-records/${encodeURIComponent(id)}/integrity`,
+    );
+  }
+
+  /** Treatment plan of a record (the plan is created lazily by the API). */
+  getTreatmentPlan(recordId: string): Observable<TreatmentPlan> {
+    return this.http.get<TreatmentPlan>(
+      `${this.baseUrl}/clinical-records/${encodeURIComponent(recordId)}/treatment-plan`,
+    );
+  }
+
+  addTreatmentPlanItem(
+    recordId: string,
+    payload: AddTreatmentPlanItemPayload,
+  ): Observable<TreatmentPlanItem> {
+    return this.http.post<TreatmentPlanItem>(
+      `${this.baseUrl}/clinical-records/${encodeURIComponent(recordId)}/treatment-plan/items`,
+      payload,
+    );
+  }
+
+  updateTreatmentPlanItem(
+    itemId: string,
+    payload: UpdateTreatmentPlanItemPayload,
+  ): Observable<TreatmentPlanItem> {
+    return this.http.patch<TreatmentPlanItem>(
+      `${this.baseUrl}/treatment-plan-items/${encodeURIComponent(itemId)}`,
+      payload,
     );
   }
 }

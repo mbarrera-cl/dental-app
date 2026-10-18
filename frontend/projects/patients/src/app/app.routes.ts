@@ -61,6 +61,15 @@ export const PATIENTS_ROUTES: Routes = [
         loadComponent: () => import('./indices/indices-page').then((m) => m.IndicesPage),
       },
       {
+        path: 'plan',
+        loadComponent: () =>
+          import('./treatment-plan/treatment-plan-page').then((m) => m.TreatmentPlanPage),
+      },
+      {
+        path: 'historial',
+        loadComponent: () => import('./timeline/timeline-page').then((m) => m.TimelinePage),
+      },
+      {
         path: 'presupuestos',
         loadComponent: () =>
           import('./patient-quotes/patient-quotes-page').then((m) => m.PatientQuotesPage),

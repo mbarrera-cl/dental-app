@@ -512,6 +512,8 @@ export const ES = {
       record: 'Ficha clínica',
       odontogram: 'Odontograma',
       indicators: 'Indicadores',
+      plan: 'Plan de tratamiento',
+      timeline: 'Historial',
       quotes: 'Presupuestos',
       prescriptions: 'Recetas',
       consents: 'Consentimientos',
@@ -554,6 +556,49 @@ export const ES = {
     },
     readonly: {
       notice: 'Esta ficha está finalizada y sellada: ya no se puede editar.',
+    },
+    plan: {
+      title: 'Plan de tratamiento',
+      subtitle: 'Procedimientos planificados para este paciente, con su estado de avance.',
+      empty: 'Todavía no hay procedimientos en el plan.',
+      toothLabel: 'Pieza {{tooth}}',
+      form: {
+        procedure: 'Procedimiento',
+        procedurePlaceholder: 'p. ej. Endodoncia pieza 36…',
+        tooth: 'Pieza (opcional)',
+        toothPlaceholder: 'p. ej. 36',
+        notes: 'Notas',
+        notesPlaceholder: 'Observaciones opcionales…',
+        add: 'Agregar',
+        status: 'Estado',
+      },
+      statuses: {
+        planificado: 'Planificado',
+        'en-ejecucion': 'En ejecución',
+        realizado: 'Realizado',
+        cancelado: 'Cancelado',
+      },
+      validation: {
+        tooth: 'Ingresa una pieza válida (11–48 o 51–85) o déjala vacía.',
+        procedureMax: 'Máximo 300 caracteres.',
+      },
+      toasts: {
+        itemAdded: 'Procedimiento agregado al plan.',
+      },
+    },
+    timeline: {
+      title: 'Historial clínico',
+      subtitle: 'Todas las acciones registradas en la ficha, de la más reciente a la más antigua.',
+      empty: 'Todavía no hay eventos en el historial.',
+      actions: {
+        'ficha-creada': 'Ficha abierta',
+        'ficha-actualizada': 'Ficha actualizada',
+        'ficha-finalizada': 'Ficha cerrada',
+        'hallazgo-agregado': 'Hallazgo agregado',
+        'hallazgo-anulado': 'Hallazgo anulado',
+        'plan-item-agregado': 'Plan: procedimiento agregado',
+        'plan-item-actualizado': 'Plan: procedimiento actualizado',
+      },
     },
     form: {
       categoria: 'Categoría',

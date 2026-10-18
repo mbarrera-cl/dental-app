@@ -190,6 +190,62 @@ export interface ClinicalIntegrity {
   computedHash: string;
 }
 
+/**
+ * Treatment plan (plan de tratamiento): one entry per procedure, optionally
+ * bound to a tooth, with its execution state.
+ */
+export const TREATMENT_PLAN_ITEM_STATUSES = [
+  'planificado',
+  'en-ejecucion',
+  'realizado',
+  'cancelado',
+] as const;
+
+export type TreatmentPlanItemStatus = (typeof TREATMENT_PLAN_ITEM_STATUSES)[number];
+
+export interface TreatmentPlanItem {
+  id: string;
+  planId: string;
+  /** FDI tooth; `null` for whole-mouth procedures. */
+  tooth: number | null;
+  procedure: string;
+  ucoCode: string | null;
+  status: TreatmentPlanItemStatus;
+  notes: string | null;
+  position: number;
+  createdBy: string | null;
+  updatedBy: string | null;
+  /** ISO-8601 timestamps. */
+  createdAt: string;
+  updatedAt: string;
+  statusChangedAt: string | null;
+  statusChangedBy: string | null;
+}
+
+export interface TreatmentPlan {
+  id: string;
+  recordId: string;
+  /** ISO-8601 timestamps. */
+  createdAt: string;
+  updatedAt: string;
+  items: TreatmentPlanItem[];
+}
+
+export interface AddTreatmentPlanItemPayload {
+  tooth?: number | null;
+  procedure: string;
+  ucoCode?: string | null;
+  notes?: string | null;
+}
+
+export interface UpdateTreatmentPlanItemPayload {
+  status?: TreatmentPlanItemStatus;
+  tooth?: number | null;
+  procedure?: string;
+  ucoCode?: string | null;
+  notes?: string | null;
+}
+
 export interface CreateClinicalRecordPayload {
   categoria?: CategoriaEtaria;
   embarazada?: boolean;
@@ -285,6 +341,8 @@ export const CLINICAL_EVENT_ACTIONS = [
   'ficha-finalizada',
   'hallazgo-agregado',
   'hallazgo-anulado',
+  'plan-item-agregado',
+  'plan-item-actualizado',
 ] as const;
 
 export type ClinicalEventAction = (typeof CLINICAL_EVENT_ACTIONS)[number];

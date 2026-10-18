@@ -6,12 +6,17 @@ import {
   PatientsApi,
   mapApiError,
   type AddFindingPayload,
+  type AddTreatmentPlanItemPayload,
+  type ClinicalEvent,
   type ClinicalFinding,
   type ClinicalIndices,
   type ClinicalRecord,
   type CreateClinicalRecordPayload,
   type Patient,
+  type TreatmentPlan,
+  type TreatmentPlanItem,
   type UpdateClinicalRecordPayload,
+  type UpdateTreatmentPlanItemPayload,
 } from 'data-access';
 
 /**
@@ -46,6 +51,10 @@ export class ClinicalRecordStore {
   /** Full append-only log (voided entries included), oldest first. */
   readonly findings = signal<readonly ClinicalFinding[]>([]);
   readonly indices = signal<ClinicalIndices | null>(null);
+  /** Treatment plan of the record (created lazily by the API on first use). */
+  readonly plan = signal<TreatmentPlan | null>(null);
+  /** Clinical timeline / audit trail, newest first. */
+  readonly events = signal<readonly ClinicalEvent[]>([]);
 
   readonly loading = signal(true);
   /** Transloco key of the load failure, if any. */
@@ -76,6 +85,8 @@ export class ClinicalRecordStore {
     this.record.set(null);
     this.findings.set([]);
     this.indices.set(null);
+    this.plan.set(null);
+    this.events.set([]);
 
     this.patientsApi
       .getById(patientId)
@@ -107,6 +118,8 @@ export class ClinicalRecordStore {
             this.record.set(result);
             this.reloadFindings();
             this.reloadIndices();
+            this.reloadPlan();
+            this.reloadEvents();
           }
 
           this.loading.set(false);
@@ -134,6 +147,8 @@ export class ClinicalRecordStore {
           this.creating.set(false);
           this.reloadFindings();
           this.reloadIndices();
+          this.reloadPlan();
+          this.reloadEvents();
         },
         error: () => this.creating.set(false),
       }),
@@ -181,6 +196,32 @@ export class ClinicalRecordStore {
       tap({
         next: (record) => {
           this.record.set(record);
+          this.reloadEvents();
+        },
+      }),
+    );
+  }
+
+  addPlanItem(payload: AddTreatmentPlanItemPayload): Observable<TreatmentPlanItem> {
+    return this.clinicalApi.addTreatmentPlanItem(this.requireRecordId(), payload).pipe(
+      tap({
+        next: () => {
+          this.reloadPlan();
+          this.reloadEvents();
+        },
+      }),
+    );
+  }
+
+  updatePlanItem(
+    itemId: string,
+    payload: UpdateTreatmentPlanItemPayload,
+  ): Observable<TreatmentPlanItem> {
+    return this.clinicalApi.updateTreatmentPlanItem(itemId, payload).pipe(
+      tap({
+        next: () => {
+          this.reloadPlan();
+          this.reloadEvents();
         },
       }),
     );
@@ -210,6 +251,32 @@ export class ClinicalRecordStore {
       .getIndices(recordId)
       .pipe(takeUntil(this.destroy))
       .subscribe({ next: (indices) => this.indices.set(indices) });
+  }
+
+  reloadPlan(): void {
+    const recordId = this.recordId();
+
+    if (recordId === null) {
+      return;
+    }
+
+    this.clinicalApi
+      .getTreatmentPlan(recordId)
+      .pipe(takeUntil(this.destroy))
+      .subscribe({ next: (plan) => this.plan.set(plan) });
+  }
+
+  reloadEvents(): void {
+    const recordId = this.recordId();
+
+    if (recordId === null) {
+      return;
+    }
+
+    this.clinicalApi
+      .listEvents(recordId)
+      .pipe(takeUntil(this.destroy))
+      .subscribe({ next: (events) => this.events.set(events) });
   }
 
   private requireRecordId(): string {

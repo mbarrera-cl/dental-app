@@ -8,12 +8,15 @@ import {
   PIEZAS_HIGIENE_ORAL,
   REGIONES_ESTOMATOGNATICAS,
   type AntecedentesRecord,
+  type ClinicalEvent,
   type ClinicalFinding,
   type ClinicalIndices,
   type ClinicalRecord,
   type HigieneOralRecord,
   type Patient,
   type RegionesRecord,
+  type TreatmentPlan,
+  type TreatmentPlanItem,
 } from 'data-access';
 import { ClinicalRecordStore } from './clinical-record.store';
 
@@ -109,6 +112,16 @@ const INDICES: ClinicalIndices = {
   higieneOral: { placa: 0, calculo: 0, gingivitis: 0, total: 0 },
 };
 
+const PLAN: TreatmentPlan = {
+  id: 'plan-1',
+  recordId: RECORD_ID,
+  createdAt: '2026-10-16T10:00:00.000Z',
+  updatedAt: '2026-10-16T10:00:00.000Z',
+  items: [],
+};
+
+const EVENTS: ClinicalEvent[] = [];
+
 describe('ClinicalRecordStore', () => {
   let http: HttpTestingController;
   let store: ClinicalRecordStore;
@@ -142,6 +155,8 @@ describe('ClinicalRecordStore', () => {
       .flush(buildRecord());
     http.expectOne(`http://api.test/v1/clinical-records/${RECORD_ID}/findings`).flush([FINDING]);
     http.expectOne(`http://api.test/v1/clinical-records/${RECORD_ID}/indices`).flush(INDICES);
+    http.expectOne(`http://api.test/v1/clinical-records/${RECORD_ID}/treatment-plan`).flush(PLAN);
+    http.expectOne(`http://api.test/v1/clinical-records/${RECORD_ID}/events`).flush(EVENTS);
   }
 
   it('treats a missing clinical record as a normal state (404 on load)', () => {
@@ -183,6 +198,8 @@ describe('ClinicalRecordStore', () => {
 
     http.expectOne(`http://api.test/v1/clinical-records/${RECORD_ID}/findings`).flush([]);
     http.expectOne(`http://api.test/v1/clinical-records/${RECORD_ID}/indices`).flush(INDICES);
+    http.expectOne(`http://api.test/v1/clinical-records/${RECORD_ID}/treatment-plan`).flush(PLAN);
+    http.expectOne(`http://api.test/v1/clinical-records/${RECORD_ID}/events`).flush(EVENTS);
 
     expect(store.record()?.id).toBe(RECORD_ID);
     expect(store.creating()).toBe(false);
@@ -249,6 +266,53 @@ describe('ClinicalRecordStore', () => {
     expect(store.record()?.id).toBe(RECORD_ID);
   });
 
+  it('adds plan items and advances their status, refreshing plan and events', () => {
+    loadPatient();
+    loadRecord();
+
+    const item: TreatmentPlanItem = {
+      id: 'item-1',
+      planId: 'plan-1',
+      tooth: 36,
+      procedure: 'Endodoncia pieza 36',
+      ucoCode: null,
+      status: 'planificado',
+      notes: null,
+      position: 0,
+      createdBy: 'user-1',
+      updatedBy: 'user-1',
+      createdAt: '2026-10-16T10:00:00.000Z',
+      updatedAt: '2026-10-16T10:00:00.000Z',
+      statusChangedAt: null,
+      statusChangedBy: null,
+    };
+
+    store.addPlanItem({ tooth: 36, procedure: 'Endodoncia pieza 36' }).subscribe();
+    const post = http.expectOne(
+      `http://api.test/v1/clinical-records/${RECORD_ID}/treatment-plan/items`,
+    );
+    expect(post.request.method).toBe('POST');
+    post.flush(item);
+    http
+      .expectOne(`http://api.test/v1/clinical-records/${RECORD_ID}/treatment-plan`)
+      .flush({ ...PLAN, items: [item] });
+    http.expectOne(`http://api.test/v1/clinical-records/${RECORD_ID}/events`).flush(EVENTS);
+
+    expect(store.plan()?.items).toHaveLength(1);
+
+    store.updatePlanItem(item.id, { status: 'realizado' }).subscribe();
+    const patch = http.expectOne(`http://api.test/v1/treatment-plan-items/${item.id}`);
+    expect(patch.request.method).toBe('PATCH');
+    expect(patch.request.body).toEqual({ status: 'realizado' });
+    patch.flush({ ...item, status: 'realizado' });
+    http
+      .expectOne(`http://api.test/v1/clinical-records/${RECORD_ID}/treatment-plan`)
+      .flush({ ...PLAN, items: [{ ...item, status: 'realizado' }] });
+    http.expectOne(`http://api.test/v1/clinical-records/${RECORD_ID}/events`).flush(EVENTS);
+
+    expect(store.plan()?.items[0].status).toBe('realizado');
+  });
+
   it('switches patients, cancelling the requests of the previous one', () => {
     store.load(PATIENT_ID);
     http.expectOne('http://api.test/v1/patients/patient-1').flush(PATIENT);
@@ -257,6 +321,8 @@ describe('ClinicalRecordStore', () => {
       .flush(buildRecord());
     http.expectOne(`http://api.test/v1/clinical-records/${RECORD_ID}/findings`).flush([]);
     http.expectOne(`http://api.test/v1/clinical-records/${RECORD_ID}/indices`).flush(INDICES);
+    http.expectOne(`http://api.test/v1/clinical-records/${RECORD_ID}/treatment-plan`).flush(PLAN);
+    http.expectOne(`http://api.test/v1/clinical-records/${RECORD_ID}/events`).flush(EVENTS);
 
     store.load('patient-2');
 

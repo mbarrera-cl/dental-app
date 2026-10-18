@@ -1,0 +1,36 @@
+<section class="grid gap-6">
+  <div class="grid gap-1">
+    <h3 class="text-lg font-semibold tracking-tight">{{ 'clinical.timeline.title' | transloco }}</h3>
+    <p class="text-muted-foreground text-sm">{{ 'clinical.timeline.subtitle' | transloco }}</p>
+  </div>
+
+  <div class="bg-card grid gap-3 rounded-lg border p-4" data-testid="timeline-events">
+    @if (events().length === 0) {
+      <p class="text-muted-foreground text-sm">{{ 'clinical.timeline.empty' | transloco }}</p>
+    } @else {
+      <ul class="grid gap-2">
+        @for (event of events(); track event.id) {
+          <li
+            class="flex flex-wrap items-center gap-2 rounded-md border px-3 py-2 text-sm"
+            data-testid="timeline-event"
+          >
+            <ng-icon name="lucideHistory" class="text-muted-foreground shrink-0" />
+            <span hlmBadge variant="outline">{{ actionLabelKey(event.action) | transloco }}</span>
+
+            @if (event.summary) {
+              <span class="flex-1">{{ event.summary }}</span>
+            }
+
+            @if (eventPayload(event); as payload) {
+              <span class="text-muted-foreground w-full text-xs sm:w-auto">{{ payload }}</span>
+            }
+
+            <span class="text-muted-foreground ms-auto text-xs">
+              {{ formatDate(event.createdAt) }}
+            </span>
+          </li>
+        }
+      </ul>
+    }
+  </div>
+</section>

@@ -502,6 +502,8 @@ export const EN = {
       record: 'Clinical record',
       odontogram: 'Odontogram',
       indicators: 'Indicators',
+      plan: 'Treatment plan',
+      timeline: 'Timeline',
       quotes: 'Quotations',
       prescriptions: 'Prescriptions',
       consents: 'Consents',
@@ -544,6 +546,49 @@ export const EN = {
     },
     readonly: {
       notice: 'This record is finalized and sealed: it can no longer be edited.',
+    },
+    plan: {
+      title: 'Treatment plan',
+      subtitle: 'Planned procedures for this patient, with their progress state.',
+      empty: 'There are no procedures in the plan yet.',
+      toothLabel: 'Tooth {{tooth}}',
+      form: {
+        procedure: 'Procedure',
+        procedurePlaceholder: 'e.g. Root canal tooth 36…',
+        tooth: 'Tooth (optional)',
+        toothPlaceholder: 'e.g. 36',
+        notes: 'Notes',
+        notesPlaceholder: 'Optional observations…',
+        add: 'Add',
+        status: 'Status',
+      },
+      statuses: {
+        planificado: 'Planned',
+        'en-ejecucion': 'In progress',
+        realizado: 'Done',
+        cancelado: 'Cancelled',
+      },
+      validation: {
+        tooth: 'Enter a valid tooth (11–48 or 51–85) or leave it empty.',
+        procedureMax: 'At most 300 characters.',
+      },
+      toasts: {
+        itemAdded: 'Procedure added to the plan.',
+      },
+    },
+    timeline: {
+      title: 'Clinical timeline',
+      subtitle: 'Every action recorded on the record, newest first.',
+      empty: 'There are no timeline events yet.',
+      actions: {
+        'ficha-creada': 'Record opened',
+        'ficha-actualizada': 'Record updated',
+        'ficha-finalizada': 'Record closed',
+        'hallazgo-agregado': 'Finding added',
+        'hallazgo-anulado': 'Finding voided',
+        'plan-item-agregado': 'Plan: procedure added',
+        'plan-item-actualizado': 'Plan: procedure updated',
+      },
     },
     form: {
       categoria: 'Category',

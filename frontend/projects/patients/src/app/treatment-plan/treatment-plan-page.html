@@ -1,0 +1,114 @@
+<section class="grid gap-6">
+  <div class="grid gap-1">
+    <h3 class="text-lg font-semibold tracking-tight">{{ 'clinical.plan.title' | transloco }}</h3>
+    <p class="text-muted-foreground text-sm">{{ 'clinical.plan.subtitle' | transloco }}</p>
+  </div>
+
+  @if (finalized()) {
+    <div
+      class="text-muted-foreground flex items-center gap-3 rounded-lg border bg-muted/40 px-4 py-3 text-sm"
+      data-testid="plan-readonly-notice"
+    >
+      <ng-icon name="lucideLock" class="shrink-0" />
+      <p class="flex-1">{{ 'clinical.readonly.notice' | transloco }}</p>
+    </div>
+  } @else {
+    <form
+      [formGroup]="form"
+      (ngSubmit)="add()"
+      class="bg-card grid gap-4 rounded-lg border p-4 sm:grid-cols-[1fr_6rem_auto]"
+      data-testid="plan-add-form"
+    >
+      <div class="grid gap-2">
+        <label hlmLabel for="plan-procedure">{{ 'clinical.plan.form.procedure' | transloco }}</label>
+        <input
+          hlmInput
+          id="plan-procedure"
+          formControlName="procedure"
+          [placeholder]="'clinical.plan.form.procedurePlaceholder' | transloco"
+          data-testid="plan-procedure"
+        />
+        @if (form.controls.procedure.invalid && form.controls.procedure.touched) {
+          <p class="text-destructive text-xs">{{ 'clinical.plan.validation.procedureMax' | transloco }}</p>
+        }
+      </div>
+
+      <div class="grid gap-2">
+        <label hlmLabel for="plan-tooth">{{ 'clinical.plan.form.tooth' | transloco }}</label>
+        <input
+          hlmInput
+          id="plan-tooth"
+          formControlName="tooth"
+          type="number"
+          inputmode="numeric"
+          [placeholder]="'clinical.plan.form.toothPlaceholder' | transloco"
+          data-testid="plan-tooth"
+        />
+        @if (toothError(); as errorKey) {
+          <p class="text-destructive text-xs">{{ errorKey | transloco }}</p>
+        }
+      </div>
+
+      <div class="flex items-end">
+        <button hlmBtn type="submit" [disabled]="adding()" data-testid="plan-add">
+          <ng-icon name="lucidePlus" />
+          {{ 'clinical.plan.form.add' | transloco }}
+        </button>
+      </div>
+
+      <div class="grid gap-2 sm:col-span-3">
+        <label hlmLabel for="plan-notes">{{ 'clinical.plan.form.notes' | transloco }}</label>
+        <input
+          hlmInput
+          id="plan-notes"
+          formControlName="notes"
+          [placeholder]="'clinical.plan.form.notesPlaceholder' | transloco"
+          data-testid="plan-notes"
+        />
+      </div>
+    </form>
+  }
+
+  <div class="bg-card grid gap-3 rounded-lg border p-4" data-testid="plan-items">
+    @if (items().length === 0) {
+      <p class="text-muted-foreground text-sm">{{ 'clinical.plan.empty' | transloco }}</p>
+    } @else {
+      <ul class="grid gap-2">
+        @for (item of items(); track item.id) {
+          <li
+            class="flex flex-wrap items-center gap-3 rounded-md border px-3 py-2 text-sm"
+            data-testid="plan-item"
+          >
+            <span class="font-mono font-medium" data-testid="plan-item-tooth">
+              {{ 'clinical.plan.toothLabel' | transloco: { tooth: toothLabel(item.tooth) } }}
+            </span>
+
+            <span class="flex-1 font-medium">{{ item.procedure }}</span>
+
+            @if (item.notes) {
+              <span class="text-muted-foreground w-full text-xs sm:w-auto">{{ item.notes }}</span>
+            }
+
+            @if (finalized()) {
+              <span hlmBadge [variant]="statusVariant(item.status)">
+                {{ statusLabelKey(item.status) | transloco }}
+              </span>
+            } @else {
+              <select
+                class="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-8 rounded-md border px-2 text-sm shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px]"
+                [value]="item.status"
+                (change)="changeStatus(item, readStatus($event))"
+                [attr.data-testid]="'plan-item-status-' + item.id"
+                [attr.aria-label]="'clinical.plan.form.status' | transloco"
+              >
+                @for (status of statuses; track status) {
+                  <option [value]="status">{{ statusLabelKey(status) | transloco }}</option>
+                }
+              </select>
+            }
+          </li>
+        }
+      </ul>
+    }
+  </div>
+</section>
