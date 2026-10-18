@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { lucideBadgeDollarSign, lucideCalendar, lucideKeyRound, lucideSettings, lucideShieldCheck } from '@ng-icons/lucide';
+import { lucideBadgeDollarSign, lucideCalendar, lucideKeyRound, lucideScrollText, lucideSettings, lucideShieldCheck } from '@ng-icons/lucide';
 import { HasPermissionDirective, PERMISSION_KEYS } from 'auth';
 
 /**
@@ -20,7 +20,7 @@ import { HasPermissionDirective, PERMISSION_KEYS } from 'auth';
     NgIcon,
     HasPermissionDirective,
   ],
-  providers: [provideIcons({ lucideShieldCheck, lucideSettings, lucideKeyRound, lucideBadgeDollarSign, lucideCalendar })],
+  providers: [provideIcons({ lucideShieldCheck, lucideSettings, lucideKeyRound, lucideBadgeDollarSign, lucideCalendar, lucideScrollText })],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <section class="flex flex-col gap-6">
@@ -69,6 +69,16 @@ import { HasPermissionDirective, PERMISSION_KEYS } from 'auth';
         >
           <ng-icon name="lucideBadgeDollarSign" />
           {{ 'admin.tabs.uco' | transloco }}
+        </a>
+        <a
+          *hasPermission="permissionKeys.consents.manage"
+          routerLink="consentimientos"
+          routerLinkActive="border-primary text-foreground"
+          class="text-muted-foreground hover:text-foreground -mb-px flex items-center gap-2 border-b-2 border-transparent px-3 py-2 text-sm font-medium"
+          data-testid="admin-tab-consents"
+        >
+          <ng-icon name="lucideScrollText" />
+          {{ 'admin.tabs.consents' | transloco }}
         </a>
         <a
           *hasPermission="permissionKeys.settings.read"

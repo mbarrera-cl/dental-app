@@ -139,6 +139,50 @@ describe('settings registry', () => {
     }
   });
 
+  it('composes every group from its owning module', () => {
+    expect(SETTING_GROUPS.map((group) => group.id)).toEqual([
+      'passwordPolicy',
+      'login',
+      'session',
+      'apiKeys',
+      'clinic',
+      'quotes',
+      'activity',
+      'mcp',
+      'caroIa',
+      'agenda',
+    ]);
+  });
+
+  it('flags exactly the security-sensitive settings', () => {
+    const securityKeys = SETTING_DEFINITIONS.filter(
+      (definition) => definition.sensitivity === 'security',
+    ).map((definition) => definition.key);
+
+    expect(securityKeys).toEqual([
+      // auth context: password policy, lockout, tokens and API key limits
+      'passwordPolicy.minLength',
+      'passwordPolicy.maxLength',
+      'passwordPolicy.requireUppercase',
+      'passwordPolicy.requireLowercase',
+      'passwordPolicy.requireDigit',
+      'passwordPolicy.requireSymbol',
+      'passwordPolicy.historyCount',
+      'passwordPolicy.expirationDays',
+      'login.maxFailedAttempts',
+      'login.lockDurationMinutes',
+      'session.accessTokenTtlMinutes',
+      'session.refreshTokenTtlDays',
+      'apiKeys.defaultExpirationDays',
+      'apiKeys.maxKeysPerUser',
+      // integration write gates and safety toggles
+      'mcp.allowWrites',
+      'mcp.redactPii',
+      'mcp.requireConfirmation',
+      'caroIa.allowWrites',
+    ]);
+  });
+
   it('looks definitions up by key and returns undefined otherwise', () => {
     expect(findSettingDefinition('session.accessTokenTtlMinutes')?.type).toBe('number');
     expect(findSettingDefinition('nope.nope')).toBeUndefined();

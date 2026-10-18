@@ -9,12 +9,14 @@ export interface ImportSettingsCommand {
   /** Raw request body: the exported envelope, or a bare `{ values }` object. */
   envelope: unknown;
   actor: SettingsAuditActor;
+  /** Whether the caller may import `security`-sensitive settings. */
+  securityGranted?: boolean;
 }
 
 /**
  * Imports a configuration envelope. The shape is validated here and the
  * values go through the regular update path (registry validation,
- * managed-key rejection, audit trail, all-or-nothing).
+ * managed-key rejection, security gate, audit trail, all-or-nothing).
  */
 @Injectable()
 export class ImportSettingsUseCase implements UseCase<ImportSettingsCommand, SettingOverview[]> {
@@ -23,6 +25,10 @@ export class ImportSettingsUseCase implements UseCase<ImportSettingsCommand, Set
   async execute(command: ImportSettingsCommand): Promise<SettingOverview[]> {
     const values = parseSettingsImport(command.envelope);
 
-    return this.updateSettings.execute({ values, actor: command.actor });
+    return this.updateSettings.execute({
+      values,
+      actor: command.actor,
+      securityGranted: command.securityGranted ?? false,
+    });
   }
 }

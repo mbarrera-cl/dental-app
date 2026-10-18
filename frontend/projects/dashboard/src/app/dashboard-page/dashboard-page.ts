@@ -78,6 +78,12 @@ export class DashboardPage {
       return '—';
     }
 
-    return prevision.tipo === 'FONASA' ? `${prevision.tipo} · ${prevision.tramo}` : (prevision.plan ?? '—');
+    return prevision.tipo === 'FONASA'
+      ? `${prevision.tipo} · ${prevision.tramo}`
+      : prevision.tipo === 'ISAPRE'
+        ? (prevision.plan ?? '—')
+        : prevision.tipo === 'CONVENIO'
+          ? (prevision.convenio ?? '—')
+          : 'Particular';
   }
 }

@@ -384,6 +384,8 @@
               <option value="">{{ 'patients.form.previsionSin' | transloco }}</option>
               <option value="FONASA">FONASA</option>
               <option value="ISAPRE">ISAPRE</option>
+              <option value="PARTICULAR">Particular</option>
+              <option value="CONVENIO">Convenio</option>
             </select>
           </div>
 
@@ -410,6 +412,17 @@
                 formControlName="previsionPlan"
                 autocomplete="off"
                 [placeholder]="'patients.form.previsionPlanPlaceholder' | transloco"
+              />
+            </div>
+          } @else if (form.controls.previsionTipo.value === 'CONVENIO') {
+            <div class="grid gap-2">
+              <label hlmLabel for="patient-convenio">{{ 'patients.form.previsionConvenio' | transloco }}</label>
+              <input
+                hlmInput
+                id="patient-convenio"
+                formControlName="previsionConvenio"
+                autocomplete="off"
+                [placeholder]="'patients.form.previsionConvenioPlaceholder' | transloco"
               />
             </div>
           }

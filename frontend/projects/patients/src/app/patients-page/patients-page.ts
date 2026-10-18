@@ -255,6 +255,10 @@ export class PatientsPage {
     previsionTipo: new FormControl('', { nonNullable: true }),
     previsionTramo: new FormControl('', { nonNullable: true }),
     previsionPlan: new FormControl('', { nonNullable: true, validators: [Validators.maxLength(100)] }),
+    previsionConvenio: new FormControl('', {
+      nonNullable: true,
+      validators: [Validators.maxLength(100)],
+    }),
     contactoNombre: new FormControl('', {
       nonNullable: true,
       validators: [Validators.maxLength(100)],
@@ -318,7 +322,13 @@ export class PatientsPage {
       return '—';
     }
 
-    return prevision.tipo === 'FONASA' ? `${prevision.tipo} · ${prevision.tramo}` : (prevision.plan ?? '—');
+    return prevision.tipo === 'FONASA'
+      ? `${prevision.tipo} · ${prevision.tramo}`
+      : prevision.tipo === 'ISAPRE'
+        ? (prevision.plan ?? '—')
+        : prevision.tipo === 'CONVENIO'
+          ? (prevision.convenio ?? '—')
+          : 'Particular';
   }
 
   protected deletingLabel(): { name: string; rut: string } {
@@ -349,6 +359,7 @@ export class PatientsPage {
       previsionTipo: '',
       previsionTramo: '',
       previsionPlan: '',
+      previsionConvenio: '',
       contactoNombre: '',
       contactoTelefono: '',
       contactoParentesco: '',
@@ -377,6 +388,7 @@ export class PatientsPage {
       previsionTipo: patient.prevision?.tipo ?? '',
       previsionTramo: patient.prevision?.tramo ?? '',
       previsionPlan: patient.prevision?.plan ?? '',
+      previsionConvenio: patient.prevision?.convenio ?? '',
       contactoNombre: patient.contactoEmergencia?.nombre ?? '',
       contactoTelefono: patient.contactoEmergencia?.telefono ?? '',
       contactoParentesco: patient.contactoEmergencia?.parentesco ?? '',
@@ -577,10 +589,13 @@ export class PatientsPage {
   }
 
   private previsionValidationKey(): string | null {
-    const { previsionTipo, previsionTramo, previsionPlan } = this.form.getRawValue();
+    const { previsionTipo, previsionTramo, previsionPlan, previsionConvenio } =
+      this.form.getRawValue();
 
     if (previsionTipo === '') {
-      return previsionTramo !== '' || previsionPlan.trim() !== ''
+      return previsionTramo !== '' ||
+        previsionPlan.trim() !== '' ||
+        previsionConvenio.trim() !== ''
         ? 'patients.validation.previsionTipoRequired'
         : null;
     }
@@ -589,7 +604,15 @@ export class PatientsPage {
       return previsionTramo === '' ? 'patients.validation.tramoRequired' : null;
     }
 
-    return previsionPlan.trim() === '' ? 'patients.validation.planRequired' : null;
+    if (previsionTipo === 'ISAPRE') {
+      return previsionPlan.trim() === '' ? 'patients.validation.planRequired' : null;
+    }
+
+    if (previsionTipo === 'CONVENIO') {
+      return previsionConvenio.trim() === '' ? 'patients.validation.convenioRequired' : null;
+    }
+
+    return null;
   }
 
   private contactoValidationKey(): string | null {
@@ -637,8 +660,27 @@ export class PatientsPage {
         raw.previsionTipo === ''
           ? null
           : raw.previsionTipo === 'FONASA'
-            ? { tipo: 'FONASA', tramo: raw.previsionTramo as FonasaTramo, plan: null }
-            : { tipo: 'ISAPRE', tramo: null, plan: raw.previsionPlan.trim() },
+            ? {
+                tipo: 'FONASA',
+                tramo: raw.previsionTramo as FonasaTramo,
+                plan: null,
+                convenio: null,
+              }
+            : raw.previsionTipo === 'ISAPRE'
+              ? {
+                  tipo: 'ISAPRE',
+                  tramo: null,
+                  plan: raw.previsionPlan.trim(),
+                  convenio: null,
+                }
+              : raw.previsionTipo === 'CONVENIO'
+                ? {
+                    tipo: 'CONVENIO',
+                    tramo: null,
+                    plan: null,
+                    convenio: raw.previsionConvenio.trim(),
+                  }
+                : { tipo: 'PARTICULAR', tramo: null, plan: null, convenio: null },
       contactoEmergencia:
         raw.contactoNombre.trim() === '' && raw.contactoTelefono.trim() === ''
           ? null

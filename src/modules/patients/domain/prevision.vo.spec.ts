@@ -8,6 +8,7 @@ describe('Prevision', () => {
     expect(prevision.tipo).toBe('FONASA');
     expect(prevision.tramo).toBe('B');
     expect(prevision.plan).toBeNull();
+    expect(prevision.convenio).toBeNull();
   });
 
   it('accepts ISAPRE with a plan name, normalized', () => {
@@ -19,6 +20,28 @@ describe('Prevision', () => {
     expect(prevision.tipo).toBe('ISAPRE');
     expect(prevision.tramo).toBeNull();
     expect(prevision.plan).toBe('Consalud Plus');
+    expect(prevision.convenio).toBeNull();
+  });
+
+  it('accepts PARTICULAR without coverage details', () => {
+    const prevision = Prevision.create({ tipo: 'particular' });
+
+    expect(prevision.tipo).toBe('PARTICULAR');
+    expect(prevision.tramo).toBeNull();
+    expect(prevision.plan).toBeNull();
+    expect(prevision.convenio).toBeNull();
+  });
+
+  it('accepts CONVENIO with a name, normalized', () => {
+    const prevision = Prevision.create({
+      tipo: 'convenio',
+      convenio: '  Colegio San Ignacio ',
+    });
+
+    expect(prevision.tipo).toBe('CONVENIO');
+    expect(prevision.tramo).toBeNull();
+    expect(prevision.plan).toBeNull();
+    expect(prevision.convenio).toBe('Colegio San Ignacio');
   });
 
   it('rejects FONASA without a tramo', () => {
@@ -33,6 +56,16 @@ describe('Prevision', () => {
   it('rejects FONASA carrying an ISAPRE plan', () => {
     expect(() =>
       Prevision.create({ tipo: 'FONASA', tramo: 'A', plan: 'Consalud' }),
+    ).toThrow(InvalidPrevisionError);
+  });
+
+  it('rejects FONASA carrying a convenio name', () => {
+    expect(() =>
+      Prevision.create({
+        tipo: 'FONASA',
+        tramo: 'A',
+        convenio: 'Colegio San Ignacio',
+      }),
     ).toThrow(InvalidPrevisionError);
   });
 
@@ -51,8 +84,59 @@ describe('Prevision', () => {
     ).toThrow(InvalidPrevisionError);
   });
 
+  it('rejects ISAPRE carrying a convenio name', () => {
+    expect(() =>
+      Prevision.create({
+        tipo: 'ISAPRE',
+        plan: 'Colmena',
+        convenio: 'Colegio San Ignacio',
+      }),
+    ).toThrow(InvalidPrevisionError);
+  });
+
+  it('rejects PARTICULAR carrying coverage details', () => {
+    expect(() => Prevision.create({ tipo: 'PARTICULAR', tramo: 'A' })).toThrow(
+      InvalidPrevisionError,
+    );
+    expect(() =>
+      Prevision.create({ tipo: 'PARTICULAR', plan: 'Colmena' }),
+    ).toThrow(InvalidPrevisionError);
+    expect(() =>
+      Prevision.create({
+        tipo: 'PARTICULAR',
+        convenio: 'Colegio San Ignacio',
+      }),
+    ).toThrow(InvalidPrevisionError);
+  });
+
+  it('rejects CONVENIO without a name', () => {
+    expect(() => Prevision.create({ tipo: 'CONVENIO' })).toThrow(
+      InvalidPrevisionError,
+    );
+    expect(() =>
+      Prevision.create({ tipo: 'CONVENIO', convenio: '   ' }),
+    ).toThrow(InvalidPrevisionError);
+  });
+
+  it('rejects CONVENIO carrying a tramo or an ISAPRE plan', () => {
+    expect(() =>
+      Prevision.create({
+        tipo: 'CONVENIO',
+        tramo: 'A',
+        convenio: 'Colegio San Ignacio',
+      }),
+    ).toThrow(InvalidPrevisionError);
+    expect(() =>
+      Prevision.create({
+        tipo: 'CONVENIO',
+        plan: 'Colmena',
+        convenio: 'Colegio San Ignacio',
+      }),
+    ).toThrow(InvalidPrevisionError);
+  });
+
   it('rejects unknown tipos', () => {
-    expect(() => Prevision.create({ tipo: 'particular' })).toThrow(
+    expect(() => Prevision.create({ tipo: 'otro' })).toThrow(
       InvalidPrevisionError,
     );
   });

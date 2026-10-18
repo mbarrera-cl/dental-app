@@ -1,14 +1,15 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { lucideRefreshCw, lucideRotateCcw, lucideTriangleAlert, lucideUndo2 } from '@ng-icons/lucide';
+import { lucideLock, lucideRefreshCw, lucideRotateCcw, lucideSlidersHorizontal, lucideTriangleAlert, lucideUndo2 } from '@ng-icons/lucide';
 import { toast } from '@spartan-ng/brain/sonner';
 import { HlmBadge } from '@ui/badge';
 import { HlmButton } from '@ui/button';
 import { HlmInput } from '@ui/input';
 import { HlmSkeleton } from '@ui/skeleton';
 import { HlmSpinner } from '@ui/spinner';
-import { HasPermissionDirective, PERMISSION_KEYS } from 'auth';
+import { HasPermissionDirective, PERMISSION_KEYS, SessionStore } from 'auth';
 import {
   SettingsApi,
   mapApiError,
@@ -17,8 +18,9 @@ import {
   type SettingsValues,
 } from 'data-access';
 
-interface SettingGroup {
+interface SettingSection {
   group: string;
+  security: boolean;
   items: Setting[];
 }
 
@@ -26,14 +28,20 @@ interface SettingGroup {
  * Settings section: a form generated from `GET /settings` alone. Each
  * definition carries its type, bounds, default and description, so adding a
  * setting to the backend registry makes it appear here with no frontend
- * change. Edits accumulate in a draft map (`dirty-state`) and are applied in
- * one `PATCH`; the response is the full merged list.
+ * change.
+ *
+ * The form is split in two blocks driven by the registry `sensitivity` flag:
+ * security settings (password policy, lockout, tokens, write gates) require
+ * `settings:update-security` and are hidden without it; operational settings
+ * keep working with plain `settings:update`. Edits accumulate in one draft
+ * map and each block saves only its own keys in a single `PATCH`.
  */
 @Component({
   selector: 'app-settings-page',
   imports: [
     TranslocoPipe,
     NgIcon,
+    NgTemplateOutlet,
     HlmButton,
     HlmInput,
     HlmBadge,
@@ -41,13 +49,23 @@ interface SettingGroup {
     HlmSpinner,
     HasPermissionDirective,
   ],
-  providers: [provideIcons({ lucideRefreshCw, lucideRotateCcw, lucideTriangleAlert, lucideUndo2 })],
+  providers: [
+    provideIcons({
+      lucideRefreshCw,
+      lucideRotateCcw,
+      lucideTriangleAlert,
+      lucideUndo2,
+      lucideLock,
+      lucideSlidersHorizontal,
+    }),
+  ],
   templateUrl: './settings-page.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class SettingsPage {
   private readonly api = inject(SettingsApi);
   private readonly transloco = inject(TranslocoService);
+  private readonly session = inject(SessionStore);
 
   /** Typed permission keys, so the template never hard-codes strings. */
   protected readonly permissionKeys = PERMISSION_KEYS;
@@ -61,28 +79,52 @@ export class SettingsPage {
   /** Changed values only: `key -> new value`. */
   protected readonly draft = signal<SettingsValues>({});
 
+  protected readonly canEditSecurity = computed(() =>
+    this.session.has(PERMISSION_KEYS.settings.updateSecurity),
+  );
+
   protected readonly dirtyCount = computed(() => Object.keys(this.draft()).length);
 
+  protected readonly securityDirtyCount = computed(() =>
+    Object.keys(this.draft()).filter((key) => this.isSecurity(key)).length,
+  );
+
+  protected readonly standardDirtyCount = computed(() =>
+    Object.keys(this.draft()).filter((key) => !this.isSecurity(key)).length,
+  );
+
   /**
-   * Settings grouped in registry order. The `clinic` group is skipped: it is
-   * edited from its own panel (`/settings/clinic`), not from this dynamic
-   * form, which only knows numeric and boolean rows.
+   * Settings grouped in registry order, split by `sensitivity`. The `clinic`
+   * group is skipped: it is edited from its own panel (`/settings/clinic`),
+   * not from this dynamic form, which only knows numeric and boolean rows.
+   * The same goes for `agenda`, which has its own page. A group with mixed
+   * sensitivity (e.g. `mcp`) appears once per block, with its own rows.
    */
-  protected readonly groups = computed<SettingGroup[]>(() => {
-    const groups = new Map<string, Setting[]>();
+  protected readonly sections = computed<SettingSection[]>(() => {
+    const sections = new Map<string, SettingSection>();
 
     for (const setting of this.settings()) {
       if (setting.group === 'clinic' || setting.group === 'agenda') {
         continue;
       }
 
-      const items = groups.get(setting.group) ?? [];
-      items.push(setting);
-      groups.set(setting.group, items);
+      const security = setting.sensitivity === 'security';
+      const key = `${setting.group}:${security}`;
+      const section = sections.get(key) ?? { group: setting.group, security, items: [] };
+      section.items.push(setting);
+      sections.set(key, section);
     }
 
-    return [...groups.entries()].map(([group, items]) => ({ group, items }));
+    return [...sections.values()];
   });
+
+  protected readonly securitySections = computed(() =>
+    this.sections().filter((section) => section.security),
+  );
+
+  protected readonly standardSections = computed(() =>
+    this.sections().filter((section) => !section.security),
+  );
 
   constructor() {
     this.load();
@@ -106,6 +148,11 @@ export class SettingsPage {
 
   protected groupLabel(group: string): string {
     return this.labels('settings.groups')[group] ?? group;
+  }
+
+  /** Stable `@for` key: the same group may appear once per sensitivity block. */
+  protected trackSection(section: SettingSection): string {
+    return `${section.group}:${section.security}`;
   }
 
   protected itemLabel(setting: Setting): string {
@@ -163,17 +210,39 @@ export class SettingsPage {
     this.draft.set({});
   }
 
-  protected save(): void {
-    if (this.dirtyCount() === 0) {
+  /** Saves only the security-sensitive rows of the draft. */
+  protected saveSecurity(): void {
+    this.save((key) => this.isSecurity(key));
+  }
+
+  /** Saves only the operational rows of the draft. */
+  protected saveStandard(): void {
+    this.save((key) => !this.isSecurity(key));
+  }
+
+  protected save(predicate: (key: string) => boolean): void {
+    const values = Object.fromEntries(
+      Object.entries(this.draft()).filter(([key]) => predicate(key)),
+    );
+
+    if (Object.keys(values).length === 0) {
       return;
     }
 
     this.saving.set(true);
 
-    this.api.update({ values: this.draft() }).subscribe({
+    this.api.update({ values }).subscribe({
       next: (settings) => {
         this.settings.set(settings);
-        this.draft.set({});
+        this.draft.update((draft) => {
+          const next = { ...draft };
+
+          for (const key of Object.keys(values)) {
+            delete next[key];
+          }
+
+          return next;
+        });
         this.saving.set(false);
         toast.success(this.transloco.translate('settings.toasts.saved'));
       },
@@ -182,6 +251,10 @@ export class SettingsPage {
         toast.error(this.transloco.translate(mapApiError(error)));
       },
     });
+  }
+
+  private isSecurity(key: string): boolean {
+    return this.settings().find((setting) => setting.key === key)?.sensitivity === 'security';
   }
 
   private setValue(setting: Setting, value: SettingValue): void {

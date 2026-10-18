@@ -25,7 +25,7 @@ const CAMILA: Patient = {
     numero: '1234',
     departamento: null,
   },
-  prevision: { tipo: 'FONASA', tramo: 'B', plan: null },
+  prevision: { tipo: 'FONASA', tramo: 'B', plan: null, convenio: null },
   contactoEmergencia: null,
   notas: null,
   numeroHistoria: 'HC-000001',

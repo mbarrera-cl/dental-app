@@ -29,6 +29,10 @@ export const adminHome: RedirectFunction = () => {
     return 'uco';
   }
 
+  if (store.has(PERMISSION_KEYS.consents.manage)) {
+    return 'consentimientos';
+  }
+
   return '/forbidden';
 };
 
@@ -48,6 +52,7 @@ export const ADMIN_ROUTES: Routes = [
           PERMISSION_KEYS.settings.read,
           PERMISSION_KEYS.apiKeys.read,
           PERMISSION_KEYS.uco.read,
+          PERMISSION_KEYS.consents.manage,
         ],
       }),
     ],
@@ -73,6 +78,12 @@ export const ADMIN_ROUTES: Routes = [
         path: 'uco',
         canMatch: [permissionGuard({ allOf: [PERMISSION_KEYS.uco.read] })],
         loadComponent: () => import('./uco/uco-page').then((m) => m.UcoPage),
+      },
+      {
+        path: 'consentimientos',
+        canMatch: [permissionGuard({ allOf: [PERMISSION_KEYS.consents.manage] })],
+        loadComponent: () =>
+          import('./consents/consents-admin-page').then((m) => m.ConsentsAdminPage),
       },
       {
         path: 'agenda',

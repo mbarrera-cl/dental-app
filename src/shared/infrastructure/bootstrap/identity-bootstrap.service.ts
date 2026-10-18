@@ -8,6 +8,8 @@ import { agendaCategory } from '../../../modules/agenda/permissions.js';
 import { apiKeysCategory } from '../../../modules/apikeys/permissions.js';
 import { activityCategory } from '../../../modules/activity/permissions.js';
 import { patientsCategory } from '../../../modules/patients/permissions.js';
+import { consentsCategory } from '../../../modules/consents/permissions.js';
+import { prescriptionsCategory } from '../../../modules/prescriptions/permissions.js';
 import { usersCategory } from '../../../modules/users/permissions.js';
 import { allPermissionKeys, dashboardCategory } from '../../security/permissions.js';
 import { PasswordHasher } from '../../security/password-hasher.js';
@@ -29,6 +31,10 @@ const DENTIST_PERMISSIONS = [
   agendaCategory.keys.cancel,
   agendaCategory.keys.professional,
   patientsCategory.keys.read,
+  prescriptionsCategory.keys.read,
+  prescriptionsCategory.keys.create,
+  consentsCategory.keys.read,
+  consentsCategory.keys.record,
 ];
 
 /** Permissions of the seeded `viewer` role (read-only demo role). */

@@ -107,6 +107,7 @@ describe('MCP server (e2e)', () => {
     expect(names).toEqual(
       expect.arrayContaining([
         'hexa_whoami',
+        'hexa_calc',
         'hexa_patients_search',
         'hexa_uco_search',
         'hexa_quotes_list',
@@ -117,6 +118,19 @@ describe('MCP server (e2e)', () => {
         'hexa_activity_list',
       ]),
     );
+  });
+
+  it('evaluates arithmetic without any domain scope', async () => {
+    const call = await mcp('tools/call', {
+      name: 'hexa_calc',
+      arguments: { operation: 'max', values: [14900, 23900, 18990] },
+    }).expect(200);
+
+    expect(JSON.parse(textOf(call))).toMatchObject({
+      operation: 'max',
+      values: [14900, 23900, 18990],
+      result: 23900,
+    });
   });
 
   it('reports the effective API key scopes', async () => {
@@ -164,9 +178,16 @@ describe('MCP server (e2e)', () => {
       name: 'hexa_uco_search',
       arguments: { query: 'consulta', limit: 1 },
     }).expect(200);
-    const ucoCode = (JSON.parse(textOf(uco)) as { items: Array<{ code: string }> }).items[0]?.code;
+    const ucoItems = JSON.parse(textOf(uco)) as {
+      items: Array<{ code: string; units: number; unitPrice: number; rate: number }>;
+    };
+    const ucoCode = ucoItems.items[0]?.code;
 
     expect(ucoCode).toBeDefined();
+    expect(ucoItems.items[0]?.rate).toBeGreaterThan(0);
+    expect(ucoItems.items[0]?.unitPrice).toBe(
+      Math.round(ucoItems.items[0]!.units * ucoItems.items[0]!.rate),
+    );
 
     const created = await mcp('tools/call', {
       name: 'hexa_quotes_create',

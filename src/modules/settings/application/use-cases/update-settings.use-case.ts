@@ -4,7 +4,7 @@ import type { SettingOverview, SettingValue } from '../../domain/setting-definit
 import type { SettingsAuditActor } from '../../domain/settings-audit.js';
 import { diffSettingValues } from '../../domain/settings-audit.js';
 import { findSettingDefinition } from '../../domain/settings-registry.js';
-import { SettingsValueInvalidError } from '../../domain/settings.errors.js';
+import { SettingsSecurityUpdateForbiddenError, SettingsValueInvalidError } from '../../domain/settings.errors.js';
 import { SettingsAuditService } from '../settings-audit.service.js';
 import { SettingsService } from '../settings.service.js';
 
@@ -12,13 +12,21 @@ export interface UpdateSettingsCommand {
   values: Record<string, unknown>;
   /** Who is writing; omitted by internal callers that need no audit trail. */
   actor?: SettingsAuditActor;
+  /**
+   * Whether the caller may change `security`-sensitive settings
+   * (`settings:update-security`). Defaults to false: internal callers keep
+   * writing their own operational keys, and the HTTP boundary passes the
+   * principal's effective permission.
+   */
+  securityGranted?: boolean;
 }
 
 /**
  * HTTP-facing update. Besides delegating validation and persistence to the
  * service, it rejects settings flagged as `managed`: those are written by
  * their own module through `SettingsService.update` (e.g. the clinic module
- * owns `clinic.logo.version`).
+ * owns `clinic.logo.version`). It also gates `security`-sensitive settings
+ * behind `securityGranted`.
  *
  * When the caller identifies itself, the effective diff is appended to the
  * configuration audit trail (keys that actually moved, never no-ops).
@@ -32,6 +40,7 @@ export class UpdateSettingsUseCase implements UseCase<UpdateSettingsCommand, Set
 
   async execute(command: UpdateSettingsCommand): Promise<SettingOverview[]> {
     this.assertNoManagedKeys(command.values);
+    this.assertSecurityGranted(command.values, command.securityGranted ?? false);
 
     const before = await this.settings.overview();
     const after = await this.settings.update(command.values);
@@ -60,6 +69,20 @@ export class UpdateSettingsUseCase implements UseCase<UpdateSettingsCommand, Set
           reason: 'is managed internally and cannot be edited',
         })),
       );
+    }
+  }
+
+  private assertSecurityGranted(values: Record<string, unknown>, granted: boolean): void {
+    if (granted) {
+      return;
+    }
+
+    const securityKeys = Object.keys(values).filter(
+      (key) => findSettingDefinition(key)?.sensitivity === 'security',
+    );
+
+    if (securityKeys.length > 0) {
+      throw new SettingsSecurityUpdateForbiddenError(securityKeys);
     }
   }
 }

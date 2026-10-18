@@ -45,7 +45,10 @@ describe('UpdateSettingsUseCase', () => {
   it('delegates valid updates to the settings service', async () => {
     const { repository, useCase } = setup();
 
-    const overview = await useCase.execute({ values: { 'passwordPolicy.minLength': 10 } });
+    const overview = await useCase.execute({
+      values: { 'passwordPolicy.minLength': 10 },
+      securityGranted: true,
+    });
 
     expect(repository.stored).toEqual({ 'passwordPolicy.minLength': 10 });
     expect(overview.find((setting) => setting.key === 'passwordPolicy.minLength')?.value).toBe(10);
@@ -104,5 +107,55 @@ describe('UpdateSettingsUseCase', () => {
       },
     });
     expect(repository.stored).toEqual({});
+  });
+
+  it('rejects security-sensitive keys without the security grant', async () => {
+    const { repository, useCase } = setup();
+
+    await expect(
+      useCase.execute({ values: { 'passwordPolicy.minLength': 10 } }),
+    ).rejects.toMatchObject({
+      name: 'SettingsSecurityUpdateForbiddenError',
+      kind: 'forbidden',
+      details: { keys: ['passwordPolicy.minLength'] },
+    });
+    expect(repository.stored).toEqual({});
+  });
+
+  it('rejects a mixed update when any security key lacks the grant', async () => {
+    const { repository, useCase } = setup();
+
+    await expect(
+      useCase.execute({
+        values: { 'clinic.name': 'Clínica Los Andes', 'mcp.allowWrites': true },
+      }),
+    ).rejects.toMatchObject({
+      name: 'SettingsSecurityUpdateForbiddenError',
+      details: { keys: ['mcp.allowWrites'] },
+    });
+    expect(repository.stored).toEqual({});
+  });
+
+  it('allows security-sensitive keys when the security grant is present', async () => {
+    const { repository, useCase } = setup();
+
+    const overview = await useCase.execute({
+      values: { 'passwordPolicy.minLength': 10, 'caroIa.allowWrites': true },
+      securityGranted: true,
+    });
+
+    expect(repository.stored).toEqual({
+      'passwordPolicy.minLength': 10,
+      'caroIa.allowWrites': true,
+    });
+    expect(overview.find((setting) => setting.key === 'passwordPolicy.minLength')?.value).toBe(10);
+  });
+
+  it('keeps operational updates working without the security grant', async () => {
+    const { repository, useCase } = setup();
+
+    await useCase.execute({ values: { 'quotes.ucoRate': 3500 } });
+
+    expect(repository.stored).toEqual({ 'quotes.ucoRate': 3500 });
   });
 });

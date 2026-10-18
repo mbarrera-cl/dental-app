@@ -14,8 +14,8 @@ const trimUpper = ({ value }: { value: unknown }): unknown =>
 
 /**
  * Nested request DTO for the health coverage group. The crossed invariants
- * (FONASA ↔ tramo, ISAPRE ↔ plan) are enforced by the `Prevision` value
- * object, so both are validated here only field-by-field.
+ * (FONASA ↔ tramo, ISAPRE ↔ plan, CONVENIO ↔ convenio name) are enforced by
+ * the `Prevision` value object, so both are validated here only field-by-field.
  */
 export class PrevisionRequestDto {
   @ApiProperty({ example: 'FONASA', enum: PREVISION_TIPOS })
@@ -39,4 +39,16 @@ export class PrevisionRequestDto {
   @IsString()
   @MaxLength(100)
   plan?: string | null;
+
+  @ApiPropertyOptional({
+    example: 'Colegio San Ignacio',
+    description: 'CONVENIO only: agreement name.',
+    maxLength: 100,
+    nullable: true,
+  })
+  @IsOptional()
+  @Transform(trim)
+  @IsString()
+  @MaxLength(100)
+  convenio?: string | null;
 }

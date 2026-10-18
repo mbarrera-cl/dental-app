@@ -42,7 +42,7 @@ export class QuotesPrompts {
               `Build a dental quotation for patient ${patientRef}.`,
               'Steps:',
               '1. Call hexa_patients_get or hexa_patients_search to identify the patient.',
-              '2. Call hexa_uco_search with the relevant procedures and pick the exact codes.',
+              '2. Call hexa_uco_search with the relevant procedures and pick the exact codes; each result includes the suggested CLP price (unitPrice computed with the configured UCO rate).',
               '3. Propose the lines (code, quantity, tooth if applicable) and ask the human to confirm prices and quantities.',
               '4. Only after explicit confirmation, call hexa_quotes_create with patientId/patientRut and the agreed lines.',
               'Never invent prices: omit unitPrice so the server derives it from the UCO rate.',

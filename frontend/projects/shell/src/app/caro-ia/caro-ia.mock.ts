@@ -30,6 +30,15 @@ const TOOL_LABELS: Record<string, string> = {
 const REFUSAL =
   'No puedo responder eso. Solo uso la información del MCP de Hexa (presupuestos, pacientes, arancel UCO y actividad). Prueba con una consulta sobre esos datos.';
 
+const GREETING = `¡Hola! Soy **CaroIA**, la asistente de presupuestos de Hexa. Puedo ayudarte con:
+
+- **Presupuestos**: buscar, revisar y preparar borradores o cambios (con tu aprobación antes de escribir).
+- **Pacientes**: encontrar fichas y revisar sus datos.
+- **Arancel UCO**: consultar precios y códigos.
+- **Actividad**: ver las acciones recientes en Hexa.
+
+¿Sobre qué te ayudo hoy?`;
+
 function labelFor(name: string): string {
   return TOOL_LABELS[name] ?? `Consultó ${name.replace('hexa_', '').replaceAll('_', ' ')}`;
 }
@@ -242,6 +251,12 @@ export class CaroIaMockGateway extends CaroIaGateway {
       if (/clima|capital|receta|diagn[oó]stico|medicamento|f[uú]tbol|chiste|pol[ií]tica/.test(text)) {
         stream(REFUSAL, 250);
         schedule(finish, 250 + words(REFUSAL).length * 22 + 180);
+        return () => timers.forEach(clearTimeout);
+      }
+
+      if (/^(hola|holi|buenas|hey|hello|hi)\b|^gracias|qu[eé]\s+(puedes|puedo|haces|hacer|opciones)/.test(text)) {
+        stream(GREETING, 250);
+        schedule(finish, 250 + words(GREETING).length * 22 + 180);
         return () => timers.forEach(clearTimeout);
       }
 

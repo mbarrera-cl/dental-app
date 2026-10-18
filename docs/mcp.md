@@ -66,10 +66,11 @@ role applies immediately.
 | Tool | Scope | Write | Notes |
 | --- | --- | --- | --- |
 | `hexa_whoami` | authenticated | — | Key owner, type and effective scopes |
+| `hexa_calc` | authenticated | — | Deterministic calculator: `sum`, `mean`, `min`, `max`, `count`, `median`, `range`, `stddev` over a list of numbers |
 | `hexa_patients_search` | `patients:read` | — | RUT or name; max `mcp.maxResults` |
 | `hexa_patients_get` | `patients:read` | — | By id or RUT |
-| `hexa_uco_search` | `uco:read` | — | Code, name or chapter |
-| `hexa_uco_get` | `uco:read` | — | Exact code + UCO units |
+| `hexa_uco_search` | `uco:read` | — | Code, name or chapter; CLP price = `units × quotes.ucoRate` |
+| `hexa_uco_get` | `uco:read` | — | Exact code + UCO units + CLP price (`units × quotes.ucoRate`) |
 | `hexa_quotes_list` | `quotes:read` | — | Patient, status, folio, dates, trash |
 | `hexa_quotes_get` | `quotes:read` | — | Lines, totals and patient snapshot |
 | `hexa_quotes_versions` | `quotes:read` | — | Version trail with snapshots |

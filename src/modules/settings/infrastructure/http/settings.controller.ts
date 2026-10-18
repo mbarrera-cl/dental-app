@@ -54,6 +54,7 @@ export class SettingsController {
     const overview = await this.updateSettings.execute({
       values: body.values,
       actor: actorOf(principal),
+      securityGranted: principal.permissions.has(settingsPermissions.updateSecurity),
     });
 
     return overview.map((setting) => SettingResponseDto.fromOverview(setting));
@@ -82,6 +83,7 @@ export class SettingsController {
     const overview = await this.importSettings.execute({
       envelope: body,
       actor: actorOf(principal),
+      securityGranted: principal.permissions.has(settingsPermissions.updateSecurity),
     });
 
     return overview.map((setting) => SettingResponseDto.fromOverview(setting));

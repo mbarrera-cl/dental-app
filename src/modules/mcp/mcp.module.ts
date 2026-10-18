@@ -13,6 +13,7 @@ import { PatientsFacade } from './application/facades/patients.facade.js';
 import { QuotesFacade } from './application/facades/quotes.facade.js';
 import { UcoFacade } from './application/facades/uco.facade.js';
 import { ActivityTools } from './application/tools/activity.tools.js';
+import { CalcTools } from './application/tools/calc.tools.js';
 import { IdentityTools } from './application/tools/identity.tools.js';
 import { PatientsTools } from './application/tools/patients.tools.js';
 import { QuotesPrompts } from './application/prompts/quotes.prompts.js';
@@ -40,6 +41,7 @@ import { mcpStrategy } from './mcp.strategy.js';
     QuotesTools,
     QuotesPrompts,
     ActivityTools,
+    CalcTools,
   ],
   providers: [
     McpEnabledGuard,
@@ -49,6 +51,7 @@ import { mcpStrategy } from './mcp.strategy.js';
     PatientsTools,
     UcoTools,
     ActivityTools,
+    CalcTools,
     PatientsFacade,
     UcoFacade,
     QuotesFacade,

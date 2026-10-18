@@ -135,7 +135,7 @@ describe('Navigation (e2e)', () => {
   it('serves the seeded menu to the administrator', async () => {
     const tree = (await getMine().expect(200)).body as MenuNode[];
 
-    expect(keys(tree)).toEqual(['patients', 'dashboard', 'agenda', 'users', 'quotes', 'caroIa', 'Administración', 'Mi cuenta']);
+    expect(keys(tree)).toEqual(['patients', 'dashboard', 'agenda', 'users', 'quotes', 'payments', 'caroIa', 'Administración', 'Mi cuenta']);
 
     const patients = tree[0]!;
     expect(patients).toMatchObject({
@@ -146,7 +146,15 @@ describe('Navigation (e2e)', () => {
       label: null,
     });
 
-    const adminGroup = tree[6]!;
+    const payments = tree[5]!;
+    expect(payments).toMatchObject({
+      kind: 'item',
+      icon: 'lucideBadgeDollarSign',
+      routeKey: 'payments',
+      requiredPermission: 'payments:read',
+    });
+
+    const adminGroup = tree[7]!;
     expect(adminGroup.kind).toBe('group');
     expect(adminGroup.children.map((child) => child.routeKey)).toEqual([
       'admin.roles',
@@ -195,7 +203,7 @@ describe('Navigation (e2e)', () => {
     }).expect(201);
 
     const intranet = created.body as MenuNode;
-    expect(intranet.position).toBe(8); // after the eight seeded roots
+    expect(intranet.position).toBe(9); // after the nine seeded roots
     expect(intranet.externalUrl).toBe('https://intranet.example.com/');
     expect(intranet.label).toBe('Intranet');
 
@@ -273,7 +281,7 @@ describe('Navigation (e2e)', () => {
     ]).expect(200);
 
     const mine = (await getMine().expect(200)).body as MenuNode[];
-    expect(keys(mine)).toEqual(['patients', 'divider', 'dashboard', 'agenda', 'users', 'quotes', 'Administración', 'caroIa', 'Mi cuenta']);
+    expect(keys(mine)).toEqual(['patients', 'divider', 'dashboard', 'agenda', 'users', 'quotes', 'Administración', 'payments', 'Mi cuenta', 'caroIa']);
 
     // Move one entry into a group: positions are re-numbered 0..n.
     const afterMove = (await reorder([{ id: users.id, parentId: adminGroup.id, position: 10 }]).expect(200))
@@ -316,7 +324,7 @@ describe('Navigation (e2e)', () => {
 
     const restored = (await resetMenu().expect(200)).body as MenuNode[];
 
-    expect(keys(restored)).toEqual(['patients', 'dashboard', 'agenda', 'users', 'quotes', 'caroIa', 'Administración', 'Mi cuenta']);
+    expect(keys(restored)).toEqual(['patients', 'dashboard', 'agenda', 'users', 'quotes', 'payments', 'caroIa', 'Administración', 'Mi cuenta']);
     expect(flatten(restored).filter((node) => node.kind === 'divider')).toHaveLength(0);
   });
 });

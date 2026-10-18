@@ -30,6 +30,9 @@ export type SettingGroupId =
   | 'caroIa'
   | 'agenda';
 
+/** Who may change the setting: everyone with `settings:update`, or only `settings:update-security`. */
+export type SettingSensitivity = 'security' | 'standard';
+
 export interface SettingGroup {
   readonly id: SettingGroupId;
   /** Developer-facing description (UI wording lives in the i18n dictionaries). */
@@ -42,6 +45,12 @@ export interface SettingDefinition {
   readonly group: SettingGroupId;
   readonly type: SettingType;
   readonly default: SettingValue;
+  /**
+   * `security` settings (password policy, lockout, tokens, write gates)
+   * additionally require the `settings:update-security` permission.
+   * Defaults to `standard`.
+   */
+  readonly sensitivity?: SettingSensitivity;
   /** Inclusive bounds for `number` settings. */
   readonly min?: number;
   readonly max?: number;

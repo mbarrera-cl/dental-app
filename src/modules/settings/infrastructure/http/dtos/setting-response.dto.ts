@@ -1,5 +1,10 @@
 import { ApiProperty } from '@nestjs/swagger';
-import type { SettingOverview, SettingType, SettingValue } from '../../../domain/setting-definition.js';
+import type {
+  SettingOverview,
+  SettingSensitivity,
+  SettingType,
+  SettingValue,
+} from '../../../domain/setting-definition.js';
 
 /**
  * Outbound DTO: a setting definition merged with its effective value. The
@@ -11,6 +16,9 @@ export class SettingResponseDto {
 
   @ApiProperty({ example: 'passwordPolicy' })
   group: string;
+
+  @ApiProperty({ enum: ['security', 'standard'], example: 'security', required: false })
+  sensitivity?: SettingSensitivity;
 
   @ApiProperty({
     enum: ['number', 'boolean', 'string', 'color', 'email', 'url', 'rut', 'phone', 'enum'],
@@ -46,6 +54,7 @@ export class SettingResponseDto {
     const dto = new SettingResponseDto();
     dto.key = overview.key;
     dto.group = overview.group;
+    dto.sensitivity = overview.sensitivity;
     dto.type = overview.type;
     dto.value = overview.value;
     dto.default = overview.default;

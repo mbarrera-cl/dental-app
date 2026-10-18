@@ -1,0 +1,139 @@
+import type { SettingDefinition, SettingGroup } from '../../settings/domain/setting-definition.js';
+
+/**
+ * Settings owned by the clinic context: identity, contact details, address
+ * and theme. Branding is edited from its own panel (`/settings/clinic`).
+ */
+export const CLINIC_SETTING_GROUPS: readonly SettingGroup[] = [
+  { id: 'clinic', description: 'Clinic identity, contact details and theme' },
+];
+
+export const CLINIC_SETTING_DEFINITIONS: readonly SettingDefinition[] = [
+  {
+    key: 'clinic.name',
+    group: 'clinic',
+    type: 'string',
+    default: 'Mi clínica',
+    maxLength: 60,
+    description: 'Clinic display name (used by the shell, login and print headers)',
+  },
+  {
+    key: 'clinic.slogan',
+    group: 'clinic',
+    type: 'string',
+    default: '',
+    maxLength: 120,
+    description: 'Short tagline shown next to the name',
+  },
+  {
+    key: 'clinic.timeZone',
+    group: 'clinic',
+    type: 'string',
+    default: 'America/Santiago',
+    maxLength: 64,
+    description: 'IANA time zone used by the agenda and confirmation emails',
+  },
+  {
+    key: 'clinic.legalName',
+    group: 'clinic',
+    type: 'string',
+    default: '',
+    maxLength: 120,
+    description: 'Legal name (razón social) used on documents',
+  },
+  {
+    key: 'clinic.rut',
+    group: 'clinic',
+    type: 'rut',
+    default: '',
+    description: 'Clinic RUT, stored canonical (`12345678-5`); empty when not configured',
+  },
+  {
+    key: 'clinic.address.region',
+    group: 'clinic',
+    type: 'string',
+    default: '',
+    description: 'Region of the clinic address',
+  },
+  {
+    key: 'clinic.address.comuna',
+    group: 'clinic',
+    type: 'string',
+    default: '',
+    description: 'Comuna of the clinic address',
+  },
+  {
+    key: 'clinic.address.calle',
+    group: 'clinic',
+    type: 'string',
+    default: '',
+    description: 'Street of the clinic address',
+  },
+  {
+    key: 'clinic.address.numero',
+    group: 'clinic',
+    type: 'string',
+    default: '',
+    description: 'Street number',
+  },
+  {
+    key: 'clinic.address.oficina',
+    group: 'clinic',
+    type: 'string',
+    default: '',
+    description: 'Apartment or office, when the address has one',
+  },
+  {
+    key: 'clinic.contact.phone',
+    group: 'clinic',
+    type: 'phone',
+    default: '',
+    description: 'Contact phone, stored canonical (`+56912345678`)',
+  },
+  {
+    key: 'clinic.contact.email',
+    group: 'clinic',
+    type: 'email',
+    default: '',
+    description: 'Contact email',
+  },
+  {
+    key: 'clinic.contact.website',
+    group: 'clinic',
+    type: 'url',
+    default: '',
+    description: 'Website (http/https)',
+  },
+  {
+    key: 'clinic.theme.primary',
+    group: 'clinic',
+    type: 'color',
+    default: '#0284c7',
+    description: 'Primary brand color seed; the rest of the palette is derived',
+  },
+  {
+    key: 'clinic.theme.accent',
+    group: 'clinic',
+    type: 'color',
+    default: '#f59e0b',
+    description: 'Accent brand color seed',
+  },
+  {
+    key: 'clinic.theme.mode',
+    group: 'clinic',
+    type: 'enum',
+    default: 'auto',
+    values: ['light', 'auto'],
+    description: 'Color mode: always light or follow the operating system',
+  },
+  {
+    key: 'clinic.logo.version',
+    group: 'clinic',
+    type: 'number',
+    default: 0,
+    min: 0,
+    max: 1_000_000,
+    managed: true,
+    description: 'Current logo version; only the clinic module writes it',
+  },
+];

@@ -7,9 +7,12 @@ import { AuthModule } from './modules/auth/auth.module.js';
 import { CaroIaModule } from './modules/caro-ia/caro-ia.module.js';
 import { ClinicModule } from './modules/clinic/clinic.module.js';
 import { ClinicalModule } from './modules/clinical/clinical.module.js';
+import { ConsentsModule } from './modules/consents/consents.module.js';
 import { NavigationModule } from './modules/navigation/navigation.module.js';
 import { PatientsModule } from './modules/patients/patients.module.js';
 import { McpModule } from './modules/mcp/mcp.module.js';
+import { PaymentsModule } from './modules/payments/payments.module.js';
+import { PrescriptionsModule } from './modules/prescriptions/prescriptions.module.js';
 import { RolesModule } from './modules/roles/roles.module.js';
 import { SettingsModule } from './modules/settings/settings.module.js';
 import { QuotesModule } from './modules/quotes/quotes.module.js';
@@ -46,8 +49,11 @@ import { HealthController } from './shared/infrastructure/http/health.controller
     NavigationModule,
     ClinicModule,
     ClinicalModule,
+    PrescriptionsModule,
+    ConsentsModule,
     UcoModule,
     QuotesModule,
+    PaymentsModule,
     McpModule,
     CaroIaModule,
   ],

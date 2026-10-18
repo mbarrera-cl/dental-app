@@ -31,3 +31,14 @@ export class EmptySettingsUpdateError extends DomainError {
     super('At least one setting must be provided');
   }
 }
+
+export class SettingsSecurityUpdateForbiddenError extends DomainError {
+  readonly kind: DomainErrorKind = 'forbidden';
+
+  constructor(keys: readonly string[]) {
+    super(
+      `Changing security settings requires settings:update-security: ${keys.join(', ')}`,
+      { details: { keys } },
+    );
+  }
+}

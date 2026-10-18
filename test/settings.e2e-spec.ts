@@ -193,4 +193,30 @@ describe('Settings export, import and audit (e2e)', () => {
     await postImport({ values: {} }, outsider).expect(403);
     await patchSettings({ 'clinic.name': 'No' }, outsider).expect(403);
   });
+
+  it('gates security-sensitive keys behind settings:update-security', async () => {
+    const operator = await createUserWithPermissions('settings-operator@e2e.local', [
+      'settings:read',
+      'settings:update',
+    ]);
+
+    // Operational keys stay editable with the plain update permission.
+    await patchSettings({ 'quotes.ucoRate': 3500 }, operator).expect(200);
+
+    // Security keys are rejected, all-or-nothing, without the extra grant.
+    await patchSettings({ 'passwordPolicy.minLength': 10 }, operator).expect(403);
+    await patchSettings({ 'caroIa.allowWrites': true }, operator).expect(403);
+
+    // A mixed patch rejects the whole payload, never the valid half.
+    await patchSettings(
+      { 'clinic.name': 'Clínica X', 'mcp.allowWrites': true },
+      operator,
+    ).expect(403);
+
+    const overview = (await getSettings(operator).expect(200)).body as SettingBody[];
+    expect(overview.find((setting) => setting.key === 'clinic.name')?.value).toBe('Mi clínica');
+
+    // The admin (full catalog) keeps changing security settings.
+    await patchSettings({ 'passwordPolicy.minLength': 12 }).expect(200);
+  });
 });

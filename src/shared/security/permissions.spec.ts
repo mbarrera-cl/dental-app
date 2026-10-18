@@ -11,7 +11,10 @@ import { agendaCategory } from '../../modules/agenda/permissions.js';
 import { apiKeysCategory } from '../../modules/apikeys/permissions.js';
 import { caroIaCategory } from '../../modules/caro-ia/permissions.js';
 import { clinicalCategory } from '../../modules/clinical/permissions.js';
+import { consentsCategory } from '../../modules/consents/permissions.js';
 import { patientsCategory } from '../../modules/patients/permissions.js';
+import { paymentsCategory } from '../../modules/payments/permissions.js';
+import { prescriptionsCategory } from '../../modules/prescriptions/permissions.js';
 import { quotesCategory } from '../../modules/quotes/permissions.js';
 import { rolesCategory } from '../../modules/roles/permissions.js';
 import { settingsCategory } from '../../modules/settings/permissions.js';
@@ -70,6 +73,8 @@ describe('permission catalog', () => {
       patientsCategory,
       agendaCategory,
       clinicalCategory,
+      prescriptionsCategory,
+      consentsCategory,
       caroIaCategory,
       rolesCategory,
       settingsCategory,
@@ -77,6 +82,7 @@ describe('permission catalog', () => {
       dashboardCategory,
       ucoCategory,
       quotesCategory,
+      paymentsCategory,
       activityCategory,
     ]);
   });

@@ -38,117 +38,172 @@
       }
     </div>
   } @else {
-    @for (section of groups(); track section.group) {
-      <div class="bg-card rounded-lg border" data-testid="settings-group">
-        <div class="border-b px-4 py-3">
-          <h4 class="text-sm font-semibold">{{ groupLabel(section.group) }}</h4>
+    @if (canEditSecurity()) {
+      <div class="grid gap-1">
+        <div class="flex items-center gap-2">
+          <ng-icon name="lucideLock" class="text-muted-foreground size-4" />
+          <h4 class="text-lg font-semibold">{{ 'settings.sections.security' | transloco }}</h4>
         </div>
-        <div class="divide-y">
-          @for (setting of section.items; track setting.key) {
-            <div
-              class="grid items-center gap-3 px-4 py-3 md:grid-cols-[1fr_18rem]"
-              [class.bg-muted/40]="isDirty(setting)"
-              [attr.data-testid]="'setting-' + setting.key"
+        <p class="text-muted-foreground text-sm">
+          {{ 'settings.sections.securityHint' | transloco }}
+        </p>
+      </div>
+
+      @for (section of securitySections(); track trackSection(section)) {
+        <ng-container *ngTemplateOutlet="sectionCard; context: { $implicit: section }" />
+      }
+
+      @if (securityDirtyCount() > 0) {
+        <div
+          class="bg-card sticky bottom-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border px-4 py-3 shadow-lg"
+          data-testid="settings-save-bar-security"
+        >
+          <span class="text-sm">
+            {{ 'settings.dirty' | transloco: { count: securityDirtyCount() } }}
+          </span>
+          <div class="flex gap-2">
+            <button hlmBtn variant="outline" type="button" [disabled]="saving()" (click)="discard()">
+              {{ 'settings.discard' | transloco }}
+            </button>
+            <button
+              *hasPermission="permissionKeys.settings.updateSecurity"
+              hlmBtn
+              type="button"
+              [disabled]="saving()"
+              data-testid="settings-save-security"
+              (click)="saveSecurity()"
             >
-              <div class="grid gap-1">
-                <div class="flex flex-wrap items-center gap-2">
-                  <label class="text-sm font-medium" [attr.for]="'setting-input-' + setting.key">
-                    {{ itemLabel(setting) }}
-                  </label>
-                  @if (isDirty(setting)) {
-                    <span hlmBadge variant="outline">{{ 'settings.pending' | transloco }}</span>
-                  }
-                </div>
-                <p class="text-muted-foreground font-mono text-xs">{{ setting.key }}</p>
-              </div>
+              @if (saving()) {
+                <hlm-spinner aria-label="saving" />
+              }
+              {{ 'settings.save' | transloco }}
+            </button>
+          </div>
+        </div>
+      }
+    }
 
-              <div class="flex items-center justify-end gap-2">
-                @if (setting.type === 'boolean') {
-                  <label class="flex items-center gap-2 text-sm">
-                    <input
-                      type="checkbox"
-                      class="accent-primary size-4"
-                      [checked]="$any(valueOf(setting))"
-                      [attr.data-testid]="'setting-input-' + setting.key"
-                      (change)="onToggle(setting, $any($event.target).checked)"
-                    />
-                    {{ ($any(valueOf(setting)) ? 'settings.on' : 'settings.off') | transloco }}
-                  </label>
-                } @else {
-                  <input
-                    hlmInput
-                    type="number"
-                    class="w-28 text-end"
-                    [value]="valueOf(setting)"
-                    [min]="setting.min ?? 0"
-                    [max]="setting.max ?? 100000"
-                    step="1"
-                    [attr.id]="'setting-input-' + setting.key"
-                    [attr.data-testid]="'setting-input-' + setting.key"
-                    (input)="onNumberInput(setting, $event)"
-                  />
-                }
+    <div class="grid gap-1">
+      <div class="flex items-center gap-2">
+        <ng-icon name="lucideSlidersHorizontal" class="text-muted-foreground size-4" />
+        <h4 class="text-lg font-semibold">{{ 'settings.sections.standard' | transloco }}</h4>
+      </div>
+    </div>
 
-                <button
-                  hlmBtn
-                  variant="ghost"
-                  size="icon-sm"
-                  type="button"
-                  [attr.aria-label]="'settings.useDefault' | transloco"
-                  [attr.title]="'settings.useDefault' | transloco"
-                  [attr.data-testid]="'setting-default-' + setting.key"
-                  (click)="useDefault(setting)"
-                >
-                  <ng-icon name="lucideRotateCcw" />
-                </button>
-                <button
-                  hlmBtn
-                  variant="ghost"
-                  size="icon-sm"
-                  type="button"
-                  [disabled]="!isDirty(setting)"
-                  [attr.aria-label]="'settings.discardOne' | transloco"
-                  [attr.title]="'settings.discardOne' | transloco"
-                  [attr.data-testid]="'setting-reset-' + setting.key"
-                  (click)="reset(setting)"
-                >
-                  <ng-icon name="lucideUndo2" />
-                </button>
-              </div>
-            </div>
-          }
+    @for (section of standardSections(); track trackSection(section)) {
+      <ng-container *ngTemplateOutlet="sectionCard; context: { $implicit: section }" />
+    }
+
+    @if (standardDirtyCount() > 0) {
+      <div
+        class="bg-card sticky bottom-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border px-4 py-3 shadow-lg"
+        data-testid="settings-save-bar"
+      >
+        <span class="text-sm">
+          {{ 'settings.dirty' | transloco: { count: standardDirtyCount() } }}
+        </span>
+        <div class="flex gap-2">
+          <button hlmBtn variant="outline" type="button" [disabled]="saving()" (click)="discard()">
+            {{ 'settings.discard' | transloco }}
+          </button>
+          <button
+            *hasPermission="permissionKeys.settings.update"
+            hlmBtn
+            type="button"
+            [disabled]="saving()"
+            data-testid="settings-save"
+            (click)="saveStandard()"
+          >
+            @if (saving()) {
+              <hlm-spinner aria-label="saving" />
+            }
+            {{ 'settings.save' | transloco }}
+          </button>
         </div>
       </div>
     }
   }
-
-  <!-- Sticky action bar: only meaningful while there are pending changes. -->
-  @if (dirtyCount() > 0) {
-    <div
-      class="bg-card sticky bottom-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border px-4 py-3 shadow-lg"
-      data-testid="settings-save-bar"
-    >
-      <span class="text-sm">
-        {{ 'settings.dirty' | transloco: { count: dirtyCount() } }}
-      </span>
-      <div class="flex gap-2">
-        <button hlmBtn variant="outline" type="button" [disabled]="saving()" (click)="discard()">
-          {{ 'settings.discard' | transloco }}
-        </button>
-        <button
-          *hasPermission="permissionKeys.settings.update"
-          hlmBtn
-          type="button"
-          [disabled]="saving()"
-          data-testid="settings-save"
-          (click)="save()"
-        >
-          @if (saving()) {
-            <hlm-spinner aria-label="saving" />
-          }
-          {{ 'settings.save' | transloco }}
-        </button>
-      </div>
-    </div>
-  }
 </section>
+
+<ng-template #sectionCard let-section>
+  <div class="bg-card rounded-lg border" data-testid="settings-group">
+    <div class="border-b px-4 py-3">
+      <h5 class="text-sm font-semibold">{{ groupLabel(section.group) }}</h5>
+    </div>
+    <div class="divide-y">
+      @for (setting of section.items; track setting.key) {
+        <div
+          class="grid items-center gap-3 px-4 py-3 md:grid-cols-[1fr_18rem]"
+          [class.bg-muted/40]="isDirty(setting)"
+          [attr.data-testid]="'setting-' + setting.key"
+        >
+          <div class="grid gap-1">
+            <div class="flex flex-wrap items-center gap-2">
+              <label class="text-sm font-medium" [attr.for]="'setting-input-' + setting.key">
+                {{ itemLabel(setting) }}
+              </label>
+              @if (isDirty(setting)) {
+                <span hlmBadge variant="outline">{{ 'settings.pending' | transloco }}</span>
+              }
+            </div>
+            <p class="text-muted-foreground font-mono text-xs">{{ setting.key }}</p>
+          </div>
+
+          <div class="flex items-center justify-end gap-2">
+            @if (setting.type === 'boolean') {
+              <label class="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  class="accent-primary size-4"
+                  [checked]="$any(valueOf(setting))"
+                  [attr.data-testid]="'setting-input-' + setting.key"
+                  (change)="onToggle(setting, $any($event.target).checked)"
+                />
+                {{ ($any(valueOf(setting)) ? 'settings.on' : 'settings.off') | transloco }}
+              </label>
+            } @else {
+              <input
+                hlmInput
+                type="number"
+                class="w-28 text-end"
+                [value]="valueOf(setting)"
+                [min]="setting.min ?? 0"
+                [max]="setting.max ?? 100000"
+                step="1"
+                [attr.id]="'setting-input-' + setting.key"
+                [attr.data-testid]="'setting-input-' + setting.key"
+                (input)="onNumberInput(setting, $event)"
+              />
+            }
+
+            <button
+              hlmBtn
+              variant="ghost"
+              size="icon-sm"
+              type="button"
+              [attr.aria-label]="'settings.useDefault' | transloco"
+              [attr.title]="'settings.useDefault' | transloco"
+              [attr.data-testid]="'setting-default-' + setting.key"
+              (click)="useDefault(setting)"
+            >
+              <ng-icon name="lucideRotateCcw" />
+            </button>
+            <button
+              hlmBtn
+              variant="ghost"
+              size="icon-sm"
+              type="button"
+              [disabled]="!isDirty(setting)"
+              [attr.aria-label]="'settings.discardOne' | transloco"
+              [attr.title]="'settings.discardOne' | transloco"
+              [attr.data-testid]="'setting-reset-' + setting.key"
+              (click)="reset(setting)"
+            >
+              <ng-icon name="lucideUndo2" />
+            </button>
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+</ng-template>

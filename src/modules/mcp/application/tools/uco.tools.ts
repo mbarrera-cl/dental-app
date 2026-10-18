@@ -23,7 +23,7 @@ export class UcoTools {
   @Tool({
     name: 'hexa_uco_search',
     description:
-      'Search the UCO dental fee catalog by code, name or chapter. Use it to pick procedures for a quotation.',
+      'Search the UCO dental fee catalog by code, name or chapter. Each result carries the suggested CLP price (unitPrice = units × rate, from the quotes.ucoRate setting). Use it to pick procedures and prices for a quotation.',
     parameters: searchSchema,
   })
   async search(
@@ -45,7 +45,8 @@ export class UcoTools {
 
   @Tool({
     name: 'hexa_uco_get',
-    description: 'Get one UCO procedure by its exact code (units and chapter).',
+    description:
+      'Get one UCO procedure by its exact code: units and chapter, plus the suggested CLP price (unitPrice = units × rate, from the quotes.ucoRate setting).',
     parameters: getSchema,
   })
   async get(

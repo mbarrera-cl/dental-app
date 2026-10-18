@@ -24,6 +24,8 @@ export interface Setting {
   type: SettingType;
   value: SettingValue;
   default: SettingValue;
+  /** `security` rows additionally require the `settings:update-security` permission. */
+  sensitivity?: 'security' | 'standard';
   min?: number;
   max?: number;
   /** Longest accepted value for text-like settings. */

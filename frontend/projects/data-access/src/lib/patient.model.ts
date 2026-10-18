@@ -2,7 +2,7 @@ import type { RegionCode } from './region';
 
 export type PatientSexo = 'femenino' | 'masculino' | 'otro';
 
-export type PrevisionTipo = 'FONASA' | 'ISAPRE';
+export type PrevisionTipo = 'FONASA' | 'ISAPRE' | 'PARTICULAR' | 'CONVENIO';
 
 export type FonasaTramo = 'A' | 'B' | 'C' | 'D';
 
@@ -20,6 +20,8 @@ export interface Prevision {
   tramo: FonasaTramo | null;
   /** ISAPRE only. */
   plan: string | null;
+  /** CONVENIO only. */
+  convenio: string | null;
 }
 
 export interface ContactoEmergencia {

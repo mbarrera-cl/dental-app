@@ -2,7 +2,14 @@ import { Injectable, Logger } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import type { Principal } from '../../../shared/security/principal.js';
 import { ActivityRecorder } from '../../activity/application/record-activity.service.js';
-import { McpToolCatalog, NO_ANSWER_TOOL_NAME, noAnswerTool } from '../../mcp/application/catalog/mcp-tool-catalog.js';
+import {
+  CALC_TOOL_NAME,
+  GREETING_TOOL_NAME,
+  McpToolCatalog,
+  NO_ANSWER_TOOL_NAME,
+  greetingTool,
+  noAnswerTool,
+} from '../../mcp/application/catalog/mcp-tool-catalog.js';
 import { SettingsService } from '../../settings/application/settings.service.js';
 import {
   type DeepSeekMessage,
@@ -54,6 +61,10 @@ Las herramientas de escritura están deshabilitadas en este entorno. Si el usuar
 const SYSTEM_PROMPT = `Eres CaroIA, el asistente de presupuestos de Hexa (clínica dental).
 Solo puedes responder usando la información devuelta por las herramientas MCP de Hexa.
 No uses conocimiento general ni inventes datos, precios, pacientes, presupuestos o IDs.
+Para operaciones aritméticas (sumas, promedios, máximos, mínimos, medianas, desviaciones)
+usa ${CALC_TOOL_NAME} con la lista de valores; nunca calcules de memoria.
+Si el usuario saluda, agradece o pregunta qué puedes hacer, llama a ${GREETING_TOOL_NAME}.
+Nunca la combines con una pregunta sobre datos de Hexa; en ese caso responde los datos.
 Si la petición no se puede responder con las herramientas, llama a ${NO_ANSWER_TOOL_NAME}.
 Nunca digas que ya creaste, modificaste, aprobaste o borraste algo: las escrituras
 se proponen y requieren aprobación humana; el sistema ejecutará la acción después.
@@ -214,7 +225,7 @@ export class CaroIaService {
       return;
     }
 
-    const tools: DeepSeekToolDefinition[] = [...domainTools, noAnswerTool()];
+    const tools: DeepSeekToolDefinition[] = [...domainTools, greetingTool(), noAnswerTool()];
     const messages: DeepSeekMessage[] = [
       {
         role: 'system',
@@ -232,6 +243,7 @@ ${WRITES_DISABLED_NOTE}`,
     const evidence: unknown[] = [];
     let content = '';
     let noAnswer = false;
+    let greeting = false;
 
     try {
       for (let round = 0; round < MAX_TOOL_ROUNDS; round += 1) {
@@ -260,6 +272,17 @@ ${WRITES_DISABLED_NOTE}`,
 
         if (calls.some((call) => call.function.name === NO_ANSWER_TOOL_NAME)) {
           noAnswer = true;
+          break;
+        }
+
+        // The greeting only closes the turn when it is the sole intent; mixed
+        // with real tool calls (e.g. "hola, busca el presupuesto P-1") the data
+        // tools run and the greeting is discarded.
+        if (
+          calls.some((call) => call.function.name === GREETING_TOOL_NAME) &&
+          !calls.some((call) => call.function.name !== GREETING_TOOL_NAME)
+        ) {
+          greeting = true;
           break;
         }
 
@@ -352,7 +375,7 @@ ${WRITES_DISABLED_NOTE}`,
         }
       }
 
-      const verified = this.verifier.verify({ content, evidence, noAnswer });
+      const verified = this.verifier.verify({ content, evidence, noAnswer, greeting });
       const finalContent = verified.content;
       const finalCalls = verified.ok ? toolCalls : [];
       const finalCitations = verified.ok ? citations : [];

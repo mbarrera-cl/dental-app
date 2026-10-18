@@ -406,6 +406,70 @@ CREATE TABLE IF NOT EXISTS agenda_reasons (
 );
 CREATE UNIQUE INDEX IF NOT EXISTS agenda_reasons_name_lower_idx ON agenda_reasons (LOWER(name));
 
+CREATE TABLE IF NOT EXISTS prescriptions (
+  id             UUID PRIMARY KEY,
+  patient_id     UUID NOT NULL REFERENCES patients(id) ON DELETE RESTRICT DEFERRABLE INITIALLY IMMEDIATE,
+  patient_name   TEXT NOT NULL,
+  patient_rut    TEXT NOT NULL,
+  items          JSONB NOT NULL DEFAULT '[]'::jsonb,
+  indicaciones   TEXT,
+  issued_by      UUID REFERENCES users(id) ON DELETE SET NULL DEFERRABLE INITIALLY IMMEDIATE,
+  issued_by_name TEXT NOT NULL,
+  issued_at      TIMESTAMPTZ NOT NULL,
+  created_at     TIMESTAMPTZ NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_prescriptions_patient ON prescriptions (patient_id, issued_at DESC);
+
+CREATE TABLE IF NOT EXISTS consent_templates (
+  id         UUID PRIMARY KEY,
+  key        TEXT NOT NULL UNIQUE,
+  title      TEXT NOT NULL,
+  body       TEXT NOT NULL,
+  version    INTEGER NOT NULL DEFAULT 1,
+  active     BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at TIMESTAMPTZ NOT NULL,
+  updated_at TIMESTAMPTZ NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS consent_records (
+  id               UUID PRIMARY KEY,
+  patient_id       UUID NOT NULL REFERENCES patients(id) ON DELETE RESTRICT DEFERRABLE INITIALLY IMMEDIATE,
+  patient_name     TEXT NOT NULL,
+  patient_rut      TEXT NOT NULL,
+  template_id      UUID REFERENCES consent_templates(id) ON DELETE SET NULL DEFERRABLE INITIALLY IMMEDIATE,
+  template_key     TEXT NOT NULL,
+  template_version INTEGER NOT NULL,
+  title            TEXT NOT NULL,
+  body             TEXT NOT NULL,
+  procedure        TEXT,
+  acceptor_name    TEXT NOT NULL,
+  accepted_at      TIMESTAMPTZ NOT NULL,
+  recorded_by      UUID REFERENCES users(id) ON DELETE SET NULL DEFERRABLE INITIALLY IMMEDIATE,
+  created_at       TIMESTAMPTZ NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_consent_records_patient ON consent_records (patient_id, accepted_at DESC);
+
+-- Patient account (libro mayor). Movements are append-only: cargos sum to
+-- the balance, payments subtract; annulments swap the row in place (the
+-- void columns), nothing is ever deleted.
+CREATE TABLE IF NOT EXISTS ledger_entries (
+  id             UUID PRIMARY KEY,
+  patient_id     UUID NOT NULL REFERENCES patients(id) ON DELETE RESTRICT DEFERRABLE INITIALLY IMMEDIATE,
+  kind           TEXT NOT NULL,
+  amount         INTEGER NOT NULL,
+  method         TEXT,
+  reference      TEXT,
+  concept        TEXT NOT NULL,
+  quote_id       UUID REFERENCES quotes(id) ON DELETE SET NULL DEFERRABLE INITIALLY IMMEDIATE,
+  appointment_id UUID REFERENCES appointments(id) ON DELETE SET NULL DEFERRABLE INITIALLY IMMEDIATE,
+  created_by     UUID REFERENCES users(id) ON DELETE SET NULL DEFERRABLE INITIALLY IMMEDIATE,
+  created_at     TIMESTAMPTZ NOT NULL,
+  voided_at      TIMESTAMPTZ,
+  voided_by      UUID REFERENCES users(id) ON DELETE SET NULL DEFERRABLE INITIALLY IMMEDIATE,
+  void_reason    TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_ledger_patient ON ledger_entries (patient_id, created_at DESC, id);
+
 CREATE TABLE IF NOT EXISTS schema_migrations (
   version    TEXT PRIMARY KEY,
   applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()

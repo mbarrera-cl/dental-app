@@ -4,12 +4,15 @@ import { z } from 'zod';
 import type { Principal } from '../../../../shared/security/principal.js';
 import type { DeepSeekToolDefinition } from '../../../caro-ia/application/deepseek.client.js';
 import { ActivityTools } from '../tools/activity.tools.js';
+import { CalcTools } from '../tools/calc.tools.js';
 import { PatientsFacade } from '../facades/patients.facade.js';
 import { PatientsTools } from '../tools/patients.tools.js';
 import { QuotesTools } from '../tools/quotes.tools.js';
 import { UcoTools } from '../tools/uco.tools.js';
 
 export const NO_ANSWER_TOOL_NAME = 'hexa_no_answer';
+export const GREETING_TOOL_NAME = 'hexa_greeting';
+export const CALC_TOOL_NAME = 'hexa_calc';
 
 interface ToolMetadata {
   name: string;
@@ -148,6 +151,13 @@ const ENTRIES: readonly Omit<CatalogEntry, 'instance' | 'method'>[] = [
     label: 'Restauró un presupuesto',
   },
   {
+    name: 'hexa_calc',
+    permissions: [],
+    write: false,
+    confirm: false,
+    label: 'Calculó valores',
+  },
+  {
     name: 'hexa_activity_list',
     permissions: ['activity:read', 'activity:read-all'],
     match: 'any',
@@ -173,6 +183,7 @@ const METHODS: Readonly<Record<string, string>> = {
   hexa_quotes_set_status: 'setStatus',
   hexa_quotes_delete: 'remove',
   hexa_quotes_restore: 'restore',
+  hexa_calc: 'evaluate',
   hexa_activity_list: 'list',
 };
 
@@ -203,6 +214,22 @@ const NO_ANSWER_TOOL: DeepSeekToolDefinition = {
   },
 };
 
+const GREETING_TOOL: DeepSeekToolDefinition = {
+  type: 'function',
+  function: {
+    name: GREETING_TOOL_NAME,
+    description:
+      'Use this when the user greets, thanks, says bye or asks what you can do (capabilities, small talk). It returns a fixed greeting listing what CaroIA can help with. Do not call it when the user also asks something about Hexa data.',
+    parameters: {
+      type: 'object',
+      properties: {
+        reason: { type: 'string', description: 'Short internal reason, never shown to the user.' },
+      },
+      additionalProperties: false,
+    },
+  },
+};
+
 /**
  * Read/write facade over the existing MCP tool classes. The tools keep their
  * own permission, write-gate, redaction and audit checks; CaroIA only needs a
@@ -218,6 +245,7 @@ export class McpToolCatalog {
     patients: PatientsTools,
     uco: UcoTools,
     activity: ActivityTools,
+    calc: CalcTools,
     private readonly patientsFacade: PatientsFacade,
   ) {
     const instances: Record<string, ToolInstance> = {
@@ -225,6 +253,7 @@ export class McpToolCatalog {
       Uco: uco as unknown as ToolInstance,
       Quotes: quotes as unknown as ToolInstance,
       Activity: activity as unknown as ToolInstance,
+      Calc: calc as unknown as ToolInstance,
     };
 
     this.entries = ENTRIES.map((entry) => ({
@@ -385,6 +414,10 @@ export class McpToolCatalog {
 }
 
 function instanceFor(name: string, instances: Record<string, ToolInstance>): ToolInstance {
+  if (name === 'hexa_calc') {
+    return instances.Calc!;
+  }
+
   if (name.startsWith('hexa_patients_')) {
     return instances.Patients!;
   }
@@ -440,6 +473,12 @@ function summarize(name: string, data: unknown): string {
 
   if ((name === 'hexa_quotes_sanction' || name === 'hexa_quotes_set_status') && isRecord(record.quote)) {
     return `${display(record.quote.folio)} · ${display(record.quote.status)}`;
+  }
+
+  if (name === 'hexa_calc' && typeof record.result === 'number') {
+    const values = Array.isArray(record.values) ? record.values.length : 0;
+
+    return `${display(record.operation)} sobre ${values} valor${values === 1 ? '' : 'es'} = ${display(record.result)}`;
   }
 
   const items = Array.isArray(record.items) ? record.items.length : null;
@@ -500,4 +539,8 @@ function approvalParameters(
 
 export function noAnswerTool(): DeepSeekToolDefinition {
   return NO_ANSWER_TOOL;
+}
+
+export function greetingTool(): DeepSeekToolDefinition {
+  return GREETING_TOOL;
 }

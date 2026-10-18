@@ -55,11 +55,20 @@ export class PrevisionResponseDto {
   })
   plan: string | null;
 
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    example: null,
+    description: 'CONVENIO only.',
+  })
+  convenio: string | null;
+
   static fromDomain(prevision: Prevision): PrevisionResponseDto {
     const dto = new PrevisionResponseDto();
     dto.tipo = prevision.tipo;
     dto.tramo = prevision.tramo;
     dto.plan = prevision.plan;
+    dto.convenio = prevision.convenio;
     return dto;
   }
 }
