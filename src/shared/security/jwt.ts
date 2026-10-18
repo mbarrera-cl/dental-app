@@ -13,6 +13,12 @@ export const JWT_SECRET_MIN_LENGTH = 32;
 /** Documented development fallback; production must set `JWT_SECRET`. */
 const DEV_SECRET = 'hexa-dev-secret-do-not-use-in-production';
 
+export const JWT_ISSUER_ENV = 'JWT_ISSUER';
+export const JWT_AUDIENCE_ENV = 'JWT_AUDIENCE';
+
+const DEFAULT_ISSUER = 'hexa';
+const DEFAULT_AUDIENCE = 'hexa-api';
+
 export interface AccessTokenClaims {
   /** User id. */
   sub: string;
@@ -20,6 +26,10 @@ export interface AccessTokenClaims {
   iat: number;
   /** Expires at (unix seconds). */
   exp: number;
+  /** Issuer, prevents tokens minted by another service from being accepted. */
+  iss: string;
+  /** Intended audience. */
+  aud: string;
 }
 
 /**
@@ -33,7 +43,14 @@ export class JwtService {
 
   private readonly secret: string;
 
+  private readonly issuer: string;
+
+  private readonly audience: string;
+
   constructor() {
+    this.issuer = process.env[JWT_ISSUER_ENV]?.trim() || DEFAULT_ISSUER;
+    this.audience = process.env[JWT_AUDIENCE_ENV]?.trim() || DEFAULT_AUDIENCE;
+
     const configured = process.env[JWT_SECRET_ENV]?.trim();
 
     // In production a missing or placeholder secret would let anyone forge
@@ -70,7 +87,13 @@ export class JwtService {
 
   signAccessToken(userId: string, ttlSeconds: number, now: Date = new Date()): string {
     const issuedAt = Math.floor(now.getTime() / 1000);
-    const claims: AccessTokenClaims = { sub: userId, iat: issuedAt, exp: issuedAt + ttlSeconds };
+    const claims: AccessTokenClaims = {
+      sub: userId,
+      iat: issuedAt,
+      exp: issuedAt + ttlSeconds,
+      iss: this.issuer,
+      aud: this.audience,
+    };
     const header = { alg: 'HS256', typ: 'JWT' };
     const signingInput = `${base64Url(JSON.stringify(header))}.${base64Url(JSON.stringify(claims))}`;
 
@@ -95,11 +118,22 @@ export class JwtService {
       return null;
     }
 
+    let headerClaims: unknown;
     let claims: unknown;
 
     try {
+      headerClaims = JSON.parse(Buffer.from(header, 'base64url').toString('utf8'));
       claims = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
     } catch {
+      return null;
+    }
+
+    // Only HS256 is accepted; never honor the `alg` field to pick a verifier.
+    if (
+      typeof headerClaims !== 'object' ||
+      headerClaims === null ||
+      (headerClaims as { alg?: unknown }).alg !== 'HS256'
+    ) {
       return null;
     }
 
@@ -107,18 +141,20 @@ export class JwtService {
       return null;
     }
 
-    const { sub, iat, exp } = claims as Partial<AccessTokenClaims>;
+    const { sub, iat, exp, iss, aud } = claims as Partial<AccessTokenClaims>;
 
     if (
       typeof sub !== 'string' ||
       typeof iat !== 'number' ||
       typeof exp !== 'number' ||
-      exp * 1000 <= now.getTime()
+      exp * 1000 <= now.getTime() ||
+      iss !== this.issuer ||
+      aud !== this.audience
     ) {
       return null;
     }
 
-    return { sub, iat, exp };
+    return { sub, iat, exp, iss, aud };
   }
 
   private sign(signingInput: string): string {

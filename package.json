@@ -29,6 +29,7 @@
     "seed:patients": "node scripts/seed-patients.mjs",
     "admin:rescue": "node scripts/rescue-admin.mjs",
     "lint": "oxlint --type-aware src/ test/",
+    "audit:prod": "npm audit --omit=dev --audit-level=high",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:cov": "vitest run --coverage",
