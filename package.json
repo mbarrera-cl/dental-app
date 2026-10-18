@@ -28,6 +28,7 @@
     "seed": "node scripts/seed-users.mjs",
     "seed:patients": "node scripts/seed-patients.mjs",
     "admin:rescue": "node scripts/rescue-admin.mjs",
+    "backup": "node --env-file-if-exists=.env scripts/backup.mjs",
     "lint": "oxlint --type-aware src/ test/",
     "audit:prod": "npm audit --omit=dev --audit-level=high",
     "test": "vitest run",
