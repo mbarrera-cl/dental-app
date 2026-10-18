@@ -472,8 +472,10 @@ CREATE INDEX IF NOT EXISTS idx_ledger_patient ON ledger_entries (patient_id, cre
 
 CREATE TABLE IF NOT EXISTS schema_migrations (
   version    TEXT PRIMARY KEY,
-  applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  checksum   TEXT
 );
 INSERT INTO schema_migrations (version) VALUES ('2026-10-postgresql')
 ON CONFLICT (version) DO NOTHING;
+ALTER TABLE schema_migrations ADD COLUMN IF NOT EXISTS checksum TEXT;
 `;

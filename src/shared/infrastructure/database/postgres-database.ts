@@ -1,6 +1,7 @@
 import { Injectable, Logger, Optional, type OnModuleDestroy, type OnModuleInit } from '@nestjs/common';
 import pg from 'pg';
 import { POSTGRES_SCHEMA_SQL } from './postgres-schema.js';
+import { MIGRATIONS, applyMigrations } from './migrations.js';
 
 const { Pool, types } = pg;
 
@@ -55,6 +56,9 @@ export class PostgresDatabase implements OnModuleInit, OnModuleDestroy {
       // is still alive; pin the search path before running the idempotent DDL.
       await client.query('SET search_path TO public');
       await client.query(POSTGRES_SCHEMA_SQL);
+      await applyMigrations(client, MIGRATIONS, (version) =>
+        this.logger.log(`Applied migration ${version}`),
+      );
     } finally {
       client.release();
     }
