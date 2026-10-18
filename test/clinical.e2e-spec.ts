@@ -359,6 +359,55 @@ describe('Clinical API (e2e)', () => {
     });
   });
 
+  describe('finalize and integrity seal', () => {
+    it('finalizes the record, locks it and exposes the integrity hash', async () => {
+      const patient = await createPatient();
+      const record = await openRecord(patient.id);
+
+      await api()
+        .post(`/clinical-records/${record.id}/findings`)
+        .send({ tooth: 16, surfaces: ['O'], symbol: 'caries' })
+        .expect(201);
+
+      const finalized = await api()
+        .post(`/clinical-records/${record.id}/finalize`)
+        .expect(201);
+
+      expect(finalized.body).toMatchObject({
+        status: 'finalizada',
+        finalizedBy: expect.any(String),
+      });
+      expect(finalized.body.integrityHash).toMatch(/^[0-9a-f]{64}$/);
+
+      // A finalized record rejects edits with 423.
+      await api()
+        .patch(`/clinical-records/${record.id}`)
+        .send({ motivoConsulta: 'x' })
+        .expect(423);
+
+      // Finalizing again is also rejected.
+      await api().post(`/clinical-records/${record.id}/finalize`).expect(423);
+    });
+
+    it('verifies the seal after finalizing and before it', async () => {
+      const patient = await createPatient();
+      const record = await openRecord(patient.id);
+
+      const before = await api().get(`/clinical-records/${record.id}/integrity`).expect(200);
+      expect(before.body).toMatchObject({ finalized: false, valid: null, storedHash: null });
+
+      await api().post(`/clinical-records/${record.id}/finalize`).expect(201);
+
+      const after = await api().get(`/clinical-records/${record.id}/integrity`).expect(200);
+      expect(after.body).toMatchObject({ finalized: true, valid: true });
+      expect(after.body.storedHash).toBe(after.body.computedHash);
+    });
+
+    it('returns 404 for finalizing an unknown record', async () => {
+      await api().post('/clinical-records/does-not-exist/finalize').expect(404);
+    });
+  });
+
   describe('authorization', () => {
     it('requires an authenticated principal', async () => {
       await request(app.getHttpServer())

@@ -24,7 +24,12 @@ export interface Migration {
   sql: string;
 }
 
-export const MIGRATIONS: readonly Migration[] = [];
+export const MIGRATIONS: readonly Migration[] = [
+  {
+    version: '2026-10-clinical-integrity-hash',
+    sql: 'ALTER TABLE clinical_records ADD COLUMN IF NOT EXISTS integrity_hash TEXT;',
+  },
+];
 
 /** SHA-256 of a migration's SQL, used to detect post-apply edits. */
 export function migrationChecksum(sql: string): string {

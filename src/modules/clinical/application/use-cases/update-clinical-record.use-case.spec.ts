@@ -128,6 +128,7 @@ describe('UpdateClinicalRecordUseCase', () => {
       updatedAt: new Date('2026-01-02T00:00:00.000Z'),
       finalizedAt: new Date('2026-01-02T00:00:00.000Z'),
       finalizedBy: 'user-1',
+      integrityHash: null,
     };
     const locked = FichaClinica.reconstitute(props, 'record-locked');
 

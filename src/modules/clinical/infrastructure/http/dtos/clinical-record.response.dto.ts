@@ -78,6 +78,9 @@ export class ClinicalRecordResponseDto {
   @ApiProperty({ type: String, nullable: true })
   finalizedBy: string | null;
 
+  @ApiProperty({ type: String, nullable: true, description: 'SHA-256 integrity seal (set on finalize)' })
+  integrityHash: string | null;
+
   static fromDomain(record: FichaClinica): ClinicalRecordResponseDto {
     const dto = new ClinicalRecordResponseDto();
 
@@ -98,6 +101,7 @@ export class ClinicalRecordResponseDto {
     dto.updatedAt = record.updatedAt.toISOString();
     dto.finalizedAt = record.finalizedAt?.toISOString() ?? null;
     dto.finalizedBy = record.finalizedBy;
+    dto.integrityHash = record.integrityHash;
 
     return dto;
   }

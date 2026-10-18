@@ -4,6 +4,7 @@ import { Entity } from '../../../shared/domain/entity.js';
 export const CLINICAL_EVENT_ACTIONS = [
   'ficha-creada',
   'ficha-actualizada',
+  'ficha-finalizada',
   'hallazgo-agregado',
   'hallazgo-anulado',
 ] as const;

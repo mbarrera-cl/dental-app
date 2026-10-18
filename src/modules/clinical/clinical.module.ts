@@ -4,12 +4,14 @@ import { PatientsModule } from '../patients/patients.module.js';
 import { ClinicalRecordRepositoryPort } from './application/ports/clinical-record-repository.port.js';
 import { AddClinicalFindingUseCase } from './application/use-cases/add-clinical-finding.use-case.js';
 import { CreateClinicalRecordUseCase } from './application/use-cases/create-clinical-record.use-case.js';
+import { FinalizeClinicalRecordUseCase } from './application/use-cases/finalize-clinical-record.use-case.js';
 import { GetClinicalIndicesUseCase } from './application/use-cases/get-clinical-indices.use-case.js';
 import { GetClinicalRecordUseCase } from './application/use-cases/get-clinical-record.use-case.js';
 import { GetPatientClinicalRecordUseCase } from './application/use-cases/get-patient-clinical-record.use-case.js';
 import { ListClinicalEventsUseCase } from './application/use-cases/list-clinical-events.use-case.js';
 import { ListClinicalFindingsUseCase } from './application/use-cases/list-clinical-findings.use-case.js';
 import { UpdateClinicalRecordUseCase } from './application/use-cases/update-clinical-record.use-case.js';
+import { VerifyClinicalRecordIntegrityUseCase } from './application/use-cases/verify-clinical-record-integrity.use-case.js';
 import { VoidClinicalFindingUseCase } from './application/use-cases/void-clinical-finding.use-case.js';
 import { PostgresClinicalRecordRepository } from './infrastructure/adapters/persistence/postgres-clinical-record.repository.js';
 import { ClinicalController } from './infrastructure/http/clinical.controller.js';
@@ -32,6 +34,8 @@ import { ClinicalController } from './infrastructure/http/clinical.controller.js
     VoidClinicalFindingUseCase,
     GetClinicalIndicesUseCase,
     ListClinicalEventsUseCase,
+    FinalizeClinicalRecordUseCase,
+    VerifyClinicalRecordIntegrityUseCase,
     // Swap this binding for another database adapter (Postgres, MongoDB, ...).
     { provide: ClinicalRecordRepositoryPort, useClass: PostgresClinicalRecordRepository },
   ],

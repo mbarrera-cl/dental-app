@@ -14,18 +14,21 @@ import { RequirePermissions } from '../../../../shared/security/require-permissi
 import { ActivityAction } from '../../../activity/infrastructure/http/activity-action.decorator.js';
 import { AddClinicalFindingUseCase } from '../../application/use-cases/add-clinical-finding.use-case.js';
 import { CreateClinicalRecordUseCase } from '../../application/use-cases/create-clinical-record.use-case.js';
+import { FinalizeClinicalRecordUseCase } from '../../application/use-cases/finalize-clinical-record.use-case.js';
 import { GetClinicalIndicesUseCase } from '../../application/use-cases/get-clinical-indices.use-case.js';
 import { GetClinicalRecordUseCase } from '../../application/use-cases/get-clinical-record.use-case.js';
 import { GetPatientClinicalRecordUseCase } from '../../application/use-cases/get-patient-clinical-record.use-case.js';
 import { ListClinicalEventsUseCase } from '../../application/use-cases/list-clinical-events.use-case.js';
 import { ListClinicalFindingsUseCase } from '../../application/use-cases/list-clinical-findings.use-case.js';
 import { UpdateClinicalRecordUseCase } from '../../application/use-cases/update-clinical-record.use-case.js';
+import { VerifyClinicalRecordIntegrityUseCase } from '../../application/use-cases/verify-clinical-record-integrity.use-case.js';
 import { VoidClinicalFindingUseCase } from '../../application/use-cases/void-clinical-finding.use-case.js';
 import { clinicalPermissions } from '../../permissions.js';
 import { AddClinicalFindingRequestDto } from './dtos/add-clinical-finding.request.dto.js';
 import { ClinicalEventResponseDto } from './dtos/clinical-event.response.dto.js';
 import { ClinicalFindingResponseDto } from './dtos/clinical-finding.response.dto.js';
 import { ClinicalIndicesResponseDto } from './dtos/clinical-indices.response.dto.js';
+import { ClinicalIntegrityResponseDto } from './dtos/clinical-integrity.response.dto.js';
 import { ClinicalRecordResponseDto } from './dtos/clinical-record.response.dto.js';
 import { CreateClinicalRecordRequestDto } from './dtos/create-clinical-record.request.dto.js';
 import { UpdateClinicalRecordRequestDto } from './dtos/update-clinical-record.request.dto.js';
@@ -48,6 +51,8 @@ export class ClinicalController {
     private readonly voidFinding: VoidClinicalFindingUseCase,
     private readonly getIndices: GetClinicalIndicesUseCase,
     private readonly listEvents: ListClinicalEventsUseCase,
+    private readonly finalizeRecord: FinalizeClinicalRecordUseCase,
+    private readonly verifyIntegrity: VerifyClinicalRecordIntegrityUseCase,
   ) {}
 
   @Post('patients/:patientId/clinical-record')
@@ -249,5 +254,46 @@ export class ClinicalController {
     const events = await this.listEvents.execute({ recordId: id });
 
     return events.map((event) => ClinicalEventResponseDto.fromDomain(event));
+  }
+
+  @Post('clinical-records/:id/finalize')
+  @RequirePermissions(clinicalPermissions.update)
+  @ActivityAction({
+    action: 'clinical.finalize',
+    subjectType: 'clinical-record',
+    subjectParam: 'id',
+  })
+  @ApiOperation({
+    summary: 'Close (finalize) a clinical record',
+    description: 'Seals the ficha with an integrity hash and locks it from further edits.',
+  })
+  @ApiOkResponse({ type: ClinicalRecordResponseDto })
+  @ApiNotFoundResponse({ description: 'No clinical record with this id exists.' })
+  async finalize(
+    @Param('id') id: string,
+    @CurrentPrincipal() principal: Principal,
+  ): Promise<ClinicalRecordResponseDto> {
+    const record = await this.finalizeRecord.execute({
+      id,
+      actorId: principal.userId,
+    });
+
+    return ClinicalRecordResponseDto.fromDomain(record);
+  }
+
+  @Get('clinical-records/:id/integrity')
+  @RequirePermissions(clinicalPermissions.read)
+  @ApiOperation({
+    summary: 'Verify the integrity seal of a clinical record',
+    description: 'Recomputes the hash over the record and its findings.',
+  })
+  @ApiOkResponse({ type: ClinicalIntegrityResponseDto })
+  @ApiNotFoundResponse({ description: 'No clinical record with this id exists.' })
+  async verifyIntegrityOfRecord(
+    @Param('id') id: string,
+  ): Promise<ClinicalIntegrityResponseDto> {
+    const result = await this.verifyIntegrity.execute({ id });
+
+    return ClinicalIntegrityResponseDto.fromDomain(result);
   }
 }
