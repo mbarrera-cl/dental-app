@@ -23,6 +23,7 @@ import {
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import type { Response } from 'express';
 import { ActivitySkip } from '../../../activity/infrastructure/http/activity-action.decorator.js';
 import { CurrentPrincipal } from '../../../../shared/security/current-principal.decorator.js';
@@ -138,6 +139,7 @@ export class CaroIaController {
 
   @Post('transcribe')
   @ActivitySkip()
+  @Throttle({ default: { limit: 20, ttl: 60_000 } })
   @UseInterceptors(FileInterceptor('audio', { limits: { fileSize: 26_214_400 } }))
   @ApiConsumes('multipart/form-data')
   @ApiOperation({ summary: 'Transcribe a short audio recording with Deepgram (not persisted)' })

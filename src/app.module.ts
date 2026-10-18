@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { ActivityModule } from './modules/activity/activity.module.js';
 import { AgendaModule } from './modules/agenda/agenda.module.js';
 import { ApiKeysModule } from './modules/apikeys/apikeys.module.js';
@@ -35,10 +36,28 @@ import { HealthController } from './shared/infrastructure/http/health.controller
  * requires a valid principal unless annotated with `@Public()`, and every
  * route annotated with `@RequirePermissions(...)` demands those keys.
  */
+/** Reads a positive integer from the environment, falling back when invalid. */
+function positiveInt(value: string | undefined, fallback: number): number {
+  const parsed = Number(value);
+
+  return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : fallback;
+}
+
 @Module({
   imports: [
     DatabaseModule,
     SecurityModule,
+    ThrottlerModule.forRoot([
+      {
+        name: 'default',
+        // TTL in milliseconds (v5+ API).
+        ttl: positiveInt(process.env.THROTTLE_TTL_MS, 60_000),
+        limit: positiveInt(process.env.THROTTLE_LIMIT, 120),
+        // The e2e suites issue bursts of requests; throttling is a runtime
+        // concern and is covered by its own tests instead.
+        skipIf: () => process.env.NODE_ENV === 'test',
+      },
+    ]),
     SettingsModule,
     ActivityModule,
     AgendaModule,
@@ -62,7 +81,8 @@ import { HealthController } from './shared/infrastructure/http/health.controller
   controllers: [HealthController],
   providers: [
     IdentityBootstrapService,
-    // Order matters: authenticate first, authorize second.
+    // Order matters: throttle first, then authenticate, then authorize.
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: PermissionsGuard },
   ],

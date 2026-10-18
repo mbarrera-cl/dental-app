@@ -50,6 +50,23 @@ export class PasswordHasher {
     ].join('$');
   }
 
+  /**
+   * Runs the same scrypt work as `verify()` without a real stored hash.
+   *
+   * Credential flows call this when the account does not exist so that
+   * unknown-email attempts take as long as wrong-password attempts, closing
+   * the timing side channel used to enumerate users.
+   */
+  async verifyDummy(password: string): Promise<void> {
+    const { cost, blockSize, parallelization, keyLength, saltLength } = SCRYPT_PARAMS;
+
+    await scryptAsync(password, Buffer.alloc(saltLength, 0), keyLength, {
+      N: cost,
+      r: blockSize,
+      p: parallelization,
+    });
+  }
+
   /** Constant-time verification; returns `false` for malformed stored values. */
   async verify(password: string, stored: string): Promise<boolean> {
     const match = STORED_FORMAT.exec(stored);

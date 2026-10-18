@@ -132,8 +132,10 @@ export class PkMarkdown {
 
     return this.sanitizer.bypassSecurityTrustHtml(
       DOMPurify.sanitize(parsed, {
-        // Mermaid and KaTeX render into this subtree, so SVG and MathML stay.
-        USE_PROFILES: { html: true, svg: true, mathMl: true },
+        // Only HTML is trusted. Mermaid and KaTeX render *after* this pass
+        // (applyDiagrams/applyMath parse their own output), so user-authored
+        // SVG/MathML must not survive sanitization.
+        USE_PROFILES: { html: true },
         // El contenido del modelo es no confiable: una imagen externa podría
         // filtrar la conversación a un tercero. Las imágenes se prohíben;
         // los archivos se procesan en el servidor y se muestran como chips.
