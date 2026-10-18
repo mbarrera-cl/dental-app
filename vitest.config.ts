@@ -7,6 +7,9 @@ export default defineConfig({
   test: {
     globals: true,
     fileParallelism: false,
+    // One fork at a time: the DB-based specs share one test schema and the
+    // helper assumes files never overlap (see postgres-test-database.ts).
+    poolOptions: { forks: { maxForks: 1 } },
     root: './',
     // Backend unit specs only; the frontend has its own runner (`ng test`).
     include: ['src/**/*.spec.ts'],

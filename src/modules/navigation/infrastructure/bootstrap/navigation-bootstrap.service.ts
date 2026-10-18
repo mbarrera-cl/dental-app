@@ -3,6 +3,7 @@ import { MenuRepositoryPort } from '../../application/ports/menu-repository.port
 import { PostgresDatabase } from '../../../../shared/infrastructure/database/postgres-database.js';
 import { agendaPermissions } from '../../../agenda/permissions.js';
 import { caroIaPermissions } from '../../../caro-ia/permissions.js';
+import { paymentsPermissions } from '../../../payments/permissions.js';
 import { settingsCategory } from '../../../settings/permissions.js';
 import { buildDefaultMenuItems } from '../../domain/default-menu.js';
 import { MenuItem } from '../../domain/menu-item.entity.js';
@@ -20,6 +21,7 @@ export class NavigationBootstrapService implements OnApplicationBootstrap {
   private static readonly CARO_IA_MARKER = 'navigation.caroIa.seeded';
   private static readonly AGENDA_MARKER = 'navigation.agenda.seeded';
   private static readonly CLINIC_MARKER = 'navigation.clinic.seeded';
+  private static readonly PAYMENTS_MARKER = 'navigation.payments.seeded';
 
   constructor(
     private readonly menu: MenuRepositoryPort,
@@ -31,6 +33,7 @@ export class NavigationBootstrapService implements OnApplicationBootstrap {
       await this.ensureCaroIaEntry();
       await this.ensureAgendaEntry();
       await this.ensureClinicEntry();
+      await this.ensurePaymentsEntry();
       return;
     }
 
@@ -137,6 +140,33 @@ export class NavigationBootstrapService implements OnApplicationBootstrap {
     await this.menu.save(item);
     await this.setMarker(NavigationBootstrapService.CLINIC_MARKER);
     this.logger.log('Restored the Clinic settings entry in the existing menu');
+  }
+
+  /** The patient account (caja) shipped after the first menu seed. */
+  private async ensurePaymentsEntry(): Promise<void> {
+    if (await this.hasMarker(NavigationBootstrapService.PAYMENTS_MARKER)) {
+      return;
+    }
+
+    const items = await this.menu.findAll();
+
+    if (items.some((item) => item.routeKey === 'payments')) {
+      await this.setMarker(NavigationBootstrapService.PAYMENTS_MARKER);
+      return;
+    }
+
+    const lastPosition = (await this.menu.maxPosition(null)) ?? -1;
+    const item = MenuItem.create({
+      kind: 'item',
+      icon: 'lucideBadgeDollarSign',
+      routeKey: 'payments',
+      requiredPermission: paymentsPermissions.read,
+    });
+
+    item.setPosition(lastPosition + 1);
+    await this.menu.save(item);
+    await this.setMarker(NavigationBootstrapService.PAYMENTS_MARKER);
+    this.logger.log('Added the Payments (caja) entry to the existing menu');
   }
 
   private async hasMarker(key: string = NavigationBootstrapService.CARO_IA_MARKER): Promise<boolean> {

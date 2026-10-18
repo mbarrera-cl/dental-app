@@ -108,6 +108,42 @@ describe('Quote', () => {
     expect(quote.total).toBe(10);
   });
 
+  it('approving approves every line in a chain, so approvedTotal matches the total', () => {
+    const quote = makeQuote();
+    quote.decideItem(quote.items[1]!.id, 'rechazado', 'u-2', 'Luis');
+
+    quote.sanction('aprobada', 'u-3', 'María');
+
+    for (const item of quote.items) {
+      expect(item.status).toBe('aprobado');
+    }
+    expect(quote.approvedTotal).toBe(quote.total);
+    // The chain decision is recorded by the sanctioning actor.
+    expect(quote.items[0]!.statusChangedByName).toBe('María');
+  });
+
+  it('approving keeps the metadata of lines that were already approved', () => {
+    const quote = makeQuote();
+    quote.decideItem(quote.items[0]!.id, 'aprobado', 'u-2', 'Luis');
+
+    quote.sanction('aprobada', 'u-3', 'María');
+
+    expect(quote.items[0]!.statusChangedByName).toBe('Luis');
+    expect(quote.items[1]!.statusChangedByName).toBe('María');
+    expect(quote.approvedTotal).toBe(quote.total);
+  });
+
+  it('rejecting does not approve the lines', () => {
+    const quote = makeQuote();
+
+    quote.sanction('rechazada', 'u-3', 'María');
+
+    for (const item of quote.items) {
+      expect(item.status).toBe('generado');
+    }
+    expect(quote.approvedTotal).toBe(0);
+  });
+
   it('changes status explicitly and keeps sanction metadata coherent', () => {
     const quote = makeQuote();
 

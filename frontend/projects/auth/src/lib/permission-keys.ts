@@ -21,6 +21,7 @@ export const PERMISSION_KEYS = {
   settings: {
     read: 'settings:read',
     update: 'settings:update',
+    updateSecurity: 'settings:update-security',
   },
   agenda: {
     read: 'agenda:read',
@@ -43,6 +44,15 @@ export const PERMISSION_KEYS = {
     create: 'clinical:create',
     update: 'clinical:update',
   },
+  prescriptions: {
+    read: 'prescriptions:read',
+    create: 'prescriptions:create',
+  },
+  consents: {
+    read: 'consents:read',
+    record: 'consents:record',
+    manage: 'consents:manage',
+  },
   apiKeys: {
     self: 'apikeys:self',
     read: 'apikeys:read',
@@ -55,6 +65,11 @@ export const PERMISSION_KEYS = {
     delete: 'quotes:delete',
     send: 'quotes:send',
     approve: 'quotes:approve',
+  },
+  payments: {
+    read: 'payments:read',
+    create: 'payments:create',
+    void: 'payments:void',
   },
   uco: {
     read: 'uco:read',

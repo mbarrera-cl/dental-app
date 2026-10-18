@@ -14,7 +14,7 @@ import { formatNumeroHistoria } from '../../../domain/numero-historia.js';
 import { Patient, type Sexo } from '../../../domain/patient.entity.js';
 import {
   PatientAlreadyExistsError,
-  PatientHasQuotesError,
+  PatientHasLinkedRecordsError,
   PatientNotFoundError,
 } from '../../../domain/patient.errors.js';
 import { Prevision } from '../../../domain/prevision.vo.js';
@@ -41,6 +41,7 @@ interface PatientRow {
   prevision_tipo: string | null;
   prevision_tramo: string | null;
   prevision_plan: string | null;
+  prevision_convenio: string | null;
   contacto_nombre: string | null;
   contacto_telefono: string | null;
   contacto_parentesco: string | null;
@@ -63,10 +64,10 @@ export class PostgresPatientRepository extends PatientRepositoryPort {
            fecha_nacimiento, sexo, email, telefono,
            direccion_region, direccion_comuna, direccion_calle, direccion_numero,
            direccion_departamento, prevision_tipo, prevision_tramo, prevision_plan,
-           contacto_nombre, contacto_telefono, contacto_parentesco, notas,
-           numero_historia, created_at
+           prevision_convenio, contacto_nombre, contacto_telefono, contacto_parentesco,
+           notas, numero_historia, created_at
          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13,
-                   $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)`,
+                   $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24)`,
         [patient.id, ...this.toColumnValues(patient), patient.createdAt],
       );
     } catch (error) {
@@ -87,9 +88,10 @@ export class PostgresPatientRepository extends PatientRepositoryPort {
            direccion_region = $9, direccion_comuna = $10, direccion_calle = $11,
            direccion_numero = $12, direccion_departamento = $13,
            prevision_tipo = $14, prevision_tramo = $15, prevision_plan = $16,
-           contacto_nombre = $17, contacto_telefono = $18, contacto_parentesco = $19,
-           notas = $20, numero_historia = $21
-         WHERE id = $22`,
+           prevision_convenio = $17,
+           contacto_nombre = $18, contacto_telefono = $19, contacto_parentesco = $20,
+           notas = $21, numero_historia = $22
+         WHERE id = $23`,
         [...this.toColumnValues(patient), patient.id],
       );
 
@@ -118,7 +120,7 @@ export class PostgresPatientRepository extends PatientRepositoryPort {
       }
     } catch (error) {
       if (isForeignKeyViolation(error)) {
-        throw new PatientHasQuotesError(id);
+        throw new PatientHasLinkedRecordsError(id);
       }
 
       throw error;
@@ -190,6 +192,7 @@ export class PostgresPatientRepository extends PatientRepositoryPort {
       prevision?.tipo ?? null,
       prevision?.tramo ?? null,
       prevision?.plan ?? null,
+      prevision?.convenio ?? null,
       contacto?.nombre ?? null,
       contacto?.telefono ?? null,
       contacto?.parentesco ?? null,
@@ -226,6 +229,7 @@ export class PostgresPatientRepository extends PatientRepositoryPort {
                 tipo: row.prevision_tipo,
                 tramo: row.prevision_tramo,
                 plan: row.prevision_plan,
+                convenio: row.prevision_convenio,
               }),
         contactoEmergencia:
           row.contacto_nombre === null

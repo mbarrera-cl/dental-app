@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { DatabaseModule } from '../../shared/infrastructure/database/database.module.js';
 import { PatientsModule } from '../patients/patients.module.js';
+import { PaymentsModule } from '../payments/payments.module.js';
 import { SettingsModule } from '../settings/settings.module.js';
 import { UcoModule } from '../uco/uco.module.js';
 import { QuoteRepositoryPort } from './application/ports/quote-repository.port.js';
@@ -21,10 +22,11 @@ import { QuotesController } from './infrastructure/http/quotes.controller.js';
 /**
  * Composition root for the quotations context. Depends on the patients module
  * (validates the patient + resolves its snapshot), the UCO module (resolves
- * catalog codes) and the settings module (folio prefix, validity days).
+ * catalog codes), the settings module (folio prefix, validity days) and the
+ * payments module (charging the account when a quote is approved).
  */
 @Module({
-  imports: [DatabaseModule, PatientsModule, UcoModule, SettingsModule],
+  imports: [DatabaseModule, PatientsModule, UcoModule, SettingsModule, PaymentsModule],
   controllers: [QuotesController],
   providers: [
     CreateQuoteUseCase,

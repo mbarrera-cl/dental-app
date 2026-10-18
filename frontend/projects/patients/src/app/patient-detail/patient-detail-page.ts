@@ -10,9 +10,12 @@ import {
   lucideCalendar,
   lucideClipboardList,
   lucideFilePlus2,
+  lucideFileText,
   lucideRefreshCw,
+  lucideShieldCheck,
   lucideSmile,
   lucideTriangleAlert,
+  lucideWallet,
 } from '@ng-icons/lucide';
 import { toast } from '@spartan-ng/brain/sonner';
 import { HasPermissionDirective, PERMISSION_KEYS } from 'auth';
@@ -49,9 +52,12 @@ import { ClinicalRecordStore } from '../clinical-record.store';
       lucideCalendar,
       lucideClipboardList,
       lucideFilePlus2,
+      lucideFileText,
       lucideRefreshCw,
+      lucideShieldCheck,
       lucideSmile,
       lucideTriangleAlert,
+      lucideWallet,
     }),
   ],
   templateUrl: './patient-detail-page.html',
@@ -81,9 +87,12 @@ export class PatientDetailPage {
   /**
    * `true` while a clinical tab is active. Patients without a record have no
    * clinical tabs, so the “open the record” card replaces the outlet there —
-   * the quotes tab stays reachable in any case.
+   * the quotes, prescriptions, consents and account tabs stay reachable in
+   * any case.
    */
-  protected readonly clinicalSection = computed(() => !/\/presupuestos(?:[/?#]|$)/.test(this.url()));
+  protected readonly clinicalSection = computed(
+    () => !/\/(presupuestos|recetas|consentimientos|cuenta)(?:[/?#]|$)/.test(this.url()),
+  );
 
   protected readonly categoriaLabelKey = computed(() => {
     const record = this.store.record();

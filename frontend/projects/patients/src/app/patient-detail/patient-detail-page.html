@@ -150,6 +150,36 @@
         <ng-icon name="lucideBadgeDollarSign" />
         {{ 'clinical.tabs.quotes' | transloco }}
       </a>
+      <a
+        *hasPermission="permissionKeys.prescriptions.read"
+        routerLink="recetas"
+        routerLinkActive="border-primary text-foreground"
+        class="text-muted-foreground hover:text-foreground -mb-px flex items-center gap-2 border-b-2 border-transparent px-3 py-2 text-sm font-medium"
+        data-testid="clinical-tab-prescriptions"
+      >
+        <ng-icon name="lucideFileText" />
+        {{ 'clinical.tabs.prescriptions' | transloco }}
+      </a>
+      <a
+        *hasPermission="permissionKeys.consents.read"
+        routerLink="consentimientos"
+        routerLinkActive="border-primary text-foreground"
+        class="text-muted-foreground hover:text-foreground -mb-px flex items-center gap-2 border-b-2 border-transparent px-3 py-2 text-sm font-medium"
+        data-testid="clinical-tab-consents"
+      >
+        <ng-icon name="lucideShieldCheck" />
+        {{ 'clinical.tabs.consents' | transloco }}
+      </a>
+      <a
+        *hasPermission="permissionKeys.payments.read"
+        routerLink="cuenta"
+        routerLinkActive="border-primary text-foreground"
+        class="text-muted-foreground hover:text-foreground -mb-px flex items-center gap-2 border-b-2 border-transparent px-3 py-2 text-sm font-medium"
+        data-testid="clinical-tab-account"
+      >
+        <ng-icon name="lucideWallet" />
+        {{ 'clinical.tabs.account' | transloco }}
+      </a>
     </nav>
 
     @if (!store.record() && clinicalSection()) {

@@ -298,6 +298,12 @@ export class Quote extends Entity<QuoteProps> {
    * Explicitly changes the workflow status. Approved/rejected statuses record
    * the sanction actor/time; returning to draft or awaiting response clears
    * that metadata. Editing lines does not call this method.
+   *
+   * Approving the quote approves every line in a chain (the account charge is
+   * the approved total). Lines already approved keep their original decision
+   * metadata; undecided/rejected lines are re-decided by the sanctioning
+   * actor. Item statuses are NOT cleared when the quote returns to an open
+   * state — the sanctioned approval is a snapshot, not a live mirror.
    */
   changeStatus(status: QuoteStatus, actorId: string | null, actorName: string): void {
     this.assertNotDeleted();
@@ -316,6 +322,14 @@ export class Quote extends Entity<QuoteProps> {
       this.props.sanctionedBy = null;
       this.props.sanctionedByName = null;
       this.props.sanctionedAt = null;
+    }
+
+    if (status === 'aprobada') {
+      for (const item of this.props.items) {
+        if (item.status !== 'aprobado') {
+          item.decide('aprobado', actorId, actorName);
+        }
+      }
     }
 
     this.touch(actorId, actorName);

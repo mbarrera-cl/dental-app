@@ -143,6 +143,34 @@ describe('Patients API (e2e)', () => {
       });
     });
 
+    it('supports PARTICULAR and CONVENIO coverages', async () => {
+      const particular = await createPatient({
+        ...validPatient,
+        rut: '11.111.111-1',
+        prevision: { tipo: 'PARTICULAR' },
+      }).expect(201);
+
+      expect(particular.body.prevision).toEqual({
+        tipo: 'PARTICULAR',
+        tramo: null,
+        plan: null,
+        convenio: null,
+      });
+
+      const convenio = await createPatient({
+        ...validPatient,
+        rut: '22.222.222-2',
+        prevision: { tipo: 'CONVENIO', convenio: '  Colegio San Ignacio ' },
+      }).expect(201);
+
+      expect(convenio.body.prevision).toEqual({
+        tipo: 'CONVENIO',
+        tramo: null,
+        plan: null,
+        convenio: 'Colegio San Ignacio',
+      });
+    });
+
     it('returns 400 for a RUT with a wrong check digit', async () => {
       await createPatient({ ...validPatient, rut: '12345678-9' }).expect(400);
     });
@@ -175,6 +203,14 @@ describe('Patients API (e2e)', () => {
       await createPatient({
         ...validPatient,
         prevision: { tipo: 'ISAPRE', tramo: 'B', plan: 'Colmena' },
+      }).expect(400);
+      await createPatient({
+        ...validPatient,
+        prevision: { tipo: 'PARTICULAR', tramo: 'B' },
+      }).expect(400);
+      await createPatient({
+        ...validPatient,
+        prevision: { tipo: 'CONVENIO' },
       }).expect(400);
     });
 
@@ -377,7 +413,7 @@ describe('Patients API (e2e)', () => {
 
       const response = await api().delete(`/patients/${patientId}`).expect(409);
 
-      expect((response.body as { error: string }).error).toBe('PatientHasQuotesError');
+      expect((response.body as { error: string }).error).toBe('PatientHasLinkedRecordsError');
 
       // The patient and its quotations are still there.
       await api().get(`/patients/${patientId}`).expect(200);

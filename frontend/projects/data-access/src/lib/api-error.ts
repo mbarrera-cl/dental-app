@@ -27,7 +27,7 @@ const ERROR_NAME_TO_KEY: Readonly<Record<string, string>> = {
   InvalidDireccionError: 'errors.invalidDireccion',
   InvalidPrevisionError: 'errors.invalidPrevision',
   InvalidContactoEmergenciaError: 'errors.invalidContactoEmergencia',
-  PatientHasQuotesError: 'errors.patientHasQuotes',
+  PatientHasLinkedRecordsError: 'errors.patientHasRecords',
   // clinical context (ficha dental)
   ClinicalRecordAlreadyExistsError: 'errors.clinicalRecordExists',
   PatientClinicalRecordNotFoundError: 'errors.clinicalRecordNotFound',
@@ -72,8 +72,7 @@ const ERROR_NAME_TO_KEY: Readonly<Record<string, string>> = {
   UnknownVariantError: 'errors.notFound',
   ClinicAssetNotFoundError: 'errors.notFound',
   // navigation context
-  InvalidMenuItemKindError: 'errors.validation',
-  InvalidMenuDestinationError: 'errors.menuDestination',
+  InvalidMenuItemKindError: 'errors.validation',  InvalidMenuDestinationError: 'errors.menuDestination',
   InvalidMenuRouteKeyError: 'errors.menuRouteKey',
   InvalidMenuExternalUrlError: 'errors.menuExternalUrl',
   InvalidMenuLabelError: 'errors.invalidName',
@@ -85,6 +84,10 @@ const ERROR_NAME_TO_KEY: Readonly<Record<string, string>> = {
   MenuReorderDuplicateError: 'errors.validation',
   MenuReorderSelfParentError: 'errors.validation',
   EmptyMenuItemUpdateError: 'errors.emptyUpdate',
+  // payments context (cobros / caja)
+  InvalidMovementError: 'errors.invalidMovement',
+  MovementNotFoundError: 'errors.movementNotFound',
+  MovementAlreadyVoidedError: 'errors.movementAlreadyVoided',
 };
 
 /**

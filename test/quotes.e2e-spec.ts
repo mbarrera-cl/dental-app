@@ -207,6 +207,90 @@ describe('Quotes API (e2e)', () => {
     expect(draft.sanctionedByName).toBeNull();
   });
 
+  it('charges the patient account once when a quote is approved and never duplicates it', async () => {
+    const ledger = () =>
+      request(app.getHttpServer()).get(`/patients/${patientId}/ledger`).set('Authorization', authorization);
+
+    const cargos = async () =>
+      ((await ledger().expect(200)).body as { balance: number; movements: Array<{ id: string; kind: string; amount: number; concept: string; quoteId: string | null; voidedAt: string | null }> })
+        .movements.filter((movement) => movement.kind === 'cargo');
+
+    const changeStatus = (id: string, status: string) =>
+      request(app.getHttpServer())
+        .patch(`/quotes/${id}/status`)
+        .set('Authorization', authorization)
+        .send({ status });
+
+    const created = (await createQuote(validQuote()).expect(201)).body as QuoteBody;
+    expect(await cargos()).toHaveLength(0);
+
+    const approved = ((await changeStatus(created.id, 'aprobada').expect(200)).body as QuoteBody);
+    expect(approved.status).toBe('aprobada');
+    // Approving the quote approves every line in a chain.
+    for (const item of approved.items) {
+      expect(item.status).toBe('aprobado');
+    }
+
+    const charges = await cargos();
+    expect(charges).toHaveLength(1);
+    expect(charges[0]!.amount).toBe(13000);
+    expect(charges[0]!.quoteId).toBe(created.id);
+    expect(charges[0]!.concept).toContain(created.folio);
+    expect(charges[0]!.voidedAt).toBeNull();
+    expect(((await ledger().expect(200)).body as { balance: number }).balance).toBe(13000);
+
+    // Re-opening and re-approving never duplicates the charge (frozen snapshot).
+    await changeStatus(created.id, 'borrador').expect(200);
+    await changeStatus(created.id, 'aprobada').expect(200);
+    expect(await cargos()).toHaveLength(1);
+
+    // Rejecting another quote does not charge anything.
+    const rejected = (await createQuote(validQuote()).expect(201)).body as QuoteBody;
+    await changeStatus(rejected.id, 'rechazada').expect(200);
+    expect(await cargos()).toHaveLength(1);
+  });
+
+  it('recharges (new amount) only through the voided-charge recovery path', async () => {
+    const changeStatus = (id: string, status: string) =>
+      request(app.getHttpServer())
+        .patch(`/quotes/${id}/status`)
+        .set('Authorization', authorization)
+        .send({ status });
+
+    const ledger = () =>
+      request(app.getHttpServer()).get(`/patients/${patientId}/ledger`).set('Authorization', authorization);
+
+    const created = (await createQuote(validQuote()).expect(201)).body as QuoteBody;
+    await changeStatus(created.id, 'aprobada').expect(200);
+
+    const [charge] = ((await ledger().expect(200)).body as { movements: Array<{ id: string; kind: string }> })
+      .movements.filter((movement) => movement.kind === 'cargo');
+
+    // Editing the plan does not touch the frozen charge.
+    await changeStatus(created.id, 'borrador').expect(200);
+    await updateQuote(created.id, {
+      items: [{ description: 'Plan corregido', quantity: 1, unitPrice: 20000 }],
+    }).expect(200);
+    let ledgerBody = (await ledger().expect(200)).body as { movements: Array<{ kind: string; voidedAt: string | null; amount: number }> };
+    expect(ledgerBody.movements.filter((m) => m.kind === 'cargo' && m.voidedAt === null)).toHaveLength(1);
+    expect(ledgerBody.balance).toBe(13000);
+
+    // Voiding the old cargo unlocks a corrected charge on re-approval.
+    await request(app.getHttpServer())
+      .post(`/ledger/${charge!.id}/void`)
+      .set('Authorization', authorization)
+      .send({ reason: 'Monto corregido' })
+      .expect(200);
+
+    await changeStatus(created.id, 'aprobada').expect(200);
+
+    ledgerBody = (await ledger().expect(200)).body as { movements: Array<{ kind: string; voidedAt: string | null; amount: number }> };
+    const live = ledgerBody.movements.filter((m) => m.kind === 'cargo' && m.voidedAt === null);
+    expect(live).toHaveLength(1);
+    expect(live[0]!.amount).toBe(20000);
+    expect(ledgerBody.balance).toBe(20000);
+  });
+
   it('duplicates a quote into a new draft referencing the source', async () => {
     const created = (await createQuote(validQuote()).expect(201)).body as QuoteBody;
 

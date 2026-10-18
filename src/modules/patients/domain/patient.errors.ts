@@ -117,13 +117,14 @@ export class PatientAlreadyExistsError extends DomainError {
 }
 
 /**
- * A patient with quotations cannot be deleted: the quotes reference it
- * (`ON DELETE RESTRICT`) and a priced document must not vanish silently.
+ * A patient with linked records cannot be deleted: quotations and account
+ * (ledger) entries reference it (`ON DELETE RESTRICT`) and priced or paid
+ * history must not vanish silently.
  */
-export class PatientHasQuotesError extends DomainError {
+export class PatientHasLinkedRecordsError extends DomainError {
   readonly kind: DomainErrorKind = 'conflict';
 
   constructor(id: string) {
-    super(`Patient with id "${id}" has quotations and cannot be deleted`);
+    super(`Patient with id "${id}" has linked records (quotations or account entries) and cannot be deleted`);
   }
 }

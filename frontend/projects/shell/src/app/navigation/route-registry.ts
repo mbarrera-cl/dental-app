@@ -80,6 +80,12 @@ export const NAVIGATION_ROUTES: readonly NavigationRoute[] = [
     icon: 'lucideBuilding2',
   },
   {
+    key: 'payments',
+    path: '/patients/caja',
+    label: 'shell.navPayments',
+    icon: 'lucideBadgeDollarSign',
+  },
+  {
     key: 'quotes',
     path: '/quotes',
     label: 'shell.navQuotes',
