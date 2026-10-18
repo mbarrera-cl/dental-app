@@ -408,6 +408,68 @@ describe('Clinical API (e2e)', () => {
     });
   });
 
+  describe('treatment plan', () => {
+    it('creates the plan lazily, adds items and advances their status', async () => {
+      const patient = await createPatient();
+      const record = await openRecord(patient.id);
+
+      // The plan does not exist until first access.
+      const plan = await api()
+        .get(`/clinical-records/${record.id}/treatment-plan`)
+        .expect(200);
+      expect(plan.body.items).toEqual([]);
+
+      const item = await api()
+        .post(`/clinical-records/${record.id}/treatment-plan/items`)
+        .send({ tooth: 36, procedure: 'Endodoncia pieza 36' })
+        .expect(201);
+      expect(item.body).toMatchObject({ tooth: 36, status: 'planificado', position: 0 });
+
+      await api()
+        .post(`/clinical-records/${record.id}/treatment-plan/items`)
+        .send({ procedure: 'Limpieza general' })
+        .expect(201);
+
+      const reloaded = await api()
+        .get(`/clinical-records/${record.id}/treatment-plan`)
+        .expect(200);
+      expect(reloaded.body.items).toHaveLength(2);
+
+      const updated = await api()
+        .patch(`/treatment-plan-items/${item.body.id}`)
+        .send({ status: 'realizado' })
+        .expect(200);
+      expect(updated.body.status).toBe('realizado');
+      expect(updated.body.statusChangedAt).toEqual(expect.any(String));
+    });
+
+    it('validates the payload (unknown tooth, empty procedure, empty update)', async () => {
+      const patient = await createPatient();
+      const record = await openRecord(patient.id);
+
+      await api()
+        .post(`/clinical-records/${record.id}/treatment-plan/items`)
+        .send({ tooth: 19, procedure: 'x' })
+        .expect(400);
+
+      await api()
+        .post(`/clinical-records/${record.id}/treatment-plan/items`)
+        .send({ procedure: '   ' })
+        .expect(400);
+
+      const item = await api()
+        .post(`/clinical-records/${record.id}/treatment-plan/items`)
+        .send({ procedure: 'Limpieza' })
+        .expect(201);
+
+      await api().patch(`/treatment-plan-items/${item.body.id}`).send({}).expect(400);
+    });
+
+    it('returns 404 for a plan of an unknown record', async () => {
+      await api().get('/clinical-records/does-not-exist/treatment-plan').expect(404);
+    });
+  });
+
   describe('authorization', () => {
     it('requires an authenticated principal', async () => {
       await request(app.getHttpServer())
