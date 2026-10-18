@@ -19,7 +19,7 @@ export class DeleteRoleUseCase implements UseCase<DeleteRoleCommand, void> {
     }
 
     if (current.role.isProtected) {
-      throw new RoleProtectedError('it cannot be deleted');
+      throw new RoleProtectedError(current.role.name, 'it cannot be deleted');
     }
 
     if (current.userCount > 0) {

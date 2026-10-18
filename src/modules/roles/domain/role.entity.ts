@@ -81,7 +81,7 @@ export class Role extends Entity<RoleProps> {
     return this.props.updatedAt;
   }
 
-  /** Built-in roles cannot be renamed, deleted nor stripped of critical permissions. */
+  /** Built-in roles keep their name and cannot be deleted; see the use cases. */
   get isProtected(): boolean {
     return this.props.builtIn;
   }

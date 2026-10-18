@@ -22,9 +22,10 @@ const DEFAULT_ADMIN_EMAIL = 'admin@hexa.local';
 const DEFAULT_ADMIN_PASSWORD = 'Admin123!';
 const DEFAULT_ROLES_SEEDED_MARKER = 'default-roles-seeded';
 const DENTIST_ROLE_NAME = 'dentista';
+const DENTIST_ROLE_SEEDED_MARKER = 'dentist-role-seeded';
 
 /** Permissions of the built-in dentist role. */
-const DENTIST_PERMISSIONS = [
+export const DENTIST_PERMISSIONS = [
   agendaCategory.keys.read,
   agendaCategory.keys.create,
   agendaCategory.keys.update,
@@ -61,9 +62,11 @@ const EDITOR_PERMISSIONS = [
  *
  * 1. Keeps the built-in `admin` role in sync with the permission catalog, so
  *    a permission added by a new module is granted automatically on deploy.
- * 2. Seeds the demo roles (`editor`, `viewer`) once — a marker in
+ * 2. Seeds the built-in `dentista` role once — a marker in `bootstrap_state`
+ *    means the administrator is then in charge: its edits stick.
+ * 3. Seeds the demo roles (`editor`, `viewer`) once — a marker in
  *    `bootstrap_state` means deleting them later is respected.
- * 3. Guarantees an active administrator account (`ADMIN_EMAIL` /
+ * 4. Guarantees an active administrator account (`ADMIN_EMAIL` /
  *    `ADMIN_PASSWORD`), which doubles as the lockout rescue.
  */
 @Injectable()
@@ -116,6 +119,10 @@ export class IdentityBootstrapService implements OnApplicationBootstrap {
   }
 
   private async ensureDentistRole(): Promise<void> {
+    if (await this.hasState(DENTIST_ROLE_SEEDED_MARKER)) {
+      return;
+    }
+
     const existing = await this.roles.findByName(DENTIST_ROLE_NAME);
 
     if (existing === null) {
@@ -129,18 +136,22 @@ export class IdentityBootstrapService implements OnApplicationBootstrap {
       );
 
       this.logger.log(`Created the built-in "${DENTIST_ROLE_NAME}" role`);
-      return;
+    } else {
+      // One-time migration: databases seeded by the previous "ensure on every
+      // boot" behaviour get their default permissions completed once, then the
+      // administrator is in charge of the role and its edits are respected.
+      const missing = DENTIST_PERMISSIONS.filter((key) => !existing.hasPermission(key));
+
+      if (missing.length > 0) {
+        existing.changePermissions([...existing.permissions, ...missing]);
+        await this.roles.update(existing);
+        this.logger.log(
+          `Completed the default permissions of the existing "${DENTIST_ROLE_NAME}" role (${missing.length})`,
+        );
+      }
     }
 
-    const missing = DENTIST_PERMISSIONS.filter((key) => !existing.hasPermission(key));
-
-    if (missing.length > 0) {
-      existing.changePermissions([...existing.permissions, ...missing]);
-      await this.roles.update(existing);
-      this.logger.log(
-        `Added agenda permissions to the existing "${DENTIST_ROLE_NAME}" role (${missing.length})`,
-      );
-    }
+    await this.setState(DENTIST_ROLE_SEEDED_MARKER);
   }
 
   private async seedDefaultRolesOnce(): Promise<void> {

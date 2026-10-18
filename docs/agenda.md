@@ -15,8 +15,11 @@ superposiciones se muestran como advertencia, sin bloquear.
 | `agenda:professional` | Aparecer como profesional seleccionable |
 | `agenda:manage` | Administrar el catálogo de motivos |
 
-El rol integrado `dentista` recibe los permisos de agenda y lectura de
-pacientes. Los administradores pueden crear otros roles desde la UI.
+El rol integrado `dentista` se siembra una sola vez con los permisos de agenda
+y lectura de pacientes. El administrador puede editar sus permisos y su
+descripción desde la UI, y la plataforma respeta esos cambios en los arranques
+siguientes; su nombre queda congelado y no se puede borrar. Los administradores
+pueden crear otros roles desde la UI.
 
 ## API
 

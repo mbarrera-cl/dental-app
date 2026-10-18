@@ -44,12 +44,12 @@ export class RoleNotFoundError extends DomainError {
   }
 }
 
-/** The built-in role has protections that the panel cannot override. */
+/** A built-in role has protections that the panel cannot override. */
 export class RoleProtectedError extends DomainError {
   readonly kind: DomainErrorKind = 'validation';
 
-  constructor(reason: string) {
-    super(`The built-in "${ADMIN_ROLE_NAME}" role is protected: ${reason}`);
+  constructor(roleName: string, reason: string) {
+    super(`The built-in "${roleName}" role is protected: ${reason}`);
   }
 }
 

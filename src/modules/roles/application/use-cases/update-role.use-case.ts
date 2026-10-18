@@ -35,19 +35,22 @@ export class UpdateRoleUseCase implements UseCase<UpdateRoleCommand, RoleWithUsa
 
     const role = current.role;
 
-    // Protect the built-in administrator role *before* applying anything:
-    // its name is frozen and it must keep every administration permission, so
-    // nobody can lock the system out of its own panel.
+    // Built-in roles keep their name frozen so the bootstrapper can find them
+    // (and seeding never duplicates them). Only the built-in administrator is
+    // additionally forced to keep every administration permission, so nobody
+    // can lock the system out of its own panel; every other built-in role
+    // (e.g. `dentista`) is fully editable by the administrator.
     if (role.isProtected) {
       if (command.name !== undefined && command.name.trim() !== role.name) {
-        throw new RoleProtectedError('its name cannot be changed');
+        throw new RoleProtectedError(role.name, 'its name cannot be changed');
       }
 
-      if (command.permissions !== undefined) {
+      if (role.name === ADMIN_ROLE_NAME && command.permissions !== undefined) {
         const missing = ADMIN_CRITICAL_PERMISSIONS.filter((key) => !command.permissions!.includes(key));
 
         if (missing.length > 0) {
           throw new RoleProtectedError(
+            role.name,
             `it must keep every administration permission (missing: ${missing.join(', ')})`,
           );
         }

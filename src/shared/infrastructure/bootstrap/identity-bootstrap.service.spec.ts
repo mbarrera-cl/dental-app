@@ -3,11 +3,13 @@ import { closePostgresTestDatabase, createPostgresTestDatabase } from '../../../
 import { PostgresRoleRepository } from '../../../modules/roles/infrastructure/adapters/persistence/postgres-role.repository.js';
 import { PostgresUserRepository } from '../../../modules/users/infrastructure/adapters/persistence/postgres-user.repository.js';
 import { User } from '../../../modules/users/domain/user.entity.js';
+import { Role } from '../../../modules/roles/domain/role.entity.js';
 import { allPermissionKeys } from '../../security/permissions.js';
 import { PasswordHasher } from '../../security/password-hasher.js';
 import {
   ADMIN_EMAIL_ENV,
   ADMIN_PASSWORD_ENV,
+  DENTIST_PERMISSIONS,
   IdentityBootstrapService,
 } from './identity-bootstrap.service.js';
 
@@ -69,6 +71,39 @@ describe('IdentityBootstrapService', () => {
 
     const synced = (await roles.findByName('admin'))!;
     expect([...synced.permissions]).toEqual([...allPermissionKeys()]);
+  });
+
+  it('seeds the built-in dentist role once and respects later admin edits', async () => {
+    // Simulate a database from before the seed-once migration: an incomplete
+    // dentist role, as the old ensure-on-boot behaviour would have left it.
+    const stripped = Role.create({
+      name: 'dentista',
+      description: 'Dentist role pre-migration',
+      permissions: ['agenda:read'],
+      builtIn: true,
+    });
+    await roles.save(stripped);
+
+    await service.onApplicationBootstrap();
+
+    const migrated = (await roles.findByName('dentista'))!;
+    expect(migrated.builtIn).toBe(true);
+
+    // The one-time migration completes the default permissions...
+    for (const key of DENTIST_PERMISSIONS) {
+      expect(migrated.permissions).toContain(key);
+    }
+
+    // ...then the administrator edits the role...
+    const removed = DENTIST_PERMISSIONS[0]!;
+    migrated.changePermissions(migrated.permissions.filter((key) => key !== removed));
+    await roles.update(migrated);
+
+    // ...and later boots respect the edit instead of re-adding defaults.
+    await service.onApplicationBootstrap();
+
+    const edited = (await roles.findByName('dentista'))!;
+    expect(edited.permissions).not.toContain(removed);
   });
 
   it('seeds editor and viewer once and assigns viewer to users without roles', async () => {

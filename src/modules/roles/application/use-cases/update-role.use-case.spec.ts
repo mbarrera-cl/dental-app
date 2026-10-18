@@ -20,10 +20,23 @@ describe('UpdateRoleUseCase', () => {
       builtIn: true,
     });
     const supportRole = Role.create({ name: 'Support', permissions: ['users:read'] });
+    const dentistRole = Role.create({
+      name: 'dentista',
+      description: 'Built-in dentist',
+      permissions: ['agenda:read', 'patients:read'],
+      builtIn: true,
+    });
     await roleRepository.save(adminRole);
     await roleRepository.save(supportRole);
+    await roleRepository.save(dentistRole);
 
-    return { roleRepository, useCase: new UpdateRoleUseCase(roleRepository), adminRole, supportRole };
+    return {
+      roleRepository,
+      useCase: new UpdateRoleUseCase(roleRepository),
+      adminRole,
+      supportRole,
+      dentistRole,
+    };
   };
 
   it('updates description and permissions of a regular role', async () => {
@@ -71,6 +84,32 @@ describe('UpdateRoleUseCase', () => {
 
     const kept = await useCase.execute({ id: adminRole.id, permissions: [...allPermissionKeys()] });
     expect(kept.role.permissions).toHaveLength(allPermissionKeys().length);
+  });
+
+  it('lets the administrator rewrite the permissions of a built-in non-admin role', async () => {
+    const { useCase, dentistRole } = await setup();
+
+    // Not one of the admin-critical permissions: a dentist may lose them all.
+    const updated = await useCase.execute({ id: dentistRole.id, permissions: ['agenda:read'] });
+
+    expect(updated.role.name).toBe('dentista');
+    expect(updated.role.permissions).toEqual(['agenda:read']);
+  });
+
+  it('still freezes the name of a built-in non-admin role', async () => {
+    const { useCase, dentistRole } = await setup();
+
+    await expect(
+      useCase.execute({ id: dentistRole.id, name: 'especialista' }),
+    ).rejects.toThrow(new RoleProtectedError('dentista', 'its name cannot be changed'));
+
+    const edits = await useCase.execute({
+      id: dentistRole.id,
+      name: 'dentista',
+      description: 'Editable description',
+    });
+
+    expect(edits.role.description).toBe('Editable description');
   });
 
   it('rejects renaming to a reserved or already taken name', async () => {
