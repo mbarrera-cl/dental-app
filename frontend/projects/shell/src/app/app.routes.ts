@@ -85,7 +85,17 @@ export const routes: Routes = [
     canMatch: [
       authGuard,
       permissionGuard({
-        anyOf: [PERMISSION_KEYS.roles.read, PERMISSION_KEYS.settings.read, PERMISSION_KEYS.apiKeys.read],
+        // Must mirror the parent guard of the `admin` remote (see its
+        // `ADMIN_ROUTES`): a permission that opens a section there has to
+        // pass this gate too, or the shell redirects to /forbidden before the
+        // remote is even loaded.
+        anyOf: [
+          PERMISSION_KEYS.roles.read,
+          PERMISSION_KEYS.settings.read,
+          PERMISSION_KEYS.apiKeys.read,
+          PERMISSION_KEYS.uco.read,
+          PERMISSION_KEYS.consents.manage,
+        ],
       }),
     ],
     loadChildren: () =>
