@@ -2,8 +2,12 @@ import { Injectable } from '@nestjs/common';
 import { PasswordHasher } from '../../../../shared/security/password-hasher.js';
 import { SettingsService } from '../../../settings/application/settings.service.js';
 import { UserRepositoryPort } from '../../../users/application/ports/user-repository.port.js';
-import { assertLoginAllowed, loadUserWithPassword } from '../credential-flows.js';
-import { PasswordChangeRequiredError } from '../../domain/auth.errors.js';
+import {
+  assertLoginAllowed,
+  loadUserWithPassword,
+  type CredentialedUser,
+} from '../credential-flows.js';
+import { InvalidCredentialsError, PasswordChangeRequiredError } from '../../domain/auth.errors.js';
 import { LoginAttemptsService } from '../login-attempts.service.js';
 import { SessionService, type AuthSessionResult } from '../session.service.js';
 
@@ -29,7 +33,21 @@ export class LoginUseCase {
 
   async execute({ email, password }: LoginCommand): Promise<AuthSessionResult> {
     const now = new Date();
-    const { user, passwordHash } = await loadUserWithPassword(this.users, email);
+    let loaded: CredentialedUser;
+
+    try {
+      loaded = await loadUserWithPassword(this.users, email);
+    } catch (error) {
+      // Unknown/malformed emails return before any hashing. Do the same
+      // scrypt work anyway so response time does not reveal account existence.
+      if (error instanceof InvalidCredentialsError) {
+        await this.hasher.verifyDummy(password);
+      }
+
+      throw error;
+    }
+
+    const { user, passwordHash } = loaded;
 
     assertLoginAllowed(user, now);
 

@@ -15,6 +15,7 @@ import {
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import type { Request, Response } from 'express';
 import { CurrentPrincipal } from '../../../../shared/security/current-principal.decorator.js';
 import type { Principal } from '../../../../shared/security/principal.js';
@@ -60,6 +61,7 @@ export class AuthController {
 
   @Public()
   @Post('login')
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Sign in with email and password' })
   @ApiOkResponse({ type: AuthSessionResponseDto })
@@ -95,6 +97,7 @@ export class AuthController {
 
   @Public()
   @Post('refresh')
+  @Throttle({ default: { limit: 30, ttl: 60_000 } })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Rotate the refresh token and get a new access token' })
   @ApiOkResponse({ type: AuthSessionResponseDto })
@@ -137,6 +140,7 @@ export class AuthController {
 
   @Public()
   @Post('change-expired-password')
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Change an expired or admin-reset password and sign in' })
   @ApiOkResponse({ type: AuthSessionResponseDto })

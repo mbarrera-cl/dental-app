@@ -79,9 +79,16 @@ describe('LoginUseCase', () => {
   });
 
   it('rejects unknown emails and users without a password with the same error', async () => {
+    const dummyVerify = vi.spyOn(hasher, 'verifyDummy');
+
     await expect(useCase.execute({ email: 'ghost@example.com', password })).rejects.toThrow(
       InvalidCredentialsError,
     );
+
+    // The dummy hash keeps the response time indistinguishable from a real
+    // wrong-password attempt.
+    expect(dummyVerify).toHaveBeenCalledWith(password);
+    dummyVerify.mockRestore();
 
     const noPassword = User.create({ email: 'nopass@example.com', name: 'No Password' });
     await users.save(noPassword);
