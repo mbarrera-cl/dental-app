@@ -40,9 +40,13 @@ function sendFile(res, file, status = 200) {
   }
 
   const ext = extname(file).toLowerCase();
+  // The federation manifest names the hashed chunks of the current deploy:
+  // caching it would keep the shell loading a previous release.
+  const mustRevalidate =
+    file.endsWith('index.html') || file.endsWith('config.js') || file.endsWith('remoteEntry.json');
   res.writeHead(status, {
     'Content-Type': MIME[ext] ?? 'application/octet-stream',
-    ...(file.endsWith('index.html') || file.endsWith('config.js')
+    ...(mustRevalidate
       ? { 'Cache-Control': 'no-cache' }
       : { 'Cache-Control': 'public, max-age=31536000, immutable' }),
   });
