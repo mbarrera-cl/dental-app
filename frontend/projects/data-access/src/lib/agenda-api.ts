@@ -6,6 +6,7 @@ import type {
   AgendaConfig,
   AgendaPatient,
   AgendaProfessional,
+  AgendaReason,
   Appointment,
   AppointmentConflict,
   CreateAppointmentPayload,
@@ -31,6 +32,25 @@ export class AgendaApi {
     return this.http.get<AgendaPatient>(
       `${this.baseUrl}/agenda/patients/${encodeURIComponent(id)}`,
     );
+  }
+
+  reasons(): Observable<AgendaReason[]> {
+    return this.http.get<AgendaReason[]>(`${this.baseUrl}/agenda/reasons`);
+  }
+
+  createReason(name: string): Observable<AgendaReason> {
+    return this.http.post<AgendaReason>(`${this.baseUrl}/agenda/reasons`, { name });
+  }
+
+  updateReason(id: string, name: string): Observable<AgendaReason> {
+    return this.http.patch<AgendaReason>(
+      `${this.baseUrl}/agenda/reasons/${encodeURIComponent(id)}`,
+      { name },
+    );
+  }
+
+  deleteReason(id: string): Observable<void> {
+    return this.http.delete<void>(`${this.baseUrl}/agenda/reasons/${encodeURIComponent(id)}`);
   }
 
   professionals(): Observable<AgendaProfessional[]> {

@@ -153,5 +153,77 @@
         </ul>
       </aside>
     </div>
+
+    <section class="bg-card rounded-lg border" data-testid="agenda-reasons">
+      <div class="border-b px-4 py-3">
+        <h3 class="text-sm font-semibold">Motivos de agenda</h3>
+        <p class="text-muted-foreground mt-1 text-xs">
+          Estos motivos aparecen en el selector al crear o editar una hora.
+        </p>
+      </div>
+
+      <div class="grid gap-4 p-4">
+        @if (reasonError(); as text) {
+          <div class="border-destructive/30 bg-destructive/5 text-destructive rounded-md border px-3 py-2 text-xs">
+            {{ text }}
+          </div>
+        }
+
+        @if (canManageReasons()) {
+          <div class="flex flex-wrap gap-2">
+            <input
+              hlmInput
+              type="text"
+              maxlength="80"
+              placeholder="Nuevo motivo"
+              class="min-w-48 flex-1"
+              [value]="newReasonName()"
+              (input)="setNewReasonName($event)"
+              data-testid="agenda-reason-new"
+            />
+            <button hlmBtn type="button" [disabled]="reasonBusy()" (click)="addReason()">
+              Agregar
+            </button>
+          </div>
+        }
+
+        @if (reasons().length === 0) {
+          <p class="text-muted-foreground text-sm">Todavía no hay motivos configurados.</p>
+        } @else {
+          <div class="divide-y rounded-md border">
+            @for (reason of reasons(); track reason.id) {
+              <div class="flex flex-wrap items-center gap-2 px-3 py-2" data-testid="agenda-reason-row">
+                @if (editingReasonId() === reason.id) {
+                  <input
+                    hlmInput
+                    type="text"
+                    maxlength="80"
+                    class="min-w-48 flex-1"
+                    [value]="editingReasonName()"
+                    (input)="setEditingReasonName($event)"
+                  />
+                  <button hlmBtn type="button" size="sm" [disabled]="reasonBusy()" (click)="saveReason()">
+                    Guardar
+                  </button>
+                  <button hlmBtn type="button" variant="ghost" size="sm" (click)="cancelReasonEdit()">
+                    Cancelar
+                  </button>
+                } @else {
+                  <span class="flex-1 text-sm">{{ reason.name }}</span>
+                  @if (canManageReasons()) {
+                    <button hlmBtn type="button" variant="outline" size="sm" (click)="startReasonEdit(reason)">
+                      Editar
+                    </button>
+                    <button hlmBtn type="button" variant="destructive" size="sm" [disabled]="reasonBusy()" (click)="deleteReason(reason)">
+                      Eliminar
+                    </button>
+                  }
+                }
+              </div>
+            }
+          </div>
+        }
+      </div>
+    </section>
   }
 </section>

@@ -13,6 +13,7 @@ superposiciones se muestran como advertencia, sin bloquear.
 | `agenda:update` | Editar o reprogramar |
 | `agenda:cancel` | Cancelar |
 | `agenda:professional` | Aparecer como profesional seleccionable |
+| `agenda:manage` | Administrar el catálogo de motivos |
 
 El rol integrado `dentista` recibe los permisos de agenda y lectura de
 pacientes. Los administradores pueden crear otros roles desde la UI.
@@ -27,6 +28,10 @@ GET    /agenda/professionals
 GET    /agenda/appointments?from&to&professionalId&patientId
 GET    /agenda/appointments/:id
 GET    /agenda/conflicts?professionalId&startsAt&endsAt&excludeId
+GET    /agenda/reasons
+POST   /agenda/reasons
+PATCH  /agenda/reasons/:id
+DELETE /agenda/reasons/:id
 POST   /agenda/appointments
 PATCH  /agenda/appointments/:id
 POST   /agenda/appointments/:id/cancel
@@ -34,6 +39,14 @@ POST   /agenda/appointments/:id/cancel
 
 Todas las fechas viajan en ISO 8601 UTC. El frontend las presenta y captura
 en la zona horaria configurada en `clinic.timeZone`.
+
+## Motivos de agenda
+
+El administrador mantiene el catálogo desde **Administración → Agenda y correo
+→ Motivos de agenda**. Al crear la base se siembran seis motivos habituales;
+se pueden agregar, renombrar y eliminar. El agendador solo ofrece los motivos
+vigentes, pero conserva el texto histórico de las horas anteriores si un motivo
+se elimina.
 
 ## Settings
 

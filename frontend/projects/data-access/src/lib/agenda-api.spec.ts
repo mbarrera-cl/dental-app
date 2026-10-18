@@ -30,6 +30,24 @@ describe('AgendaApi', () => {
     api.professionals().subscribe();
     http.expectOne(`${BASE}/agenda/professionals`).flush([]);
 
+    api.reasons().subscribe();
+    http.expectOne(`${BASE}/agenda/reasons`).flush([]);
+
+    api.createReason('Control').subscribe();
+    const createReason = http.expectOne(`${BASE}/agenda/reasons`);
+    expect(createReason.request.method).toBe('POST');
+    expect(createReason.request.body).toEqual({ name: 'Control' });
+    createReason.flush({ id: 'reason-1', name: 'Control' });
+
+    api.updateReason('reason-1', 'Control anual').subscribe();
+    const updateReason = http.expectOne(`${BASE}/agenda/reasons/reason-1`);
+    expect(updateReason.request.method).toBe('PATCH');
+    expect(updateReason.request.body).toEqual({ name: 'Control anual' });
+    updateReason.flush({ id: 'reason-1', name: 'Control anual' });
+
+    api.deleteReason('reason-1').subscribe();
+    http.expectOne(`${BASE}/agenda/reasons/reason-1`).flush(null);
+
     api.patients('camila').subscribe();
     http
       .expectOne(

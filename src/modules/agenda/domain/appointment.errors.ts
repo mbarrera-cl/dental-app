@@ -31,3 +31,27 @@ export class AgendaProfessionalNotFoundError extends DomainError {
     super(`User "${id}" is not an active agenda professional`);
   }
 }
+
+export class InvalidAgendaReasonError extends DomainError {
+  readonly kind = 'validation' as const;
+
+  constructor(reason: string) {
+    super(`Invalid agenda reason: ${reason}`);
+  }
+}
+
+export class AgendaReasonNotFoundError extends DomainError {
+  readonly kind = 'not_found' as const;
+
+  constructor(id: string) {
+    super(`Agenda reason with id "${id}" was not found`);
+  }
+}
+
+export class AgendaReasonNameTakenError extends DomainError {
+  readonly kind = 'conflict' as const;
+
+  constructor(name: string) {
+    super(`Agenda reason "${name}" already exists`);
+  }
+}

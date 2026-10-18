@@ -138,6 +138,39 @@ describe('Agenda (e2e)', () => {
     expect(one.body).toMatchObject({ id: patientId, nombreCompleto: 'Agenda Paciente E2E' });
   });
 
+  it('creates, updates and deletes appointment reasons', async () => {
+    const initial = await request(app.getHttpServer())
+      .get('/agenda/reasons')
+      .set('Authorization', authorization)
+      .expect(200);
+    expect((initial.body as Array<{ name: string }>).length).toBeGreaterThanOrEqual(6);
+
+    const created = await request(app.getHttpServer())
+      .post('/agenda/reasons')
+      .set('Authorization', authorization)
+      .send({ name: 'Ortodoncia' })
+      .expect(201);
+    const id = (created.body as { id: string }).id;
+
+    const updated = await request(app.getHttpServer())
+      .patch(`/agenda/reasons/${id}`)
+      .set('Authorization', authorization)
+      .send({ name: 'Ortodoncia control' })
+      .expect(200);
+    expect(updated.body).toMatchObject({ id, name: 'Ortodoncia control' });
+
+    await request(app.getHttpServer())
+      .delete(`/agenda/reasons/${id}`)
+      .set('Authorization', authorization)
+      .expect(204);
+
+    const after = await request(app.getHttpServer())
+      .get('/agenda/reasons')
+      .set('Authorization', authorization)
+      .expect(200);
+    expect((after.body as Array<{ id: string }>).some((reason) => reason.id === id)).toBe(false);
+  });
+
   it('creates an appointment and queues both confirmation emails', async () => {
     const range = futureRange();
     const created = await request(app.getHttpServer())

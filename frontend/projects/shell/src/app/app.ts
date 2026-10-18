@@ -55,6 +55,18 @@ export class App {
     { initialValue: this.router.url.startsWith('/caro-ia') },
   );
 
+  /** Agenda is a workspace: it fills the viewport below the header. */
+  protected readonly isAgenda = toSignal(
+    this.router.events.pipe(
+      filter((event): event is NavigationEnd => event instanceof NavigationEnd),
+      map((event) => event.urlAfterRedirects.startsWith('/agenda')),
+      startWith(this.router.url.startsWith('/agenda')),
+    ),
+    { initialValue: this.router.url.startsWith('/agenda') },
+  );
+
+  protected readonly isFullBleed = computed(() => this.isCaroIa() || this.isAgenda());
+
   /**
    * Shown to users who can edit settings while the branding is untouched:
    * default name, no logo ever uploaded, default version.

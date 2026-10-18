@@ -11,6 +11,7 @@ export const agendaCategory = defineCategory('agenda', 'Appointment calendar', {
   update: 'Edit and reschedule appointments',
   cancel: 'Cancel appointments',
   professional: 'Be selectable as the professional of an appointment',
+  manage: 'Manage the appointment reasons catalog',
 });
 
 export const agendaPermissions = agendaCategory.keys;

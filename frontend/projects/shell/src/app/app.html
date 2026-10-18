@@ -1,6 +1,6 @@
 <div
   [class]="
-    isCaroIa()
+    isFullBleed()
       ? 'bg-background text-foreground flex h-dvh flex-col overflow-hidden'
       : 'bg-background text-foreground flex min-h-dvh flex-col'
   "
@@ -77,19 +77,19 @@
     </div>
   </header>
 
-  <div [class]="isCaroIa() ? 'flex min-h-0 min-w-0 flex-1 overflow-hidden' : 'flex min-w-0 flex-1'">
+  <div [class]="isFullBleed() ? 'flex min-h-0 min-w-0 flex-1 overflow-hidden' : 'flex min-w-0 flex-1'">
     @if (store.isAuthenticated()) {
       <app-sidebar />
     }
 
     <main
       [class]="
-        isCaroIa()
+        isFullBleed()
           ? 'h-full w-full min-w-0 flex-1 overflow-hidden p-0'
           : 'mx-auto w-full max-w-5xl min-w-0 flex-1 px-4 py-8'
       "
     >
-      @if (showOnboarding() && !isCaroIa()) {
+      @if (showOnboarding() && !isFullBleed()) {
         <div
           class="border-primary/30 bg-primary/5 mb-6 flex flex-wrap items-center gap-3 rounded-lg border px-4 py-3"
           data-testid="onboarding-banner"
@@ -124,7 +124,7 @@
     </main>
   </div>
 
-  @if (!isCaroIa()) {
+  @if (!isFullBleed()) {
     <footer class="text-muted-foreground border-t px-4 py-4 text-center text-xs">
       @if (branding.name(); as name) {
         {{ name }}

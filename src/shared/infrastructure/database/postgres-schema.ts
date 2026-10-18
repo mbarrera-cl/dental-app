@@ -396,6 +396,16 @@ CREATE TABLE IF NOT EXISTS agenda_email_outbox (
 );
 CREATE INDEX IF NOT EXISTS idx_agenda_email_pending ON agenda_email_outbox (status, next_attempt_at);
 
+CREATE TABLE IF NOT EXISTS agenda_reasons (
+  id         UUID PRIMARY KEY,
+  name       TEXT NOT NULL,
+  created_by UUID REFERENCES users(id) ON DELETE SET NULL DEFERRABLE INITIALLY IMMEDIATE,
+  updated_by UUID REFERENCES users(id) ON DELETE SET NULL DEFERRABLE INITIALLY IMMEDIATE,
+  created_at TIMESTAMPTZ NOT NULL,
+  updated_at TIMESTAMPTZ NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS agenda_reasons_name_lower_idx ON agenda_reasons (LOWER(name));
+
 CREATE TABLE IF NOT EXISTS schema_migrations (
   version    TEXT PRIMARY KEY,
   applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()

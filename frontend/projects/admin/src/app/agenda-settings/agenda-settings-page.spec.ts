@@ -58,6 +58,9 @@ describe('AgendaSettingsPage', () => {
     const fixture = TestBed.createComponent(AgendaSettingsPage);
     fixture.detectChanges();
     http.expectOne(SETTINGS_URL).flush(SETTINGS);
+    http
+      .expectOne(`${BASE}/agenda/reasons`)
+      .flush([{ id: 'reason-1', name: 'Control', createdAt: '', updatedAt: '' }]);
     fixture.detectChanges();
 
     const page = fixture.componentInstance as unknown as PageHandle;

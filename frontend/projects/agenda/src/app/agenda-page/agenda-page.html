@@ -1,9 +1,9 @@
-<section class="flex flex-col gap-5">
-  <header class="flex flex-wrap items-end justify-between gap-3">
-    <div class="grid gap-1">
-      <h2 class="text-2xl font-semibold tracking-tight">Agenda</h2>
-      <p class="text-muted-foreground text-sm">
-        Calendario de horas del equipo. Las superposiciones se muestran como advertencia.
+<section class="flex h-full min-h-0 flex-col gap-3 p-3 sm:p-4">
+  <header class="flex flex-wrap items-center justify-between gap-3">
+    <div class="grid gap-0.5">
+      <h2 class="text-xl font-semibold tracking-tight">Agenda</h2>
+      <p class="text-muted-foreground text-xs">
+        Horas del equipo · {{ timeZone() }}
       </p>
     </div>
 
@@ -24,78 +24,91 @@
   </header>
 
   @if (message(); as text) {
-    <div class="rounded-lg border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+    <div class="rounded-md border border-emerald-300 bg-emerald-50 px-3 py-2 text-xs text-emerald-900">
       {{ text }}
     </div>
   }
 
   @if (error(); as text) {
-    <div class="border-destructive/30 bg-destructive/5 text-destructive rounded-lg border px-4 py-3 text-sm">
+    <div class="border-destructive/30 bg-destructive/5 text-destructive rounded-md border px-3 py-2 text-xs">
       {{ text }}
     </div>
   }
 
-  <div class="grid gap-5 xl:grid-cols-[minmax(0,1fr)_24rem]">
-    <div class="bg-card min-h-[34rem] rounded-lg border p-2">
-      @if (loading()) {
-        <div class="text-muted-foreground p-6 text-sm">Cargando agenda…</div>
-      }
-      <full-calendar [options]="calendarOptions()" />
-    </div>
+  <div class="bg-card min-h-0 flex-1 overflow-hidden rounded-lg border p-2">
+    @if (loading()) {
+      <div class="text-muted-foreground p-6 text-sm">Cargando agenda…</div>
+    }
+    <full-calendar [options]="calendarOptions()" />
+  </div>
 
-    @if (formOpen()) {
-      <aside class="bg-card h-fit rounded-lg border p-4" data-testid="agenda-form">
-        <div class="mb-4 flex items-start justify-between gap-3">
+  @if (formOpen()) {
+    <div
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-[1px]"
+      role="presentation"
+      tabindex="-1"
+      (click)="closeForm()"
+      (keydown.escape)="closeForm()"
+    >
+      <div
+        class="bg-card flex max-h-[92dvh] w-full max-w-3xl flex-col overflow-hidden rounded-xl border shadow-2xl"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="agenda-form-title"
+        data-testid="agenda-form"
+        (click)="$event.stopPropagation()"
+      >
+        <div class="flex items-start justify-between gap-4 border-b px-5 py-4">
           <div>
-            <h3 class="font-semibold">{{ form().id === null ? 'Nueva hora' : 'Editar hora' }}</h3>
-            <p class="text-muted-foreground text-xs">
-              Horario en {{ timeZone() }}.
-            </p>
+            <h3 id="agenda-form-title" class="text-lg font-semibold">
+              {{ form().id === null ? 'Nueva hora' : 'Editar hora' }}
+            </h3>
+            <p class="text-muted-foreground text-xs">Horario en {{ timeZone() }}</p>
           </div>
-          <button hlmBtn variant="ghost" type="button" (click)="closeForm()">Cerrar</button>
+          <button hlmBtn variant="ghost" size="sm" type="button" (click)="closeForm()">Cerrar</button>
         </div>
 
-        <div class="grid gap-3">
-          <label class="grid gap-1 text-sm">
-            <span>Paciente</span>
-            <input
-              hlmInput
-              type="search"
-              placeholder="Buscar por nombre o RUT…"
-              [value]="patientQuery()"
-              (input)="onPatientQuery($event)"
-            />
-            <select
-              class="border-input bg-background h-9 rounded-md border px-2 text-sm"
-              [value]="form().patientId"
-              (change)="setField('patientId', $any($event.target).value)"
-              data-testid="agenda-patient"
-            >
-              <option value="">Selecciona un paciente</option>
-              @for (patient of patients(); track patient.id) {
-                <option [value]="patient.id">
-                  {{ patientName(patient) }} · {{ patient.rut }}
-                </option>
-              }
-            </select>
-          </label>
+        <div class="grid gap-4 overflow-y-auto p-5">
+          <div class="grid gap-3 sm:grid-cols-2">
+            <label class="grid gap-1 text-sm sm:col-span-2">
+              <span>Paciente</span>
+              <input
+                hlmInput
+                type="search"
+                placeholder="Buscar por nombre o RUT…"
+                [value]="patientQuery()"
+                (input)="onPatientQuery($event)"
+              />
+              <select
+                class="border-input bg-background h-9 rounded-md border px-2 text-sm"
+                [value]="form().patientId"
+                (change)="setField('patientId', $any($event.target).value)"
+                data-testid="agenda-patient"
+              >
+                <option value="">Selecciona un paciente</option>
+                @for (patient of patients(); track patient.id) {
+                  <option [value]="patient.id">
+                    {{ patientName(patient) }} · {{ patient.rut }}
+                  </option>
+                }
+              </select>
+            </label>
 
-          <label class="grid gap-1 text-sm">
-            <span>Profesional</span>
-            <select
-              class="border-input bg-background h-9 rounded-md border px-2 text-sm"
-              [value]="form().professionalId"
-              (change)="setField('professionalId', $any($event.target).value)"
-              data-testid="agenda-professional"
-            >
-              <option value="">Selecciona un profesional</option>
-              @for (professional of professionals(); track professional.id) {
-                <option [value]="professional.id">{{ professional.name }}</option>
-              }
-            </select>
-          </label>
+            <label class="grid gap-1 text-sm sm:col-span-2">
+              <span>Profesional</span>
+              <select
+                class="border-input bg-background h-9 rounded-md border px-2 text-sm"
+                [value]="form().professionalId"
+                (change)="setField('professionalId', $any($event.target).value)"
+                data-testid="agenda-professional"
+              >
+                <option value="">Selecciona un profesional</option>
+                @for (professional of professionals(); track professional.id) {
+                  <option [value]="professional.id">{{ professional.name }}</option>
+                }
+              </select>
+            </label>
 
-          <div class="grid grid-cols-2 gap-3">
             <label class="grid gap-1 text-sm">
               <span>Fecha</span>
               <input
@@ -105,6 +118,7 @@
                 (input)="setField('date', $any($event.target).value)"
               />
             </label>
+
             <label class="grid gap-1 text-sm">
               <span>Hora</span>
               <input
@@ -114,48 +128,56 @@
                 (input)="setField('time', $any($event.target).value)"
               />
             </label>
+
+            <label class="grid gap-1 text-sm">
+              <span>Duración (minutos)</span>
+              <input
+                hlmInput
+                type="number"
+                min="5"
+                max="480"
+                [value]="form().durationMinutes"
+                (input)="setField('durationMinutes', +$any($event.target).value)"
+              />
+            </label>
+
+            <label class="grid gap-1 text-sm">
+              <span>Ubicación</span>
+              <input
+                hlmInput
+                type="text"
+                [value]="form().location"
+                (input)="onTextInput('location', $event)"
+              />
+            </label>
+
+            <label class="grid gap-1 text-sm sm:col-span-2">
+              <span>Motivo</span>
+              <select
+                class="border-input bg-background h-9 rounded-md border px-2 text-sm"
+                [value]="form().reason"
+                (change)="setField('reason', $any($event.target).value)"
+                data-testid="agenda-reason"
+              >
+                <option value="">Sin motivo</option>
+                @if (form().reason !== '' && !reasons().some(reason => reason.name === form().reason)) {
+                  <option [value]="form().reason">{{ form().reason }} (histórico)</option>
+                }
+                @for (reason of reasons(); track reason.id) {
+                  <option [value]="reason.name">{{ reason.name }}</option>
+                }
+              </select>
+            </label>
+
+            <label class="grid gap-1 text-sm sm:col-span-2">
+              <span>Notas</span>
+              <textarea
+                class="border-input bg-background min-h-24 rounded-md border px-3 py-2 text-sm"
+                [value]="form().notes"
+                (input)="onTextInput('notes', $event)"
+              ></textarea>
+            </label>
           </div>
-
-          <label class="grid gap-1 text-sm">
-            <span>Duración (minutos)</span>
-            <input
-              hlmInput
-              type="number"
-              min="5"
-              max="480"
-              [value]="form().durationMinutes"
-              (input)="setField('durationMinutes', +$any($event.target).value)"
-            />
-          </label>
-
-          <label class="grid gap-1 text-sm">
-            <span>Motivo</span>
-            <input
-              hlmInput
-              type="text"
-              [value]="form().reason"
-              (input)="onTextInput('reason', $event)"
-            />
-          </label>
-
-          <label class="grid gap-1 text-sm">
-            <span>Notas</span>
-            <textarea
-              class="border-input bg-background min-h-20 rounded-md border px-3 py-2 text-sm"
-              [value]="form().notes"
-              (input)="onTextInput('notes', $event)"
-            ></textarea>
-          </label>
-
-          <label class="grid gap-1 text-sm">
-            <span>Ubicación</span>
-            <input
-              hlmInput
-              type="text"
-              [value]="form().location"
-              (input)="onTextInput('location', $event)"
-            />
-          </label>
 
           @if (conflicts().length > 0) {
             <div class="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900">
@@ -168,25 +190,25 @@
               <p class="mt-1">Puedes guardar de todos modos.</p>
             </div>
           }
-
-          <div class="flex flex-wrap gap-2 pt-1">
-            <button hlmBtn type="button" [disabled]="saving()" (click)="save()">
-              {{ saving() ? 'Guardando…' : conflicts().length > 0 ? 'Guardar de todos modos' : 'Guardar' }}
-            </button>
-            @if (form().id !== null) {
-              <button
-                hlmBtn
-                variant="destructive"
-                type="button"
-                [disabled]="saving()"
-                (click)="cancelSelected()"
-              >
-                Cancelar hora
-              </button>
-            }
-          </div>
         </div>
-      </aside>
-    }
-  </div>
+
+        <div class="flex flex-wrap justify-end gap-2 border-t px-5 py-4">
+          @if (form().id !== null) {
+            <button
+              hlmBtn
+              variant="destructive"
+              type="button"
+              [disabled]="saving()"
+              (click)="cancelSelected()"
+            >
+              Cancelar hora
+            </button>
+          }
+          <button hlmBtn type="button" [disabled]="saving()" (click)="save()">
+            {{ saving() ? 'Guardando…' : conflicts().length > 0 ? 'Guardar de todos modos' : 'Guardar' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
 </section>

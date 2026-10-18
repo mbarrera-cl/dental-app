@@ -48,7 +48,17 @@ export class PostgresDatabase implements OnModuleInit, OnModuleDestroy {
   }
 
   async ensureSchema(): Promise<void> {
-    await this.pool.query(POSTGRES_SCHEMA_SQL);
+    const client = await this.pool.connect();
+
+    try {
+      // A test helper may recreate the public schema while a pooled connection
+      // is still alive; pin the search path before running the idempotent DDL.
+      await client.query('SET search_path TO public');
+      await client.query(POSTGRES_SCHEMA_SQL);
+    } finally {
+      client.release();
+    }
+
     this.logger.log('PostgreSQL schema is up to date');
   }
 

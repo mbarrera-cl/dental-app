@@ -711,6 +711,7 @@ overlap.
   `agenda.notifyProfessional`. Every message includes an `invitacion.ics`
   generated with the clinic timezone and `METHOD:REQUEST`, `UPDATE` or
   `CANCEL`.
+- **Reasons:** the administrator maintains the catalogue from **Administración → Agenda y correo**; the scheduler shows the current reasons and keeps the historical text on old appointments.
 - **Template:** `agenda.confirmationSubject` and `agenda.confirmationHtml` are
   edited from **Administración → Agenda** with a small WYSIWYG editor. The
   HTML is sanitized before sending.

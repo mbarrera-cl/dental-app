@@ -23,9 +23,30 @@ import {
   type AgendaConfig,
   type AgendaPatient,
   type AgendaProfessional,
+  type AgendaReason,
   type Appointment,
   type AppointmentConflict,
 } from 'data-access';
+
+const ES_LOCALE = {
+  code: 'es',
+  week: { dow: 1, doy: 4 },
+  prevText: 'Ant',
+  nextText: 'Sig',
+  todayText: 'Hoy',
+  yearText: 'Año',
+  monthText: 'Mes',
+  weekTextLong: 'Semana',
+  weekTextShort: 'Sm',
+  dayText: 'Día',
+  listText: 'Agenda',
+  allDayText: 'Todo el día',
+  timedText: 'Horas',
+  moreLinkText: 'más',
+  noEventsText: 'No hay eventos para mostrar',
+  closeHint: 'Cerrar',
+  eventsHint: 'Eventos',
+};
 
 interface AgendaForm {
   id: string | null;
@@ -53,6 +74,7 @@ export class AgendaPage {
 
   protected readonly config = signal<AgendaConfig | null>(null);
   protected readonly professionals = signal<AgendaProfessional[]>([]);
+  protected readonly reasons = signal<AgendaReason[]>([]);
   protected readonly patients = signal<AgendaPatient[]>([]);
   protected readonly appointments = signal<Appointment[]>([]);
   protected readonly loading = signal(true);
@@ -77,9 +99,9 @@ export class AgendaPage {
       center: 'title',
       right: 'dayGridMonth,timeGridWeek,timeGridDay',
     },
-    locale: 'es',
+    locale: ES_LOCALE,
     timeZone: this.config()?.timeZone ?? 'America/Santiago',
-    height: 'auto',
+    height: '100%',
     allDaySlot: false,
     slotMinTime: '08:00:00',
     slotMaxTime: '20:00:00',
@@ -271,13 +293,15 @@ export class AgendaPage {
     this.loading.set(true);
 
     try {
-      const [config, professionals, patients] = await Promise.all([
+      const [config, professionals, reasons, patients] = await Promise.all([
         firstValueFrom(this.api.config()),
         firstValueFrom(this.api.professionals()),
+        firstValueFrom(this.api.reasons()),
         firstValueFrom(this.api.patients('')),
       ]);
       this.config.set(config);
       this.professionals.set(professionals);
+      this.reasons.set(reasons);
       this.patients.set(patients);
       await this.loadRange(this.range.from, this.range.to);
 

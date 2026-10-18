@@ -827,6 +827,7 @@ export const ES = {
       'agenda:update': 'Editar y reprogramar horas',
       'agenda:cancel': 'Cancelar horas',
       'agenda:professional': 'Ser seleccionable como profesional',
+      'agenda:manage': 'Gestionar los motivos de agenda',
       'dashboard:read': 'Ver el dashboard',
       'caroIa:use': 'Usar CaroIA y sus conversaciones',
     },

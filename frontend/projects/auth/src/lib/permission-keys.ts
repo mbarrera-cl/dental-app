@@ -28,6 +28,7 @@ export const PERMISSION_KEYS = {
     update: 'agenda:update',
     cancel: 'agenda:cancel',
     professional: 'agenda:professional',
+    manage: 'agenda:manage',
   },
   caroIa: {
     use: 'caroIa:use',

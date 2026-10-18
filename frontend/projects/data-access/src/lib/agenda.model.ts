@@ -56,3 +56,10 @@ export interface CreateAppointmentPayload {
 }
 
 export type UpdateAppointmentPayload = Partial<CreateAppointmentPayload>;
+
+export interface AgendaReason {
+  id: string;
+  name: string;
+  createdAt: string;
+  updatedAt: string;
+}

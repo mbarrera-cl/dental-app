@@ -817,6 +817,7 @@ export const EN = {
       'agenda:update': 'Edit and reschedule appointments',
       'agenda:cancel': 'Cancel appointments',
       'agenda:professional': 'Be selectable as a professional',
+      'agenda:manage': 'Manage appointment reasons',
       'dashboard:read': 'View the dashboard',
       'caroIa:use': 'Use CaroIA and its conversations',
     },

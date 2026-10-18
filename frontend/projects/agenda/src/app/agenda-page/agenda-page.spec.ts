@@ -68,6 +68,9 @@ describe('AgendaPage', () => {
     http.expectOne(`${BASE}/agenda/professionals`).flush([
       { id: 'pro-1', name: 'Dra. Ana', email: 'ana@example.com' },
     ]);
+    http.expectOne(`${BASE}/agenda/reasons`).flush([
+      { id: 'reason-1', name: 'Control', createdAt: '', updatedAt: '' },
+    ]);
     http
       .expectOne((request) => request.url === `${BASE}/agenda/patients` && request.params.get('query') === '')
       .flush([PATIENT]);
