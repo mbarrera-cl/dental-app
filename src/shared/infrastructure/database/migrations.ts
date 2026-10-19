@@ -55,6 +55,32 @@ CREATE TABLE IF NOT EXISTS treatment_plan_items (
 );
 CREATE INDEX IF NOT EXISTS idx_treatment_plan_items_plan ON treatment_plan_items (plan_id, position);`,
   },
+  {
+    version: '2026-10-treatment-plan-item-status',
+    sql: `ALTER TABLE treatment_plan_items ADD COLUMN IF NOT EXISTS realizado_at TIMESTAMPTZ;
+ALTER TABLE treatment_plan_items ADD COLUMN IF NOT EXISTS realizado_by UUID REFERENCES users(id) ON DELETE SET NULL DEFERRABLE INITIALLY IMMEDIATE;
+ALTER TABLE treatment_plan_items ALTER COLUMN status SET DEFAULT 'pendiente';
+UPDATE treatment_plan_items SET status = 'pendiente' WHERE status IN ('planificado', 'en-ejecucion');`,
+  },
+  {
+    version: '2026-10-treatment-plan-item-soft-delete',
+    sql: `ALTER TABLE treatment_plan_items ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
+ALTER TABLE treatment_plan_items ADD COLUMN IF NOT EXISTS deleted_by UUID REFERENCES users(id) ON DELETE SET NULL DEFERRABLE INITIALLY IMMEDIATE;
+ALTER TABLE treatment_plan_items ADD COLUMN IF NOT EXISTS deleted_reason TEXT;`,
+  },
+  {
+    version: '2026-10-treatment-plan-item-source',
+    sql: `ALTER TABLE treatment_plan_items ADD COLUMN IF NOT EXISTS source_quote_item_id UUID REFERENCES quote_items(id) ON DELETE SET NULL DEFERRABLE INITIALLY IMMEDIATE;
+CREATE INDEX IF NOT EXISTS idx_treatment_plan_items_source ON treatment_plan_items (source_quote_item_id);`,
+  },
+  {
+    version: '2026-10-treatment-plan-notes',
+    sql: `ALTER TABLE treatment_plans ADD COLUMN IF NOT EXISTS notes TEXT;
+ALTER TABLE treatment_plans ADD COLUMN IF NOT EXISTS notes_updated_at TIMESTAMPTZ;
+ALTER TABLE treatment_plans ADD COLUMN IF NOT EXISTS notes_updated_by UUID REFERENCES users(id) ON DELETE SET NULL DEFERRABLE INITIALLY IMMEDIATE;
+ALTER TABLE treatment_plan_items ADD COLUMN IF NOT EXISTS notes_updated_at TIMESTAMPTZ;
+ALTER TABLE treatment_plan_items ADD COLUMN IF NOT EXISTS notes_updated_by UUID REFERENCES users(id) ON DELETE SET NULL DEFERRABLE INITIALLY IMMEDIATE;`,
+  },
 ];
 
 /** SHA-256 of a migration's SQL, used to detect post-apply edits. */

@@ -20,7 +20,7 @@ export class TreatmentPlanItemResponseDto {
   @ApiProperty({ type: String, nullable: true })
   ucoCode: string | null;
 
-  @ApiProperty({ enum: TREATMENT_PLAN_ITEM_STATUSES, example: 'planificado' })
+  @ApiProperty({ enum: TREATMENT_PLAN_ITEM_STATUSES, example: 'pendiente' })
   status: string;
 
   @ApiProperty({ type: String, nullable: true })
@@ -28,6 +28,9 @@ export class TreatmentPlanItemResponseDto {
 
   @ApiProperty({ example: 0 })
   position: number;
+
+  @ApiProperty({ type: String, nullable: true })
+  sourceQuoteItemId: string | null;
 
   @ApiProperty({ type: String, nullable: true })
   createdBy: string | null;
@@ -47,6 +50,30 @@ export class TreatmentPlanItemResponseDto {
   @ApiProperty({ type: String, nullable: true })
   statusChangedBy: string | null;
 
+  @ApiProperty({ type: String, nullable: true, format: 'date-time' })
+  realizadoAt: string | null;
+
+  @ApiProperty({ type: String, nullable: true })
+  realizadoBy: string | null;
+
+  @ApiProperty({ type: String, nullable: true, format: 'date-time' })
+  notesUpdatedAt: string | null;
+
+  @ApiProperty({ type: String, nullable: true })
+  notesUpdatedBy: string | null;
+
+  @ApiProperty({ type: String, nullable: true, format: 'date-time' })
+  deletedAt: string | null;
+
+  @ApiProperty({ type: String, nullable: true })
+  deletedBy: string | null;
+
+  @ApiProperty({ type: String, nullable: true })
+  deletedReason: string | null;
+
+  @ApiProperty()
+  isDeleted: boolean;
+
   static fromDomain(item: TreatmentPlanItem): TreatmentPlanItemResponseDto {
     const dto = new TreatmentPlanItemResponseDto();
 
@@ -58,12 +85,21 @@ export class TreatmentPlanItemResponseDto {
     dto.status = item.status;
     dto.notes = item.notes;
     dto.position = item.position;
+    dto.sourceQuoteItemId = item.sourceQuoteItemId;
     dto.createdBy = item.createdBy;
     dto.updatedBy = item.updatedBy;
     dto.createdAt = item.createdAt.toISOString();
     dto.updatedAt = item.updatedAt.toISOString();
     dto.statusChangedAt = item.statusChangedAt?.toISOString() ?? null;
     dto.statusChangedBy = item.statusChangedBy;
+    dto.realizadoAt = item.realizadoAt?.toISOString() ?? null;
+    dto.realizadoBy = item.realizadoBy;
+    dto.notesUpdatedAt = item.notesUpdatedAt?.toISOString() ?? null;
+    dto.notesUpdatedBy = item.notesUpdatedBy;
+    dto.deletedAt = item.deletedAt?.toISOString() ?? null;
+    dto.deletedBy = item.deletedBy;
+    dto.deletedReason = item.deletedReason;
+    dto.isDeleted = item.isDeleted;
 
     return dto;
   }

@@ -10,6 +10,8 @@ import { TreatmentPlanRepositoryPort } from '../ports/treatment-plan-repository.
 
 export interface GetTreatmentPlanQuery {
   recordId: string;
+  /** `true` returns the trash (soft-deleted items) instead of the active plan. */
+  deleted?: boolean;
 }
 
 export interface TreatmentPlanView {
@@ -19,7 +21,8 @@ export interface TreatmentPlanView {
 
 /**
  * Returns the treatment plan of a clinical record, creating the plan lazily
- * on first access (a record may exist before any plan entry is added).
+ * on first access (a record may exist before any plan entry is added). With
+ * `deleted` it returns the trash instead of the active items.
  */
 @Injectable()
 export class GetTreatmentPlanUseCase implements UseCase<
@@ -33,6 +36,7 @@ export class GetTreatmentPlanUseCase implements UseCase<
 
   async execute({
     recordId,
+    deleted = false,
   }: GetTreatmentPlanQuery): Promise<TreatmentPlanView> {
     const record = await this.records.findById(recordId);
 
@@ -41,7 +45,8 @@ export class GetTreatmentPlanUseCase implements UseCase<
     }
 
     const plan = await this.getOrCreatePlan(recordId);
-    const items = await this.plans.listItems(plan.id);
+    const all = await this.plans.listItems(plan.id, { includeDeleted: true });
+    const items = deleted ? all.filter((item) => item.isDeleted) : all.filter((item) => !item.isDeleted);
 
     return { plan, items };
   }

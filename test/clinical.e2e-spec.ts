@@ -409,9 +409,30 @@ describe('Clinical API (e2e)', () => {
   });
 
   describe('treatment plan', () => {
-    it('creates the plan lazily, adds items and advances their status', async () => {
+    const createApprovedQuote = async (
+      patientId: string,
+      items: object[],
+    ): Promise<{ id: string; items: Array<{ id: string }> }> => {
+      const quote = await api()
+        .post('/quotes')
+        .send({ patientId, items })
+        .expect(201);
+
+      await api()
+        .patch(`/quotes/${quote.body.id as string}/status`)
+        .send({ status: 'aprobada' })
+        .expect(200);
+
+      return quote.body as { id: string; items: Array<{ id: string }> };
+    };
+
+    it('imports an approved quotation and advances the status', async () => {
       const patient = await createPatient();
       const record = await openRecord(patient.id);
+      const quote = await createApprovedQuote(patient.id, [
+        { description: 'Endodoncia pieza 36', piezaDental: '36', quantity: 1, unitPrice: 100_000 },
+        { description: 'Profilaxis', quantity: 1, unitPrice: 20_000 },
+      ]);
 
       // The plan does not exist until first access.
       const plan = await api()
@@ -419,50 +440,125 @@ describe('Clinical API (e2e)', () => {
         .expect(200);
       expect(plan.body.items).toEqual([]);
 
-      const item = await api()
-        .post(`/clinical-records/${record.id}/treatment-plan/items`)
-        .send({ tooth: 36, procedure: 'Endodoncia pieza 36' })
-        .expect(201);
-      expect(item.body).toMatchObject({ tooth: 36, status: 'planificado', position: 0 });
-
-      await api()
-        .post(`/clinical-records/${record.id}/treatment-plan/items`)
-        .send({ procedure: 'Limpieza general' })
-        .expect(201);
-
-      const reloaded = await api()
-        .get(`/clinical-records/${record.id}/treatment-plan`)
+      const preview = await api()
+        .post(`/clinical-records/${record.id}/treatment-plan/import/preview`)
+        .send({ quoteId: quote.id })
         .expect(200);
-      expect(reloaded.body.items).toHaveLength(2);
+      expect(preview.body.items).toHaveLength(2);
+
+      const imported = await api()
+        .post(`/clinical-records/${record.id}/treatment-plan/import`)
+        .send({ quoteId: quote.id })
+        .expect(201);
+      expect(imported.body).toHaveLength(2);
+      expect(imported.body[0]).toMatchObject({
+        procedure: 'Endodoncia pieza 36',
+        tooth: 36,
+        status: 'pendiente',
+        position: 0,
+        sourceQuoteItemId: quote.items[0].id,
+      });
+      expect(imported.body[1].tooth).toBeNull();
+
+      // Re-importing duplicates nothing.
+      const again = await api()
+        .post(`/clinical-records/${record.id}/treatment-plan/import`)
+        .send({ quoteId: quote.id })
+        .expect(201);
+      expect(again.body).toEqual([]);
 
       const updated = await api()
-        .patch(`/treatment-plan-items/${item.body.id}`)
+        .patch(`/treatment-plan-items/${imported.body[0].id as string}`)
         .send({ status: 'realizado' })
         .expect(200);
       expect(updated.body.status).toBe('realizado');
-      expect(updated.body.statusChangedAt).toEqual(expect.any(String));
+      expect(updated.body.realizadoAt).toEqual(expect.any(String));
+
+      // Notes (rich text, sanitized).
+      await api()
+        .patch(`/clinical-records/${record.id}/treatment-plan/notes`)
+        .send({ notes: '<p>Nota <strong>clínica</strong></p><script>x</script>' })
+        .expect(200);
+      const reloaded = await api()
+        .get(`/clinical-records/${record.id}/treatment-plan`)
+        .expect(200);
+      expect(reloaded.body.notes).toBe('<p>Nota <strong>clínica</strong></p>');
     });
 
-    it('validates the payload (unknown tooth, empty procedure, empty update)', async () => {
+    it('soft-deletes with a reason, lists the trash and restores', async () => {
+      const patient = await createPatient();
+      const record = await openRecord(patient.id);
+      const quote = await createApprovedQuote(patient.id, [
+        { description: 'Limpieza general', quantity: 1, unitPrice: 20_000 },
+      ]);
+
+      const imported = await api()
+        .post(`/clinical-records/${record.id}/treatment-plan/import`)
+        .send({ quoteId: quote.id })
+        .expect(201);
+      const itemId = imported.body[0].id as string;
+
+      await api()
+        .delete(`/treatment-plan-items/${itemId}`)
+        .send({ reason: 'Duplicado del presupuesto anterior' })
+        .expect(200);
+
+      const active = await api()
+        .get(`/clinical-records/${record.id}/treatment-plan`)
+        .expect(200);
+      expect(active.body.items).toHaveLength(0);
+
+      const trash = await api()
+        .get(`/clinical-records/${record.id}/treatment-plan?deleted=true`)
+        .expect(200);
+      expect(trash.body.items).toHaveLength(1);
+      expect(trash.body.items[0].deletedReason).toBe(
+        'Duplicado del presupuesto anterior',
+      );
+
+      await api().post(`/treatment-plan-items/${itemId}/restore`).expect(201);
+
+      const restored = await api()
+        .get(`/clinical-records/${record.id}/treatment-plan`)
+        .expect(200);
+      expect(restored.body.items).toHaveLength(1);
+    });
+
+    it('validates the payload (empty update, unknown quote, non-approved quote)', async () => {
       const patient = await createPatient();
       const record = await openRecord(patient.id);
 
-      await api()
-        .post(`/clinical-records/${record.id}/treatment-plan/items`)
-        .send({ tooth: 19, procedure: 'x' })
-        .expect(400);
-
-      await api()
-        .post(`/clinical-records/${record.id}/treatment-plan/items`)
-        .send({ procedure: '   ' })
-        .expect(400);
-
-      const item = await api()
-        .post(`/clinical-records/${record.id}/treatment-plan/items`)
-        .send({ procedure: 'Limpieza' })
+      // Draft quotation is not importable.
+      const draft = await api()
+        .post('/quotes')
+        .send({
+          patientId: patient.id,
+          items: [{ description: 'Limpieza', quantity: 1, unitPrice: 20_000 }],
+        })
         .expect(201);
 
-      await api().patch(`/treatment-plan-items/${item.body.id}`).send({}).expect(400);
+      await api()
+        .post(`/clinical-records/${record.id}/treatment-plan/import`)
+        .send({ quoteId: draft.body.id as string })
+        .expect(409);
+
+      await api()
+        .post(`/clinical-records/${record.id}/treatment-plan/import`)
+        .send({ quoteId: 'does-not-exist' })
+        .expect(404);
+
+      const quote = await createApprovedQuote(patient.id, [
+        { description: 'Limpieza', quantity: 1, unitPrice: 20_000 },
+      ]);
+      const imported = await api()
+        .post(`/clinical-records/${record.id}/treatment-plan/import`)
+        .send({ quoteId: quote.id })
+        .expect(201);
+
+      await api()
+        .patch(`/treatment-plan-items/${imported.body[0].id as string}`)
+        .send({})
+        .expect(400);
     });
 
     it('returns 404 for a plan of an unknown record', async () => {

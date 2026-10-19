@@ -49,10 +49,12 @@ export class UpdateTreatmentPlanItemRequestDto {
   @MaxLength(50)
   ucoCode?: string | null;
 
-  @ApiPropertyOptional({ nullable: true, maxLength: 500 })
+  @ApiPropertyOptional({
+    nullable: true,
+    description: 'Rich-text (sanitized) note of the item.',
+  })
   @IsOptional()
-  @Transform(trim)
   @IsString()
-  @MaxLength(500)
+  @MaxLength(20_000)
   notes?: string | null;
 }

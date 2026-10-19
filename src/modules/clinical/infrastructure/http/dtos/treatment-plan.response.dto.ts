@@ -9,6 +9,15 @@ export class TreatmentPlanResponseDto {
   @ApiProperty()
   recordId: string;
 
+  @ApiProperty({ type: String, nullable: true })
+  notes: string | null;
+
+  @ApiProperty({ type: String, nullable: true, format: 'date-time' })
+  notesUpdatedAt: string | null;
+
+  @ApiProperty({ type: String, nullable: true })
+  notesUpdatedBy: string | null;
+
   @ApiProperty({ format: 'date-time' })
   createdAt: string;
 
@@ -23,6 +32,9 @@ export class TreatmentPlanResponseDto {
 
     dto.id = view.plan.id;
     dto.recordId = view.plan.recordId;
+    dto.notes = view.plan.notes;
+    dto.notesUpdatedAt = view.plan.notesUpdatedAt?.toISOString() ?? null;
+    dto.notesUpdatedBy = view.plan.notesUpdatedBy;
     dto.createdAt = view.plan.createdAt.toISOString();
     dto.updatedAt = view.plan.updatedAt.toISOString();
     dto.items = view.items.map((item) =>

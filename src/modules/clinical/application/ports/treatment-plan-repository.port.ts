@@ -5,11 +5,14 @@ import type {
 
 /**
  * Driven port for the treatment plan context. A plan is one-per-record; items
- * are appended and edited in place (status transitions are audited, never
- * deleted).
+ * are appended and edited in place. Items are only soft-deleted (with a
+ * reason) so they can be restored, never removed physically here.
  */
 export abstract class TreatmentPlanRepositoryPort {
   abstract savePlan(plan: TreatmentPlan): Promise<void>;
+
+  /** Updates an existing plan; throws when it no longer exists. */
+  abstract updatePlan(plan: TreatmentPlan): Promise<void>;
 
   abstract findPlanByRecordId(recordId: string): Promise<TreatmentPlan | null>;
 
@@ -21,6 +24,12 @@ export abstract class TreatmentPlanRepositoryPort {
 
   abstract findItem(id: string): Promise<TreatmentPlanItem | null>;
 
-  /** Every item of a plan, ordered by position. */
-  abstract listItems(planId: string): Promise<TreatmentPlanItem[]>;
+  /**
+   * Every item of a plan, ordered by position. Deleted items are excluded
+   * unless `includeDeleted` is set (the trash view).
+   */
+  abstract listItems(
+    planId: string,
+    options?: { includeDeleted?: boolean },
+  ): Promise<TreatmentPlanItem[]>;
 }

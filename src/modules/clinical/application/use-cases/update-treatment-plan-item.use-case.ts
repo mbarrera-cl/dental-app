@@ -1,17 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import type { UseCase } from '../../../../shared/application/use-case.js';
 import { ClinicalEvent } from '../../domain/clinical-event.entity.js';
-import {
-  ClinicalRecordLockedError,
-  ClinicalRecordNotFoundError,
-} from '../../domain/clinical.errors.js';
+import { ClinicalRecordLockedError } from '../../domain/clinical.errors.js';
 import {
   EmptyTreatmentPlanItemUpdateError,
-  TreatmentPlanItemNotFoundError,
 } from '../../domain/treatment-plan.errors.js';
 import type { TreatmentPlanItem } from '../../domain/treatment-plan.entity.js';
 import { ClinicalRecordRepositoryPort } from '../ports/clinical-record-repository.port.js';
 import { TreatmentPlanRepositoryPort } from '../ports/treatment-plan-repository.port.js';
+import { loadPlanItemContext } from './plan-item-context.js';
 
 export interface UpdateTreatmentPlanItemCommand {
   itemId: string;
@@ -24,8 +21,9 @@ export interface UpdateTreatmentPlanItemCommand {
 }
 
 /**
- * Partial update of a treatment plan entry (status and/or details). The
- * owning record must still be a draft.
+ * Partial update of a treatment plan entry. Once the record is finalized only
+ * the execution `status` (and its completion date) may change; editing details
+ * or notes is rejected with `ClinicalRecordLockedError` (HTTP 423).
  */
 @Injectable()
 export class UpdateTreatmentPlanItemUseCase implements UseCase<
@@ -40,37 +38,44 @@ export class UpdateTreatmentPlanItemUseCase implements UseCase<
   async execute(
     command: UpdateTreatmentPlanItemCommand,
   ): Promise<TreatmentPlanItem> {
-    const item = await this.plans.findItem(command.itemId);
+    const { item, record } = await loadPlanItemContext(
+      this.plans,
+      this.records,
+      command.itemId,
+    );
 
-    if (item === null) {
-      throw new TreatmentPlanItemNotFoundError(command.itemId);
-    }
-
-    const record = await this.loadRecord(item.planId);
-
-    const hasChanges =
-      command.status !== undefined ||
+    const hasDetails =
       command.tooth !== undefined ||
       command.procedure !== undefined ||
-      command.ucoCode !== undefined ||
-      command.notes !== undefined;
+      command.ucoCode !== undefined;
+    const hasNotes = command.notes !== undefined;
+    const hasStatus = command.status !== undefined;
 
-    if (!hasChanges) {
+    if (!hasStatus && !hasDetails && !hasNotes) {
       throw new EmptyTreatmentPlanItemUpdateError();
     }
 
-    if (command.status !== undefined) {
-      item.changeStatus(command.status, command.actorId);
+    if (!record.isDraft && (hasDetails || hasNotes)) {
+      throw new ClinicalRecordLockedError(record.id);
     }
 
-    item.changeDetails({
-      tooth: command.tooth,
-      procedure: command.procedure,
-      ucoCode: command.ucoCode,
-      notes: command.notes,
-    });
-    item.touch(command.actorId);
+    if (hasStatus) {
+      item.changeStatus(command.status as string, command.actorId);
+    }
 
+    if (hasDetails) {
+      item.changeDetails({
+        tooth: command.tooth,
+        procedure: command.procedure,
+        ucoCode: command.ucoCode,
+      });
+    }
+
+    if (hasNotes) {
+      item.changeNotes(command.notes, command.actorId);
+    }
+
+    item.touch(command.actorId);
     await this.plans.updateItem(item);
 
     await this.records.appendEvent(
@@ -90,25 +95,5 @@ export class UpdateTreatmentPlanItemUseCase implements UseCase<
     );
 
     return item;
-  }
-
-  private async loadRecord(planId: string) {
-    const plan = await this.plans.findPlanById(planId);
-
-    if (plan === null) {
-      throw new ClinicalRecordNotFoundError(planId);
-    }
-
-    const record = await this.records.findById(plan.recordId);
-
-    if (record === null) {
-      throw new ClinicalRecordNotFoundError(plan.recordId);
-    }
-
-    if (!record.isDraft) {
-      throw new ClinicalRecordLockedError(record.id);
-    }
-
-    return record;
   }
 }

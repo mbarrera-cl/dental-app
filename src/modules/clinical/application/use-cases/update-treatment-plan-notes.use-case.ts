@@ -5,31 +5,24 @@ import {
   ClinicalRecordLockedError,
   ClinicalRecordNotFoundError,
 } from '../../domain/clinical.errors.js';
-import {
-  TreatmentPlan,
-  TreatmentPlanItem,
-} from '../../domain/treatment-plan.entity.js';
+import { TreatmentPlan } from '../../domain/treatment-plan.entity.js';
 import { ClinicalRecordRepositoryPort } from '../ports/clinical-record-repository.port.js';
 import { TreatmentPlanRepositoryPort } from '../ports/treatment-plan-repository.port.js';
 
-export interface AddTreatmentPlanItemCommand {
+export interface UpdateTreatmentPlanNotesCommand {
   recordId: string;
   actorId: string | null;
-  tooth?: number | null;
-  procedure: string;
-  ucoCode?: string | null;
-  notes?: string | null;
+  /** Sanitized rich-text HTML; empty clears the note. */
+  notes: string | null | undefined;
 }
 
 /**
- * Adds one entry to the treatment plan of a clinical record, creating the
- * plan lazily on first use. The record must still be a draft (finalized
- * records are locked).
+ * Replaces the plan-level rich-text note. Blocked once the record is sealed.
  */
 @Injectable()
-export class AddTreatmentPlanItemUseCase implements UseCase<
-  AddTreatmentPlanItemCommand,
-  TreatmentPlanItem
+export class UpdateTreatmentPlanNotesUseCase implements UseCase<
+  UpdateTreatmentPlanNotesCommand,
+  TreatmentPlan
 > {
   constructor(
     private readonly records: ClinicalRecordRepositoryPort,
@@ -37,8 +30,8 @@ export class AddTreatmentPlanItemUseCase implements UseCase<
   ) {}
 
   async execute(
-    command: AddTreatmentPlanItemCommand,
-  ): Promise<TreatmentPlanItem> {
+    command: UpdateTreatmentPlanNotesCommand,
+  ): Promise<TreatmentPlan> {
     const record = await this.records.findById(command.recordId);
 
     if (record === null) {
@@ -50,37 +43,21 @@ export class AddTreatmentPlanItemUseCase implements UseCase<
     }
 
     const plan = await this.getOrCreatePlan(record.id);
-    const existing = await this.plans.listItems(plan.id);
 
-    const item = TreatmentPlanItem.create({
-      planId: plan.id,
-      tooth: command.tooth,
-      procedure: command.procedure,
-      ucoCode: command.ucoCode,
-      notes: command.notes,
-      position: existing.length,
-      createdBy: command.actorId,
-    });
-
-    await this.plans.saveItem(item);
+    plan.changeNotes(command.notes, command.actorId);
+    await this.plans.updatePlan(plan);
 
     await this.records.appendEvent(
       ClinicalEvent.create({
         patientId: record.patientId,
         recordId: record.id,
         actorId: command.actorId,
-        action: 'plan-item-agregado',
-        summary: `Plan: ${item.procedure}${item.tooth === null ? '' : ` (pieza ${item.tooth})`}`,
-        payload: {
-          itemId: item.id,
-          tooth: item.tooth,
-          procedure: item.procedure,
-          status: item.status,
-        },
+        action: 'plan-nota-actualizada',
+        summary: 'Nota del plan actualizada',
       }),
     );
 
-    return item;
+    return plan;
   }
 
   private async getOrCreatePlan(recordId: string): Promise<TreatmentPlan> {

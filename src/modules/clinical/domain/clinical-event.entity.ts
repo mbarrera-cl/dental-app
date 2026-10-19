@@ -9,6 +9,10 @@ export const CLINICAL_EVENT_ACTIONS = [
   'hallazgo-anulado',
   'plan-item-agregado',
   'plan-item-actualizado',
+  'plan-item-eliminado',
+  'plan-item-restaurado',
+  'plan-item-importado',
+  'plan-nota-actualizada',
 ] as const;
 
 export type ClinicalEventAction = (typeof CLINICAL_EVENT_ACTIONS)[number];

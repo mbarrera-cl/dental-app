@@ -34,3 +34,27 @@ export class EmptyTreatmentPlanItemUpdateError extends DomainError {
     super('At least one treatment plan item field must be provided');
   }
 }
+
+export class TreatmentPlanItemAlreadyDeletedError extends DomainError {
+  readonly kind: DomainErrorKind = 'conflict';
+
+  constructor(id: string) {
+    super(`Treatment plan item with id "${id}" is already in the trash`);
+  }
+}
+
+export class TreatmentPlanItemNotDeletedError extends DomainError {
+  readonly kind: DomainErrorKind = 'conflict';
+
+  constructor(id: string) {
+    super(`Treatment plan item with id "${id}" is not in the trash`);
+  }
+}
+
+export class QuoteNotImportableError extends DomainError {
+  readonly kind: DomainErrorKind = 'conflict';
+
+  constructor(reason: string) {
+    super(`Quotation cannot be imported into the treatment plan: ${reason}`);
+  }
+}

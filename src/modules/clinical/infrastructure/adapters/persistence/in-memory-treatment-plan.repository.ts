@@ -1,6 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { TreatmentPlanRepositoryPort } from '../../../application/ports/treatment-plan-repository.port.js';
-import { TreatmentPlanItemNotFoundError } from '../../../domain/treatment-plan.errors.js';
+import {
+  TreatmentPlanItemNotFoundError,
+  TreatmentPlanNotFoundError,
+} from '../../../domain/treatment-plan.errors.js';
 import type {
   TreatmentPlan,
   TreatmentPlanItem,
@@ -16,6 +19,14 @@ export class InMemoryTreatmentPlanRepository extends TreatmentPlanRepositoryPort
   private readonly items = new Map<string, TreatmentPlanItem>();
 
   async savePlan(plan: TreatmentPlan): Promise<void> {
+    this.plans.set(plan.id, plan);
+  }
+
+  async updatePlan(plan: TreatmentPlan): Promise<void> {
+    if (!this.plans.has(plan.id)) {
+      throw new TreatmentPlanNotFoundError(plan.id);
+    }
+
     this.plans.set(plan.id, plan);
   }
 
@@ -49,9 +60,13 @@ export class InMemoryTreatmentPlanRepository extends TreatmentPlanRepositoryPort
     return this.items.get(id) ?? null;
   }
 
-  async listItems(planId: string): Promise<TreatmentPlanItem[]> {
+  async listItems(
+    planId: string,
+    options: { includeDeleted?: boolean } = {},
+  ): Promise<TreatmentPlanItem[]> {
     return [...this.items.values()]
       .filter((item) => item.planId === planId)
+      .filter((item) => options.includeDeleted === true || !item.isDeleted)
       .sort((a, b) => a.position - b.position);
   }
 }
