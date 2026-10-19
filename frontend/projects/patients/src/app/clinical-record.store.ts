@@ -6,13 +6,14 @@ import {
   PatientsApi,
   mapApiError,
   type AddFindingPayload,
-  type AddTreatmentPlanItemPayload,
   type ClinicalEvent,
   type ClinicalFinding,
   type ClinicalIndices,
   type ClinicalRecord,
   type CreateClinicalRecordPayload,
+  type ImportQuotePayload,
   type Patient,
+  type QuoteImportPreview,
   type TreatmentPlan,
   type TreatmentPlanItem,
   type UpdateClinicalRecordPayload,
@@ -53,6 +54,8 @@ export class ClinicalRecordStore {
   readonly indices = signal<ClinicalIndices | null>(null);
   /** Treatment plan of the record (created lazily by the API on first use). */
   readonly plan = signal<TreatmentPlan | null>(null);
+  /** Trash of the treatment plan (soft-deleted items). */
+  readonly planTrash = signal<TreatmentPlan | null>(null);
   /** Clinical timeline / audit trail, newest first. */
   readonly events = signal<readonly ClinicalEvent[]>([]);
 
@@ -86,6 +89,7 @@ export class ClinicalRecordStore {
     this.findings.set([]);
     this.indices.set(null);
     this.plan.set(null);
+    this.planTrash.set(null);
     this.events.set([]);
 
     this.patientsApi
@@ -119,6 +123,7 @@ export class ClinicalRecordStore {
             this.reloadFindings();
             this.reloadIndices();
             this.reloadPlan();
+            this.reloadTrash();
             this.reloadEvents();
           }
 
@@ -148,6 +153,7 @@ export class ClinicalRecordStore {
           this.reloadFindings();
           this.reloadIndices();
           this.reloadPlan();
+          this.reloadTrash();
           this.reloadEvents();
         },
         error: () => this.creating.set(false),
@@ -202,11 +208,17 @@ export class ClinicalRecordStore {
     );
   }
 
-  addPlanItem(payload: AddTreatmentPlanItemPayload): Observable<TreatmentPlanItem> {
-    return this.clinicalApi.addTreatmentPlanItem(this.requireRecordId(), payload).pipe(
+  /** Dry-run of importing an approved quotation into the plan. */
+  previewQuoteImport(quoteId: string): Observable<QuoteImportPreview> {
+    return this.clinicalApi.previewQuoteImport(this.requireRecordId(), quoteId);
+  }
+
+  importQuote(payload: ImportQuotePayload): Observable<TreatmentPlanItem[]> {
+    return this.clinicalApi.importQuote(this.requireRecordId(), payload).pipe(
       tap({
         next: () => {
           this.reloadPlan();
+          this.reloadTrash();
           this.reloadEvents();
         },
       }),
@@ -221,6 +233,42 @@ export class ClinicalRecordStore {
       tap({
         next: () => {
           this.reloadPlan();
+          this.reloadEvents();
+        },
+      }),
+    );
+  }
+
+  deletePlanItem(itemId: string, reason: string): Observable<TreatmentPlanItem> {
+    return this.clinicalApi.deleteTreatmentPlanItem(itemId, reason).pipe(
+      tap({
+        next: () => {
+          this.reloadPlan();
+          this.reloadTrash();
+          this.reloadEvents();
+        },
+      }),
+    );
+  }
+
+  restorePlanItem(itemId: string): Observable<TreatmentPlanItem> {
+    return this.clinicalApi.restoreTreatmentPlanItem(itemId).pipe(
+      tap({
+        next: () => {
+          this.reloadPlan();
+          this.reloadTrash();
+          this.reloadEvents();
+        },
+      }),
+    );
+  }
+
+  /** Replaces the plan-level rich-text note. */
+  updatePlanNotes(notes: string | null): Observable<TreatmentPlan> {
+    return this.clinicalApi.updatePlanNotes(this.requireRecordId(), notes).pipe(
+      tap({
+        next: (plan) => {
+          this.plan.set(plan);
           this.reloadEvents();
         },
       }),
@@ -264,6 +312,19 @@ export class ClinicalRecordStore {
       .getTreatmentPlan(recordId)
       .pipe(takeUntil(this.destroy))
       .subscribe({ next: (plan) => this.plan.set(plan) });
+  }
+
+  reloadTrash(): void {
+    const recordId = this.recordId();
+
+    if (recordId === null) {
+      return;
+    }
+
+    this.clinicalApi
+      .getTreatmentPlan(recordId, { deleted: true })
+      .pipe(takeUntil(this.destroy))
+      .subscribe({ next: (plan) => this.planTrash.set(plan) });
   }
 
   reloadEvents(): void {

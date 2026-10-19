@@ -179,4 +179,65 @@ describe('ClinicalApi', () => {
     api.listEvents(RECORD_ID).subscribe();
     http.expectOne(`http://api.test/v1/clinical-records/${RECORD_ID}/events`).flush([]);
   });
+
+  it('reads the treatment plan (and its trash)', () => {
+    api.getTreatmentPlan(RECORD_ID).subscribe();
+    const active = http.expectOne(
+      `http://api.test/v1/clinical-records/${RECORD_ID}/treatment-plan`,
+    );
+    expect(active.request.method).toBe('GET');
+    active.flush({ id: 'plan-1', recordId: RECORD_ID, items: [] });
+
+    api.getTreatmentPlan(RECORD_ID, { deleted: true }).subscribe();
+    http
+      .expectOne(`http://api.test/v1/clinical-records/${RECORD_ID}/treatment-plan?deleted=true`)
+      .flush({ id: 'plan-1', recordId: RECORD_ID, items: [] });
+  });
+
+  it('previews and imports an approved quotation', () => {
+    api.previewQuoteImport(RECORD_ID, 'quote-1').subscribe();
+    const preview = http.expectOne(
+      `http://api.test/v1/clinical-records/${RECORD_ID}/treatment-plan/import/preview`,
+    );
+    expect(preview.request.method).toBe('POST');
+    expect(preview.request.body).toEqual({ quoteId: 'quote-1' });
+    preview.flush({ quoteId: 'quote-1', folio: 'COT-0001', items: [] });
+
+    api.importQuote(RECORD_ID, { quoteId: 'quote-1', itemIds: ['qi-1'] }).subscribe();
+    const imported = http.expectOne(
+      `http://api.test/v1/clinical-records/${RECORD_ID}/treatment-plan/import`,
+    );
+    expect(imported.request.body).toEqual({ quoteId: 'quote-1', itemIds: ['qi-1'] });
+    imported.flush([]);
+  });
+
+  it('updates an item, soft-deletes and restores it', () => {
+    api.updateTreatmentPlanItem('item-1', { status: 'realizado' }).subscribe();
+    const patch = http.expectOne('http://api.test/v1/treatment-plan-items/item-1');
+    expect(patch.request.method).toBe('PATCH');
+    expect(patch.request.body).toEqual({ status: 'realizado' });
+    patch.flush({ id: 'item-1' });
+
+    api.deleteTreatmentPlanItem('item-1', 'Duplicado').subscribe();
+    const remove = http.expectOne('http://api.test/v1/treatment-plan-items/item-1');
+    expect(remove.request.method).toBe('DELETE');
+    expect(remove.request.body).toEqual({ reason: 'Duplicado' });
+    remove.flush({ id: 'item-1' });
+
+    api.restoreTreatmentPlanItem('item-1').subscribe();
+    const restore = http.expectOne('http://api.test/v1/treatment-plan-items/item-1/restore');
+    expect(restore.request.method).toBe('POST');
+    restore.flush({ id: 'item-1' });
+  });
+
+  it('updates the plan-level note', () => {
+    api.updatePlanNotes(RECORD_ID, '<p>Nota</p>').subscribe();
+
+    const request = http.expectOne(
+      `http://api.test/v1/clinical-records/${RECORD_ID}/treatment-plan/notes`,
+    );
+    expect(request.request.method).toBe('PATCH');
+    expect(request.request.body).toEqual({ notes: '<p>Nota</p>' });
+    request.flush({ id: 'plan-1', recordId: RECORD_ID, notes: '<p>Nota</p>', items: [] });
+  });
 });

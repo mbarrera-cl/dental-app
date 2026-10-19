@@ -25,6 +25,13 @@ export const ES = {
     close: 'Cerrar',
     actions: 'Acciones',
     required: 'Campo obligatorio.',
+    richText: {
+      bold: 'Negrita',
+      italic: 'Cursiva',
+      underline: 'Subrayado',
+      bullets: 'Viñetas',
+      numbers: 'Lista numerada',
+    },
   },
   errors: {
     userAlreadyExists: 'Ya existe un usuario con ese email.',
@@ -49,6 +56,9 @@ export const ES = {
     clinicalRecordLocked: 'La ficha clínica está finalizada y no admite cambios.',
     clinicalFindingNotFound: 'El hallazgo ya no existe en el odontograma.',
     clinicalFindingAlreadyVoided: 'El hallazgo ya estaba anulado.',
+    planItemAlreadyDeleted: 'Ese procedimiento ya está en la papelera.',
+    planItemNotDeleted: 'Ese procedimiento no está en la papelera.',
+    quoteNotImportable: 'Ese presupuesto no se puede importar al plan (debe estar aprobado y ser de este paciente).',
     invalidMovement:
       'El movimiento no es válido: el monto debe ser un entero positivo (el CLP no tiene decimales) y el abono necesita un método.',
     movementNotFound: 'El movimiento no existe (puede haber sido anulado).',
@@ -559,31 +569,58 @@ export const ES = {
     },
     plan: {
       title: 'Plan de tratamiento',
-      subtitle: 'Procedimientos planificados para este paciente, con su estado de avance.',
-      empty: 'Todavía no hay procedimientos en el plan.',
+      subtitle: 'Procedimientos provenientes de presupuestos aprobados, con su estado de avance.',
+      empty: 'Todavía no hay procedimientos en el plan. Importa un presupuesto aprobado para comenzar.',
       toothLabel: 'Pieza {{tooth}}',
+      realizadoAt: 'Realizado el {{date}}',
       form: {
-        procedure: 'Procedimiento',
-        procedurePlaceholder: 'p. ej. Endodoncia pieza 36…',
-        tooth: 'Pieza (opcional)',
-        toothPlaceholder: 'p. ej. 36',
-        notes: 'Notas',
-        notesPlaceholder: 'Observaciones opcionales…',
-        add: 'Agregar',
         status: 'Estado',
       },
       statuses: {
-        planificado: 'Planificado',
-        'en-ejecucion': 'En ejecución',
+        pendiente: 'Pendiente',
         realizado: 'Realizado',
         cancelado: 'Cancelado',
       },
-      validation: {
-        tooth: 'Ingresa una pieza válida (11–48 o 51–85) o déjala vacía.',
-        procedureMax: 'Máximo 300 caracteres.',
+      import: {
+        action: 'Importar presupuesto',
+        title: 'Importar presupuesto aprobado',
+        quote: 'Presupuesto',
+        selectPlaceholder: 'Selecciona un presupuesto aprobado…',
+        none: 'Este paciente no tiene presupuestos aprobados.',
+        previewing: 'Analizando el presupuesto…',
+        confirm: 'Importar seleccionados',
+        flags: {
+          nuevo: 'Nuevo',
+          duplicado: 'Ya importado',
+          ambiguo: 'Posible duplicado',
+          'sin-codigo': 'Sin código',
+        },
+      },
+      trash: {
+        show: 'Ver papelera',
+        hide: 'Ocultar papelera',
+        title: 'Papelera',
+        empty: 'No hay procedimientos eliminados.',
+        restore: 'Restaurar',
+      },
+      notes: {
+        title: 'Notas del plan',
+        edit: 'Editar notas',
+        placeholder: 'Notas y observaciones del plan…',
+        empty: 'Sin notas.',
+      },
+      delete: {
+        action: 'Eliminar procedimiento',
+        title: 'Eliminar procedimiento del plan',
+        reason: 'Motivo (obligatorio)',
+        reasonPlaceholder: 'p. ej. Procedimiento duplicado…',
+        confirm: 'Eliminar',
       },
       toasts: {
-        itemAdded: 'Procedimiento agregado al plan.',
+        imported: '{{count}} procedimiento(s) importado(s) al plan.',
+        itemDeleted: 'Procedimiento enviado a la papelera.',
+        itemRestored: 'Procedimiento restaurado.',
+        notesSaved: 'Notas guardadas.',
       },
     },
     timeline: {
@@ -598,6 +635,10 @@ export const ES = {
         'hallazgo-anulado': 'Hallazgo anulado',
         'plan-item-agregado': 'Plan: procedimiento agregado',
         'plan-item-actualizado': 'Plan: procedimiento actualizado',
+        'plan-item-eliminado': 'Plan: procedimiento eliminado',
+        'plan-item-restaurado': 'Plan: procedimiento restaurado',
+        'plan-item-importado': 'Plan: procedimientos importados',
+        'plan-nota-actualizada': 'Plan: nota actualizada',
       },
     },
     form: {
@@ -1149,6 +1190,7 @@ export const ES = {
       activity: 'Actividad',
       mcp: 'MCP',
       caroIa: 'CaroIA',
+      quotes: 'Arancel UCO',
     },
     items: {
       passwordPolicy: {
@@ -1211,6 +1253,11 @@ export const ES = {
         messageRateLimitPerMinute: 'Mensajes por minuto y usuario',
         maxAudioSeconds: 'Duración máxima del audio (segundos)',
         maxAudioBytes: 'Tamaño máximo del audio (bytes)',
+      },
+      quotes: {
+        ucoRate: 'Valor de la UCO (CLP)',
+        folioPrefix: 'Prefijo del folio (p. ej. COT)',
+        defaultValidityDays: 'Vigencia por defecto (días)',
       },
     },
     toasts: {

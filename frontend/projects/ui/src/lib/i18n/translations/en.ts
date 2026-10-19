@@ -17,6 +17,13 @@ export const EN = {
     close: 'Close',
     actions: 'Actions',
     required: 'This field is required.',
+    richText: {
+      bold: 'Bold',
+      italic: 'Italic',
+      underline: 'Underline',
+      bullets: 'Bullet list',
+      numbers: 'Numbered list',
+    },
   },
   errors: {
     userAlreadyExists: 'A user with that email already exists.',
@@ -41,6 +48,9 @@ export const EN = {
     clinicalRecordLocked: 'The clinical record is finalized and cannot be changed.',
     clinicalFindingNotFound: 'The finding no longer exists in the odontogram.',
     clinicalFindingAlreadyVoided: 'The finding was already voided.',
+    planItemAlreadyDeleted: 'That procedure is already in the trash.',
+    planItemNotDeleted: 'That procedure is not in the trash.',
+    quoteNotImportable: 'That quotation cannot be imported into the plan (it must be approved and belong to this patient).',
     invalidMovement:
       'The movement is not valid: the amount must be a positive integer (CLP has no decimals) and the payment needs a method.',
     movementNotFound: 'The movement does not exist (it may have been voided along the way).',
@@ -549,31 +559,58 @@ export const EN = {
     },
     plan: {
       title: 'Treatment plan',
-      subtitle: 'Planned procedures for this patient, with their progress state.',
-      empty: 'There are no procedures in the plan yet.',
+      subtitle: 'Procedures coming from approved quotations, with their progress state.',
+      empty: 'There are no procedures in the plan yet. Import an approved quotation to start.',
       toothLabel: 'Tooth {{tooth}}',
+      realizadoAt: 'Done on {{date}}',
       form: {
-        procedure: 'Procedure',
-        procedurePlaceholder: 'e.g. Root canal tooth 36…',
-        tooth: 'Tooth (optional)',
-        toothPlaceholder: 'e.g. 36',
-        notes: 'Notes',
-        notesPlaceholder: 'Optional observations…',
-        add: 'Add',
         status: 'Status',
       },
       statuses: {
-        planificado: 'Planned',
-        'en-ejecucion': 'In progress',
+        pendiente: 'Pending',
         realizado: 'Done',
         cancelado: 'Cancelled',
       },
-      validation: {
-        tooth: 'Enter a valid tooth (11–48 or 51–85) or leave it empty.',
-        procedureMax: 'At most 300 characters.',
+      import: {
+        action: 'Import quotation',
+        title: 'Import approved quotation',
+        quote: 'Quotation',
+        selectPlaceholder: 'Select an approved quotation…',
+        none: 'This patient has no approved quotations.',
+        previewing: 'Analysing the quotation…',
+        confirm: 'Import selected',
+        flags: {
+          nuevo: 'New',
+          duplicado: 'Already imported',
+          ambiguo: 'Possible duplicate',
+          'sin-codigo': 'No code',
+        },
+      },
+      trash: {
+        show: 'View trash',
+        hide: 'Hide trash',
+        title: 'Trash',
+        empty: 'There are no deleted procedures.',
+        restore: 'Restore',
+      },
+      notes: {
+        title: 'Plan notes',
+        edit: 'Edit notes',
+        placeholder: 'Plan notes and observations…',
+        empty: 'No notes.',
+      },
+      delete: {
+        action: 'Delete procedure',
+        title: 'Delete procedure from the plan',
+        reason: 'Reason (required)',
+        reasonPlaceholder: 'e.g. Duplicate procedure…',
+        confirm: 'Delete',
       },
       toasts: {
-        itemAdded: 'Procedure added to the plan.',
+        imported: '{{count}} procedure(s) imported into the plan.',
+        itemDeleted: 'Procedure moved to the trash.',
+        itemRestored: 'Procedure restored.',
+        notesSaved: 'Notes saved.',
       },
     },
     timeline: {
@@ -588,6 +625,10 @@ export const EN = {
         'hallazgo-anulado': 'Finding voided',
         'plan-item-agregado': 'Plan: procedure added',
         'plan-item-actualizado': 'Plan: procedure updated',
+        'plan-item-eliminado': 'Plan: procedure deleted',
+        'plan-item-restaurado': 'Plan: procedure restored',
+        'plan-item-importado': 'Plan: procedures imported',
+        'plan-nota-actualizada': 'Plan: note updated',
       },
     },
     form: {
@@ -1138,6 +1179,7 @@ export const EN = {
       activity: 'Activity',
       mcp: 'MCP',
       caroIa: 'CaroIA',
+      quotes: 'UCO rate scale',
     },
     items: {
       passwordPolicy: {
@@ -1200,6 +1242,11 @@ export const EN = {
         messageRateLimitPerMinute: 'Messages per minute and user',
         maxAudioSeconds: 'Maximum audio duration (seconds)',
         maxAudioBytes: 'Maximum audio size (bytes)',
+      },
+      quotes: {
+        ucoRate: 'CLP value of one UCO unit',
+        folioPrefix: 'Folio prefix (e.g. COT)',
+        defaultValidityDays: 'Default validity (days)',
       },
     },
     toasts: {

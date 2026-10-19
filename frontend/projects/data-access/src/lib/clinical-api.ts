@@ -4,13 +4,14 @@ import { Observable } from 'rxjs';
 import { API_BASE_URL } from './api-base-url';
 import type {
   AddFindingPayload,
-  AddTreatmentPlanItemPayload,
   ClinicalEvent,
   ClinicalFinding,
   ClinicalIndices,
   ClinicalIntegrity,
   ClinicalRecord,
   CreateClinicalRecordPayload,
+  ImportQuotePayload,
+  QuoteImportPreview,
   TreatmentPlan,
   TreatmentPlanItem,
   UpdateClinicalRecordPayload,
@@ -107,19 +108,40 @@ export class ClinicalApi {
   }
 
   /** Treatment plan of a record (the plan is created lazily by the API). */
-  getTreatmentPlan(recordId: string): Observable<TreatmentPlan> {
+  getTreatmentPlan(
+    recordId: string,
+    options: { deleted?: boolean } = {},
+  ): Observable<TreatmentPlan> {
     return this.http.get<TreatmentPlan>(
       `${this.baseUrl}/clinical-records/${encodeURIComponent(recordId)}/treatment-plan`,
+      { params: options.deleted === true ? { deleted: 'true' } : {} },
     );
   }
 
-  addTreatmentPlanItem(
+  /** Dry-run of importing an approved quotation (flags per line, no writes). */
+  previewQuoteImport(recordId: string, quoteId: string): Observable<QuoteImportPreview> {
+    return this.http.post<QuoteImportPreview>(
+      `${this.baseUrl}/clinical-records/${encodeURIComponent(recordId)}/treatment-plan/import/preview`,
+      { quoteId },
+    );
+  }
+
+  /** Imports the chosen lines of an approved quotation into the plan. */
+  importQuote(
     recordId: string,
-    payload: AddTreatmentPlanItemPayload,
-  ): Observable<TreatmentPlanItem> {
-    return this.http.post<TreatmentPlanItem>(
-      `${this.baseUrl}/clinical-records/${encodeURIComponent(recordId)}/treatment-plan/items`,
+    payload: ImportQuotePayload,
+  ): Observable<TreatmentPlanItem[]> {
+    return this.http.post<TreatmentPlanItem[]>(
+      `${this.baseUrl}/clinical-records/${encodeURIComponent(recordId)}/treatment-plan/import`,
       payload,
+    );
+  }
+
+  /** Replaces the plan-level rich-text note. */
+  updatePlanNotes(recordId: string, notes: string | null): Observable<TreatmentPlan> {
+    return this.http.patch<TreatmentPlan>(
+      `${this.baseUrl}/clinical-records/${encodeURIComponent(recordId)}/treatment-plan/notes`,
+      { notes },
     );
   }
 
@@ -130,6 +152,22 @@ export class ClinicalApi {
     return this.http.patch<TreatmentPlanItem>(
       `${this.baseUrl}/treatment-plan-items/${encodeURIComponent(itemId)}`,
       payload,
+    );
+  }
+
+  /** Moves a plan item to the trash (soft delete, mandatory reason). */
+  deleteTreatmentPlanItem(itemId: string, reason: string): Observable<TreatmentPlanItem> {
+    return this.http.delete<TreatmentPlanItem>(
+      `${this.baseUrl}/treatment-plan-items/${encodeURIComponent(itemId)}`,
+      { body: { reason } },
+    );
+  }
+
+  /** Brings a plan item back from the trash. */
+  restoreTreatmentPlanItem(itemId: string): Observable<TreatmentPlanItem> {
+    return this.http.post<TreatmentPlanItem>(
+      `${this.baseUrl}/treatment-plan-items/${encodeURIComponent(itemId)}/restore`,
+      {},
     );
   }
 }

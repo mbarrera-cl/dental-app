@@ -1,0 +1,74 @@
+<div class="grid gap-2" data-testid="rich-text-editor">
+  <div class="flex flex-wrap items-center gap-1">
+    <button
+      hlmBtn
+      type="button"
+      variant="ghost"
+      size="sm"
+      [disabled]="disabled()"
+      (click)="format('bold')"
+      [attr.aria-label]="'common.richText.bold' | transloco"
+      data-testid="rich-text-bold"
+    >
+      <strong>B</strong>
+    </button>
+    <button
+      hlmBtn
+      type="button"
+      variant="ghost"
+      size="sm"
+      [disabled]="disabled()"
+      (click)="format('italic')"
+      [attr.aria-label]="'common.richText.italic' | transloco"
+      data-testid="rich-text-italic"
+    >
+      <em>I</em>
+    </button>
+    <button
+      hlmBtn
+      type="button"
+      variant="ghost"
+      size="sm"
+      [disabled]="disabled()"
+      (click)="format('underline')"
+      [attr.aria-label]="'common.richText.underline' | transloco"
+      data-testid="rich-text-underline"
+    >
+      <span class="underline">U</span>
+    </button>
+    <button
+      hlmBtn
+      type="button"
+      variant="ghost"
+      size="sm"
+      [disabled]="disabled()"
+      (click)="format('insertUnorderedList')"
+      [attr.aria-label]="'common.richText.bullets' | transloco"
+      data-testid="rich-text-ul"
+    >
+      •
+    </button>
+    <button
+      hlmBtn
+      type="button"
+      variant="ghost"
+      size="sm"
+      [disabled]="disabled()"
+      (click)="format('insertOrderedList')"
+      [attr.aria-label]="'common.richText.numbers' | transloco"
+      data-testid="rich-text-ol"
+    >
+      1.
+    </button>
+  </div>
+
+  <div
+    #editor
+    class="min-h-24 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] [&_ol]:list-decimal [&_ol]:pl-5 [&_ul]:list-disc [&_ul]:pl-5"
+    [attr.contenteditable]="disabled() ? 'false' : 'true'"
+    [attr.data-placeholder]="placeholder()"
+    [attr.aria-label]="placeholder()"
+    (input)="onInput()"
+    data-testid="rich-text-surface"
+  ></div>
+</div>

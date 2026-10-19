@@ -12,103 +12,317 @@
       <ng-icon name="lucideLock" class="shrink-0" />
       <p class="flex-1">{{ 'clinical.readonly.notice' | transloco }}</p>
     </div>
-  } @else {
-    <form
-      [formGroup]="form"
-      (ngSubmit)="add()"
-      class="bg-card grid gap-4 rounded-lg border p-4 sm:grid-cols-[1fr_6rem_auto]"
-      data-testid="plan-add-form"
-    >
-      <div class="grid gap-2">
-        <label hlmLabel for="plan-procedure">{{ 'clinical.plan.form.procedure' | transloco }}</label>
-        <input
-          hlmInput
-          id="plan-procedure"
-          formControlName="procedure"
-          [placeholder]="'clinical.plan.form.procedurePlaceholder' | transloco"
-          data-testid="plan-procedure"
-        />
-        @if (form.controls.procedure.invalid && form.controls.procedure.touched) {
-          <p class="text-destructive text-xs">{{ 'clinical.plan.validation.procedureMax' | transloco }}</p>
-        }
-      </div>
-
-      <div class="grid gap-2">
-        <label hlmLabel for="plan-tooth">{{ 'clinical.plan.form.tooth' | transloco }}</label>
-        <input
-          hlmInput
-          id="plan-tooth"
-          formControlName="tooth"
-          type="number"
-          inputmode="numeric"
-          [placeholder]="'clinical.plan.form.toothPlaceholder' | transloco"
-          data-testid="plan-tooth"
-        />
-        @if (toothError(); as errorKey) {
-          <p class="text-destructive text-xs">{{ errorKey | transloco }}</p>
-        }
-      </div>
-
-      <div class="flex items-end">
-        <button hlmBtn type="submit" [disabled]="adding()" data-testid="plan-add">
-          <ng-icon name="lucidePlus" />
-          {{ 'clinical.plan.form.add' | transloco }}
-        </button>
-      </div>
-
-      <div class="grid gap-2 sm:col-span-3">
-        <label hlmLabel for="plan-notes">{{ 'clinical.plan.form.notes' | transloco }}</label>
-        <input
-          hlmInput
-          id="plan-notes"
-          formControlName="notes"
-          [placeholder]="'clinical.plan.form.notesPlaceholder' | transloco"
-          data-testid="plan-notes"
-        />
-      </div>
-    </form>
   }
+
+  <div class="flex flex-wrap items-center gap-2">
+    @if (!finalized()) {
+      <button hlmBtn type="button" (click)="openImport()" data-testid="plan-import">
+        <ng-icon name="lucideDownload" />
+        {{ 'clinical.plan.import.action' | transloco }}
+      </button>
+    }
+
+    <button
+      hlmBtn
+      type="button"
+      variant="outline"
+      (click)="toggleTrash()"
+      data-testid="plan-trash-toggle"
+    >
+      <ng-icon name="lucideTrash2" />
+      {{ (showTrash() ? 'clinical.plan.trash.hide' : 'clinical.plan.trash.show') | transloco }}
+    </button>
+  </div>
 
   <div class="bg-card grid gap-3 rounded-lg border p-4" data-testid="plan-items">
     @if (items().length === 0) {
-      <p class="text-muted-foreground text-sm">{{ 'clinical.plan.empty' | transloco }}</p>
+      <p class="text-muted-foreground text-sm" data-testid="plan-empty">
+        {{ 'clinical.plan.empty' | transloco }}
+      </p>
     } @else {
       <ul class="grid gap-2">
         @for (item of items(); track item.id) {
-          <li
-            class="flex flex-wrap items-center gap-3 rounded-md border px-3 py-2 text-sm"
-            data-testid="plan-item"
-          >
-            <span class="font-mono font-medium" data-testid="plan-item-tooth">
-              {{ 'clinical.plan.toothLabel' | transloco: { tooth: toothLabel(item.tooth) } }}
-            </span>
-
-            <span class="flex-1 font-medium">{{ item.procedure }}</span>
-
-            @if (item.notes) {
-              <span class="text-muted-foreground w-full text-xs sm:w-auto">{{ item.notes }}</span>
-            }
-
-            @if (finalized()) {
-              <span hlmBadge [variant]="statusVariant(item.status)">
-                {{ statusLabelKey(item.status) | transloco }}
+          <li class="grid gap-2 rounded-md border px-3 py-2 text-sm" data-testid="plan-item">
+            <div class="flex flex-wrap items-center gap-3">
+              <span class="font-mono font-medium" data-testid="plan-item-tooth">
+                {{ 'clinical.plan.toothLabel' | transloco: { tooth: toothLabel(item.tooth) } }}
               </span>
-            } @else {
-              <select
-                class="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-8 rounded-md border px-2 text-sm shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px]"
-                [value]="item.status"
-                (change)="changeStatus(item, readStatus($event))"
-                [attr.data-testid]="'plan-item-status-' + item.id"
-                [attr.aria-label]="'clinical.plan.form.status' | transloco"
-              >
-                @for (status of statuses; track status) {
-                  <option [value]="status">{{ statusLabelKey(status) | transloco }}</option>
-                }
-              </select>
+
+              @if (item.ucoCode) {
+                <span hlmBadge variant="outline" class="font-mono" data-testid="plan-item-code">
+                  {{ item.ucoCode }}
+                </span>
+              }
+
+              <span class="flex-1 font-medium" data-testid="plan-item-procedure">{{ item.procedure }}</span>
+
+              @if (item.realizadoAt) {
+                <span class="text-muted-foreground text-xs" data-testid="plan-item-realizado">
+                  {{ 'clinical.plan.realizadoAt' | transloco: { date: item.realizadoAt } }}
+                </span>
+              }
+
+              @if (finalized()) {
+                <span hlmBadge [variant]="statusVariant(item.status)">
+                  {{ statusLabelKey(item.status) | transloco }}
+                </span>
+              } @else {
+                <select
+                  class="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-8 rounded-md border px-2 text-sm shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px]"
+                  [value]="item.status"
+                  (change)="changeStatus(item, readStatus($event))"
+                  [attr.data-testid]="'plan-item-status-' + item.id"
+                  [attr.aria-label]="'clinical.plan.form.status' | transloco"
+                >
+                  @for (status of statuses; track status) {
+                    <option [value]="status">{{ statusLabelKey(status) | transloco }}</option>
+                  }
+                </select>
+
+                <button
+                  hlmBtn
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  (click)="startItemNotes(item)"
+                  [attr.aria-label]="'clinical.plan.notes.edit' | transloco"
+                  [attr.data-testid]="'plan-item-note-' + item.id"
+                >
+                  <ng-icon name="lucidePencil" />
+                </button>
+
+                <button
+                  hlmBtn
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  (click)="openDelete(item)"
+                  [attr.aria-label]="'clinical.plan.delete.action' | transloco"
+                  [attr.data-testid]="'plan-item-delete-' + item.id"
+                >
+                  <ng-icon name="lucideTrash2" />
+                </button>
+              }
+            </div>
+
+            @if (itemNotesEditing() === item.id) {
+              <app-rich-text-editor
+                [value]="itemNotesDraft()"
+                [placeholder]="'clinical.plan.notes.placeholder' | transloco"
+                (valueChange)="onItemNotesChange($event)"
+              />
+              <div class="flex justify-end gap-2">
+                <button hlmBtn type="button" variant="outline" size="sm" (click)="cancelItemNotes()">
+                  {{ 'common.cancel' | transloco }}
+                </button>
+                <button
+                  hlmBtn
+                  type="button"
+                  size="sm"
+                  [disabled]="savingItemNotes()"
+                  (click)="saveItemNotes(item)"
+                  [attr.data-testid]="'plan-item-note-save-' + item.id"
+                >
+                  <ng-icon name="lucideCheck" />
+                  {{ 'common.save' | transloco }}
+                </button>
+              </div>
+            } @else if (item.notes) {
+              <div class="text-muted-foreground text-xs" [innerHTML]="item.notes"></div>
             }
           </li>
         }
       </ul>
     }
   </div>
+
+  @if (showTrash()) {
+    <div class="bg-card grid gap-3 rounded-lg border p-4" data-testid="plan-trash">
+      <h4 class="text-sm font-semibold">{{ 'clinical.plan.trash.title' | transloco }}</h4>
+
+      @if (trashItems().length === 0) {
+        <p class="text-muted-foreground text-sm">{{ 'clinical.plan.trash.empty' | transloco }}</p>
+      } @else {
+        <ul class="grid gap-2">
+          @for (item of trashItems(); track item.id) {
+            <li class="flex flex-wrap items-center gap-3 rounded-md border px-3 py-2 text-sm">
+              <span class="flex-1">
+                <span class="font-medium">{{ item.procedure }}</span>
+                <span class="text-muted-foreground"> — {{ item.deletedReason }}</span>
+              </span>
+
+              <button
+                hlmBtn
+                type="button"
+                variant="outline"
+                size="sm"
+                [disabled]="restoring() === item.id || finalized()"
+                (click)="restore(item)"
+                [attr.data-testid]="'plan-trash-restore-' + item.id"
+              >
+                <ng-icon name="lucideRotateCcw" />
+                {{ 'clinical.plan.trash.restore' | transloco }}
+              </button>
+            </li>
+          }
+        </ul>
+      }
+    </div>
+  }
+
+  <div class="bg-card grid gap-3 rounded-lg border p-4" data-testid="plan-notes">
+    <div class="flex items-center justify-between gap-2">
+      <h4 class="text-sm font-semibold">{{ 'clinical.plan.notes.title' | transloco }}</h4>
+
+      @if (!finalized() && !planNotesEditing()) {
+        <button
+          hlmBtn
+          type="button"
+          variant="ghost"
+          size="sm"
+          (click)="startPlanNotes()"
+          data-testid="plan-notes-edit"
+        >
+          <ng-icon name="lucidePencil" />
+          {{ 'clinical.plan.notes.edit' | transloco }}
+        </button>
+      }
+    </div>
+
+    @if (planNotesEditing()) {
+      <app-rich-text-editor
+        [value]="planNotesDraft()"
+        [placeholder]="'clinical.plan.notes.placeholder' | transloco"
+        (valueChange)="onPlanNotesChange($event)"
+      />
+      <div class="flex justify-end gap-2">
+        <button hlmBtn type="button" variant="outline" size="sm" (click)="cancelPlanNotes()">
+          {{ 'common.cancel' | transloco }}
+        </button>
+        <button
+          hlmBtn
+          type="button"
+          size="sm"
+          [disabled]="savingPlanNotes()"
+          (click)="savePlanNotes()"
+          data-testid="plan-notes-save"
+        >
+          <ng-icon name="lucideCheck" />
+          {{ 'common.save' | transloco }}
+        </button>
+      </div>
+    } @else if (plan()?.notes) {
+      <div class="text-sm" [innerHTML]="plan()?.notes"></div>
+    } @else {
+      <p class="text-muted-foreground text-sm">{{ 'clinical.plan.notes.empty' | transloco }}</p>
+    }
+  </div>
 </section>
+
+<hlm-dialog [state]="importOpen() ? 'open' : 'closed'" (stateChanged)="onImportStateChanged($event)">
+  <hlm-dialog-content *hlmDialogPortal="let ctx" class="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
+    <hlm-dialog-header>
+      <h3 hlmDialogTitle>{{ 'clinical.plan.import.title' | transloco }}</h3>
+    </hlm-dialog-header>
+
+    <div class="grid gap-4">
+      <div class="grid gap-2">
+        <label hlmLabel for="plan-import-quote">{{ 'clinical.plan.import.quote' | transloco }}</label>
+        <select
+          id="plan-import-quote"
+          class="border-input bg-background h-9 rounded-md border px-2 text-sm shadow-xs outline-none"
+          [value]="selectedQuoteId()"
+          (change)="readQuoteId($event)"
+          data-testid="plan-import-quote"
+        >
+          <option value="">{{ 'clinical.plan.import.selectPlaceholder' | transloco }}</option>
+          @for (quote of approvedQuotes() ?? []; track quote.id) {
+            <option [value]="quote.id">{{ quote.folio }} — {{ quote.total }}</option>
+          }
+        </select>
+
+        @if (approvedQuotes() !== null && (approvedQuotes() ?? []).length === 0) {
+          <p class="text-muted-foreground text-xs">{{ 'clinical.plan.import.none' | transloco }}</p>
+        }
+      </div>
+
+      @if (previewing()) {
+        <p class="text-muted-foreground text-sm">{{ 'clinical.plan.import.previewing' | transloco }}</p>
+      }
+
+      @if (preview(); as current) {
+        <ul class="grid gap-1" data-testid="plan-import-preview">
+          @for (line of current.items; track line.quoteItemId) {
+            <li class="flex items-center gap-3 rounded-md border px-3 py-2 text-sm">
+              <input
+                type="checkbox"
+                [checked]="isSelected(line.quoteItemId)"
+                [disabled]="line.flag === 'duplicado'"
+                (change)="toggleSelection(line.quoteItemId, readChecked($event))"
+                [attr.data-testid]="'plan-import-line-' + line.quoteItemId"
+              />
+              <span class="flex-1">
+                @if (line.ucoCode) {
+                  <span class="font-mono">{{ line.ucoCode }}</span>
+                }
+                {{ line.description }}
+              </span>
+              <span hlmBadge variant="outline">{{ flagLabelKey(line.flag) | transloco }}</span>
+            </li>
+          }
+        </ul>
+      }
+    </div>
+
+    <hlm-dialog-footer>
+      <button hlmBtn type="button" variant="outline" hlmDialogClose>
+        {{ 'common.cancel' | transloco }}
+      </button>
+      <button
+        hlmBtn
+        type="button"
+        [disabled]="importing() || selectedQuoteId() === '' || selection().size === 0"
+        (click)="confirmImport()"
+        data-testid="plan-import-confirm"
+      >
+        {{ 'clinical.plan.import.confirm' | transloco }}
+      </button>
+    </hlm-dialog-footer>
+  </hlm-dialog-content>
+</hlm-dialog>
+
+<hlm-dialog [state]="deleteOpen() ? 'open' : 'closed'" (stateChanged)="onDeleteStateChanged($event)">
+  <hlm-dialog-content *hlmDialogPortal="let ctx" class="sm:max-w-md">
+    <hlm-dialog-header>
+      <h3 hlmDialogTitle>{{ 'clinical.plan.delete.title' | transloco }}</h3>
+    </hlm-dialog-header>
+
+    <div class="grid gap-2">
+      <label hlmLabel for="plan-delete-reason">{{ 'clinical.plan.delete.reason' | transloco }}</label>
+      <input
+        hlmInput
+        id="plan-delete-reason"
+        [value]="deleteReason()"
+        (input)="readReason($event)"
+        [placeholder]="'clinical.plan.delete.reasonPlaceholder' | transloco"
+        data-testid="plan-delete-reason"
+      />
+    </div>
+
+    <hlm-dialog-footer>
+      <button hlmBtn type="button" variant="outline" hlmDialogClose>
+        {{ 'common.cancel' | transloco }}
+      </button>
+      <button
+        hlmBtn
+        type="button"
+        variant="destructive"
+        [disabled]="deleting() || deleteReason().trim() === ''"
+        (click)="confirmDelete()"
+        data-testid="plan-delete-confirm"
+      >
+        {{ 'clinical.plan.delete.confirm' | transloco }}
+      </button>
+    </hlm-dialog-footer>
+  </hlm-dialog-content>
+</hlm-dialog>

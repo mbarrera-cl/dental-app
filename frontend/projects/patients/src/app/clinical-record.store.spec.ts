@@ -115,12 +115,43 @@ const INDICES: ClinicalIndices = {
 const PLAN: TreatmentPlan = {
   id: 'plan-1',
   recordId: RECORD_ID,
+  notes: null,
+  notesUpdatedAt: null,
+  notesUpdatedBy: null,
   createdAt: '2026-10-16T10:00:00.000Z',
   updatedAt: '2026-10-16T10:00:00.000Z',
   items: [],
 };
 
+const PLAN_TRASH: TreatmentPlan = { ...PLAN, items: [] };
+
 const EVENTS: ClinicalEvent[] = [];
+
+const PLAN_ITEM: TreatmentPlanItem = {
+  id: 'item-1',
+  planId: 'plan-1',
+  tooth: 36,
+  procedure: 'Endodoncia pieza 36',
+  ucoCode: 'ENDO-MOLAR',
+  status: 'pendiente',
+  notes: null,
+  position: 0,
+  sourceQuoteItemId: 'quote-item-1',
+  createdBy: 'user-1',
+  updatedBy: 'user-1',
+  createdAt: '2026-10-16T10:00:00.000Z',
+  updatedAt: '2026-10-16T10:00:00.000Z',
+  statusChangedAt: null,
+  statusChangedBy: null,
+  realizadoAt: null,
+  realizadoBy: null,
+  notesUpdatedAt: null,
+  notesUpdatedBy: null,
+  deletedAt: null,
+  deletedBy: null,
+  deletedReason: null,
+  isDeleted: false,
+};
 
 describe('ClinicalRecordStore', () => {
   let http: HttpTestingController;
@@ -156,6 +187,9 @@ describe('ClinicalRecordStore', () => {
     http.expectOne(`http://api.test/v1/clinical-records/${RECORD_ID}/findings`).flush([FINDING]);
     http.expectOne(`http://api.test/v1/clinical-records/${RECORD_ID}/indices`).flush(INDICES);
     http.expectOne(`http://api.test/v1/clinical-records/${RECORD_ID}/treatment-plan`).flush(PLAN);
+    http
+      .expectOne(`http://api.test/v1/clinical-records/${RECORD_ID}/treatment-plan?deleted=true`)
+      .flush(PLAN_TRASH);
     http.expectOne(`http://api.test/v1/clinical-records/${RECORD_ID}/events`).flush(EVENTS);
   }
 
@@ -199,6 +233,9 @@ describe('ClinicalRecordStore', () => {
     http.expectOne(`http://api.test/v1/clinical-records/${RECORD_ID}/findings`).flush([]);
     http.expectOne(`http://api.test/v1/clinical-records/${RECORD_ID}/indices`).flush(INDICES);
     http.expectOne(`http://api.test/v1/clinical-records/${RECORD_ID}/treatment-plan`).flush(PLAN);
+    http
+      .expectOne(`http://api.test/v1/clinical-records/${RECORD_ID}/treatment-plan?deleted=true`)
+      .flush(PLAN_TRASH);
     http.expectOne(`http://api.test/v1/clinical-records/${RECORD_ID}/events`).flush(EVENTS);
 
     expect(store.record()?.id).toBe(RECORD_ID);
@@ -266,51 +303,63 @@ describe('ClinicalRecordStore', () => {
     expect(store.record()?.id).toBe(RECORD_ID);
   });
 
-  it('adds plan items and advances their status, refreshing plan and events', () => {
+  it('imports plan items and advances their status, refreshing plan, trash and events', () => {
     loadPatient();
     loadRecord();
 
-    const item: TreatmentPlanItem = {
-      id: 'item-1',
-      planId: 'plan-1',
-      tooth: 36,
-      procedure: 'Endodoncia pieza 36',
-      ucoCode: null,
-      status: 'planificado',
-      notes: null,
-      position: 0,
-      createdBy: 'user-1',
-      updatedBy: 'user-1',
-      createdAt: '2026-10-16T10:00:00.000Z',
-      updatedAt: '2026-10-16T10:00:00.000Z',
-      statusChangedAt: null,
-      statusChangedBy: null,
-    };
-
-    store.addPlanItem({ tooth: 36, procedure: 'Endodoncia pieza 36' }).subscribe();
+    store
+      .importQuote({ quoteId: 'quote-1', itemIds: ['quote-item-1'] })
+      .subscribe();
     const post = http.expectOne(
-      `http://api.test/v1/clinical-records/${RECORD_ID}/treatment-plan/items`,
+      `http://api.test/v1/clinical-records/${RECORD_ID}/treatment-plan/import`,
     );
     expect(post.request.method).toBe('POST');
-    post.flush(item);
+    expect(post.request.body).toEqual({
+      quoteId: 'quote-1',
+      itemIds: ['quote-item-1'],
+    });
+    post.flush([PLAN_ITEM]);
     http
       .expectOne(`http://api.test/v1/clinical-records/${RECORD_ID}/treatment-plan`)
-      .flush({ ...PLAN, items: [item] });
+      .flush({ ...PLAN, items: [PLAN_ITEM] });
+    http
+      .expectOne(`http://api.test/v1/clinical-records/${RECORD_ID}/treatment-plan?deleted=true`)
+      .flush(PLAN_TRASH);
     http.expectOne(`http://api.test/v1/clinical-records/${RECORD_ID}/events`).flush(EVENTS);
 
     expect(store.plan()?.items).toHaveLength(1);
 
-    store.updatePlanItem(item.id, { status: 'realizado' }).subscribe();
-    const patch = http.expectOne(`http://api.test/v1/treatment-plan-items/${item.id}`);
+    store.updatePlanItem(PLAN_ITEM.id, { status: 'realizado' }).subscribe();
+    const patch = http.expectOne(`http://api.test/v1/treatment-plan-items/${PLAN_ITEM.id}`);
     expect(patch.request.method).toBe('PATCH');
     expect(patch.request.body).toEqual({ status: 'realizado' });
-    patch.flush({ ...item, status: 'realizado' });
+    patch.flush({ ...PLAN_ITEM, status: 'realizado', realizadoAt: '2026-10-18T12:00:00.000Z' });
     http
       .expectOne(`http://api.test/v1/clinical-records/${RECORD_ID}/treatment-plan`)
-      .flush({ ...PLAN, items: [{ ...item, status: 'realizado' }] });
+      .flush({ ...PLAN, items: [{ ...PLAN_ITEM, status: 'realizado' }] });
     http.expectOne(`http://api.test/v1/clinical-records/${RECORD_ID}/events`).flush(EVENTS);
 
     expect(store.plan()?.items[0].status).toBe('realizado');
+  });
+
+  it('soft-deletes with a reason and restores, refreshing the trash', () => {
+    loadPatient();
+    loadRecord();
+
+    store.deletePlanItem(PLAN_ITEM.id, 'Duplicado').subscribe();
+    const remove = http.expectOne(`http://api.test/v1/treatment-plan-items/${PLAN_ITEM.id}`);
+    expect(remove.request.method).toBe('DELETE');
+    expect(remove.request.body).toEqual({ reason: 'Duplicado' });
+    remove.flush({ ...PLAN_ITEM, isDeleted: true, deletedReason: 'Duplicado' });
+    http
+      .expectOne(`http://api.test/v1/clinical-records/${RECORD_ID}/treatment-plan`)
+      .flush(PLAN);
+    http
+      .expectOne(`http://api.test/v1/clinical-records/${RECORD_ID}/treatment-plan?deleted=true`)
+      .flush({ ...PLAN_TRASH, items: [{ ...PLAN_ITEM, isDeleted: true }] });
+    http.expectOne(`http://api.test/v1/clinical-records/${RECORD_ID}/events`).flush(EVENTS);
+
+    expect(store.planTrash()?.items).toHaveLength(1);
   });
 
   it('switches patients, cancelling the requests of the previous one', () => {
@@ -322,6 +371,9 @@ describe('ClinicalRecordStore', () => {
     http.expectOne(`http://api.test/v1/clinical-records/${RECORD_ID}/findings`).flush([]);
     http.expectOne(`http://api.test/v1/clinical-records/${RECORD_ID}/indices`).flush(INDICES);
     http.expectOne(`http://api.test/v1/clinical-records/${RECORD_ID}/treatment-plan`).flush(PLAN);
+    http
+      .expectOne(`http://api.test/v1/clinical-records/${RECORD_ID}/treatment-plan?deleted=true`)
+      .flush(PLAN_TRASH);
     http.expectOne(`http://api.test/v1/clinical-records/${RECORD_ID}/events`).flush(EVENTS);
 
     store.load('patient-2');

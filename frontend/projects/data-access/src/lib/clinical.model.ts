@@ -192,11 +192,11 @@ export interface ClinicalIntegrity {
 
 /**
  * Treatment plan (plan de tratamiento): one entry per procedure, optionally
- * bound to a tooth, with its execution state.
+ * bound to a tooth, with its execution state. Items come only from approved
+ * quotations; they can be soft-deleted (with a reason) and restored.
  */
 export const TREATMENT_PLAN_ITEM_STATUSES = [
-  'planificado',
-  'en-ejecucion',
+  'pendiente',
   'realizado',
   'cancelado',
 ] as const;
@@ -209,10 +209,14 @@ export interface TreatmentPlanItem {
   /** FDI tooth; `null` for whole-mouth procedures. */
   tooth: number | null;
   procedure: string;
+  /** UCO code copied from the source quotation line; `null` for free text. */
   ucoCode: string | null;
   status: TreatmentPlanItemStatus;
+  /** Sanitized rich-text note (HTML). */
   notes: string | null;
   position: number;
+  /** Quotation line this item was imported from. */
+  sourceQuoteItemId: string | null;
   createdBy: string | null;
   updatedBy: string | null;
   /** ISO-8601 timestamps. */
@@ -220,22 +224,27 @@ export interface TreatmentPlanItem {
   updatedAt: string;
   statusChangedAt: string | null;
   statusChangedBy: string | null;
+  realizadoAt: string | null;
+  realizadoBy: string | null;
+  notesUpdatedAt: string | null;
+  notesUpdatedBy: string | null;
+  deletedAt: string | null;
+  deletedBy: string | null;
+  deletedReason: string | null;
+  isDeleted: boolean;
 }
 
 export interface TreatmentPlan {
   id: string;
   recordId: string;
+  /** Sanitized rich-text note of the whole plan (HTML). */
+  notes: string | null;
+  notesUpdatedAt: string | null;
+  notesUpdatedBy: string | null;
   /** ISO-8601 timestamps. */
   createdAt: string;
   updatedAt: string;
   items: TreatmentPlanItem[];
-}
-
-export interface AddTreatmentPlanItemPayload {
-  tooth?: number | null;
-  procedure: string;
-  ucoCode?: string | null;
-  notes?: string | null;
 }
 
 export interface UpdateTreatmentPlanItemPayload {
@@ -244,6 +253,32 @@ export interface UpdateTreatmentPlanItemPayload {
   procedure?: string;
   ucoCode?: string | null;
   notes?: string | null;
+}
+
+/** Classification of a quotation line when importing it into the plan. */
+export type QuoteImportFlag = 'nuevo' | 'duplicado' | 'ambiguo' | 'sin-codigo';
+
+export interface QuoteImportPreviewItem {
+  quoteItemId: string;
+  ucoCode: string | null;
+  description: string;
+  tooth: number | null;
+  flag: QuoteImportFlag;
+}
+
+export interface QuoteImportPreview {
+  quoteId: string;
+  folio: string;
+  items: QuoteImportPreviewItem[];
+}
+
+export interface ImportQuotePayload {
+  quoteId: string;
+  /**
+   * Quotation line ids to import (the operator's choices from the preview).
+   * Omit to import only the unambiguous new lines.
+   */
+  itemIds?: string[];
 }
 
 export interface CreateClinicalRecordPayload {
@@ -343,6 +378,10 @@ export const CLINICAL_EVENT_ACTIONS = [
   'hallazgo-anulado',
   'plan-item-agregado',
   'plan-item-actualizado',
+  'plan-item-eliminado',
+  'plan-item-restaurado',
+  'plan-item-importado',
+  'plan-nota-actualizada',
 ] as const;
 
 export type ClinicalEventAction = (typeof CLINICAL_EVENT_ACTIONS)[number];

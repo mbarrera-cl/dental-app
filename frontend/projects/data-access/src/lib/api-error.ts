@@ -41,6 +41,9 @@ const ERROR_NAME_TO_KEY: Readonly<Record<string, string>> = {
   TreatmentPlanItemNotFoundError: 'errors.notFound',
   InvalidTreatmentPlanError: 'errors.validation',
   EmptyTreatmentPlanItemUpdateError: 'errors.emptyUpdate',
+  TreatmentPlanItemAlreadyDeletedError: 'errors.planItemAlreadyDeleted',
+  TreatmentPlanItemNotDeletedError: 'errors.planItemNotDeleted',
+  QuoteNotImportableError: 'errors.quoteNotImportable',
   // accounts / rbac context
   LastAdminError: 'errors.lastAdmin',
   UnknownRoleError: 'errors.unknownRole',
