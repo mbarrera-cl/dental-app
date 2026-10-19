@@ -67,8 +67,19 @@ export class TreatmentPlanPage {
     return tooth === null ? '—' : String(tooth);
   }
 
+  /**
+   * The tooth field is an `input[type=number]`, so Angular's number value
+   * accessor hands back a `number` (or `null`), not the `string` the control
+   * is declared with. Normalize before trimming.
+   */
+  private toothInput(): string {
+    const value: unknown = this.form.controls.tooth.value;
+
+    return value === null || value === undefined ? '' : String(value).trim();
+  }
+
   protected toothError(): string | null {
-    const raw = this.form.controls.tooth.value.trim();
+    const raw = this.toothInput();
 
     if (raw !== '' && !isFdiTooth(Number(raw))) {
       return 'clinical.plan.validation.tooth';
@@ -89,7 +100,7 @@ export class TreatmentPlanPage {
     this.form.markAllAsTouched();
 
     const raw = this.form.getRawValue();
-    const toothRaw = raw.tooth.trim();
+    const toothRaw = this.toothInput();
     const procedure = raw.procedure.trim();
 
     if (procedure === '' || this.toothError() !== null) {
