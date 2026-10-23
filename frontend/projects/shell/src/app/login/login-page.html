@@ -4,7 +4,11 @@
       class="login-brand-panel relative isolate flex min-h-[220px] min-w-0 overflow-hidden lg:min-h-dvh"
     >
       <div class="relative z-10 flex w-full flex-1 flex-col p-6 sm:p-8 lg:p-10 xl:p-14">
-        <div class="login-brand-copy max-w-[38rem]">
+        @if (branding.name(); as name) {
+          <p class="text-2xl font-medium tracking-[-0.02em] text-white">{{ name }}</p>
+        }
+
+        <div class="login-brand-copy mt-10 max-w-[38rem]">
           <h2
             class="font-display text-[2.5rem] font-medium leading-[0.98] tracking-[-0.03em] text-white sm:text-5xl lg:text-[clamp(3rem,5vw,5.25rem)] lg:leading-[0.96] lg:tracking-[-0.04em]"
           >
