@@ -18,7 +18,7 @@ layers.
 ### Enable and start
 
 ```bash
-MCP_ENABLED=true npm run dev:all
+MCP_ENABLED=true pnpm run dev:all
 # or, with an already built backend:
 MCP_ENABLED=true node dist/main.js
 ```
@@ -139,7 +139,7 @@ activity purge, UCO catalog writes, quote email sending, patient deletion.
 For a local MCP client that launches a process:
 
 ```bash
-HEXA_MCP_API_KEY=hexa_... DATABASE_URL=postgresql://hexa:...@localhost:5433/hexa npm run mcp:stdio
+HEXA_MCP_API_KEY=hexa_... DATABASE_URL=postgresql://hexa:...@localhost:5433/hexa pnpm run mcp:stdio
 ```
 
 The process reuses the same database and use cases. `HEXA_MCP_API_KEY` is
@@ -153,7 +153,7 @@ Client configuration:
 {
   "mcpServers": {
     "hexa": {
-      "command": "npm",
+      "command": "pnpm",
       "args": ["run", "mcp:stdio"],
       "env": {
         "HEXA_MCP_API_KEY": "hexa_...",

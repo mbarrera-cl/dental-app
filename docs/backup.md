@@ -58,7 +58,7 @@ en un `railway.json` del servicio de backup.
 ### 3. Ejecución manual
 
 ```bash
-npm run backup
+pnpm run backup
 # o directamente:
 node scripts/backup.mjs
 ```

@@ -15,7 +15,7 @@ solo la transcripción se envía al modelo.
 
 ```bash
 cd /Users/mbarrera/hexa
-MCP_ENABLED=true npm run dev:all
+MCP_ENABLED=true pnpm run dev:all
 ```
 
 Abre `http://localhost:4200/caro-ia` o usa el botón **CaroIA** de la cabecera,
@@ -33,7 +33,7 @@ subirse. Después reinicia el servidor:
 cd /Users/mbarrera/hexa
 cp .env.example .env
 # edita .env con tus claves
-MCP_ENABLED=true npm run dev:all
+MCP_ENABLED=true pnpm run dev:all
 ```
 
 En producción (Railway, Docker, etc.) configura las mismas variables en el
@@ -186,15 +186,15 @@ la aprobación humana. El MCP sigue siendo la única fuente de datos.
 
 ```bash
 # Backend
-npm test
-npx vitest run test/caro-ia.e2e-spec.ts --config ./vitest.config.e2e.ts
-npx vitest run test/mcp.e2e-spec.ts --config ./vitest.config.e2e.ts
+pnpm test
+pnpm exec vitest run test/caro-ia.e2e-spec.ts --config ./vitest.config.e2e.ts
+pnpm exec vitest run test/mcp.e2e-spec.ts --config ./vitest.config.e2e.ts
 
 # Frontend
 cd frontend
-npx ng test shell --watch=false
-npx ng test data-access --watch=false
-npx ng test ui --watch=false
+pnpm exec ng test shell --watch=false
+pnpm exec ng test data-access --watch=false
+pnpm exec ng test ui --watch=false
 ```
 
 La suite de CaroIA cubre CRUD, stream de lectura con evidencia, creación de

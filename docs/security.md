@@ -42,7 +42,7 @@ Opcionales: `JWT_ISSUER`, `JWT_AUDIENCE`, `COOKIE_SAMESITE`, `COOKIE_SECURE`,
 2. **CSP en report-only**: debe promoverse a enforcing tras observar reportes
    en el entorno real (microfrontends, import maps y assets lazy).
 3. **Dependencias dev**: `@nestjs/mau`/`undici` presentan CVEs en dependencias
-   de desarrollo. Producción queda limpia (`npm audit --omit=dev`).
+   de desarrollo. Producción queda limpia (`pnpm audit --prod`).
 4. **katex < 0.19** (frontend, severidad baja vía mermaid): actualizar cuando
    mermaid publique una versión compatible.
 5. **Retención de auditoría**: `activity_log` guarda IP y User-Agent (PII).
@@ -54,8 +54,8 @@ Opcionales: `JWT_ISSUER`, `JWT_AUDIENCE`, `COOKIE_SAMESITE`, `COOKIE_SECURE`,
 ## Comandos de verificación
 
 ```bash
-npm audit --omit=dev
-npm test
-npm run test:e2e
-npm run frontend:test
+pnpm audit --prod
+pnpm test
+pnpm run test:e2e
+pnpm run frontend:test
 ```

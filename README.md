@@ -176,11 +176,11 @@ same way.
 
 ## 🚀 Getting started
 
-Requires **Node.js 24+** and **Docker** (local PostgreSQL/pgAdmin).
+Requires **Node.js 24+**, **pnpm 12+** and **Docker** (local PostgreSQL/pgAdmin).
 
 ```bash
-npm install
-npm run start:dev
+pnpm install
+pnpm run start:dev
 ```
 
 - API: <http://localhost:3000>
@@ -324,8 +324,8 @@ agents) over **Streamable HTTP** and **STDIO**, using
 use cases, API keys and activity trail:
 
 ```bash
-MCP_ENABLED=true npm run dev:all        # POST /mcp on :3000
-HEXA_MCP_API_KEY=hexa_... npm run mcp:stdio   # local STDIO process
+MCP_ENABLED=true pnpm run dev:all        # POST /mcp on :3000
+HEXA_MCP_API_KEY=hexa_... pnpm run mcp:stdio   # local STDIO process
 ```
 
 Create an API key with the scopes the agent needs (`quotes:read`,
@@ -366,7 +366,7 @@ contract and what is pending.
 | `DATABASE_SSL`                    | `false`                        | Set to `true` for managed PostgreSQL with self-signed TLS              |
 | `MCP_ENABLED`                     | `false`                        | Mounts the MCP Streamable HTTP endpoint at `/mcp`                      |
 | `MCP_SERVER_NAME` / `MCP_SERVER_VERSION` | `hexa-dental` / `1.0.0` | MCP metadata advertised to clients                                   |
-| `HEXA_MCP_API_KEY`                | —                              | Required by the STDIO MCP process (`npm run mcp:stdio`)                |
+| `HEXA_MCP_API_KEY`                | —                              | Required by the STDIO MCP process (`pnpm run mcp:stdio`)                |
 | `PORT`                            | `3000`                         | API port                                                               |
 | `RESEND_API_KEY`                  | —                              | Resend API key for appointment confirmation emails                     |
 | `MAIL_FROM`                       | —                              | Verified Resend sender, e.g. `Hexa <no-reply@clinica.cl>`              |
@@ -384,15 +384,15 @@ contract and what is pending.
 - scrypt runs async with moderate parameters; API keys use SHA-256 because
   their entropy is 256 bits.
 - If you lock yourself out: the protected `admin` role, the last-admin rule
-  and `npm run admin:rescue` (direct SQL, prints a fresh password once) are
+  and `pnpm run admin:rescue` (direct SQL, prints a fresh password once) are
   the escape hatches.
 
 ### Scripts
 
 ```bash
 ./scripts/auth-demo.sh          # curl walkthrough: cookie rotation + Bearer + X-Api-Key
-npm run admin:rescue            # forced admin reset (SQL direct), password printed once
-npm run admin:rescue ada@example.com
+pnpm run admin:rescue            # forced admin reset (SQL direct), password printed once
+pnpm run admin:rescue ada@example.com
 ```
 
 ### Endpoints
@@ -526,10 +526,10 @@ All demo scripts sign in as the bootstrap administrator first (override with
 To seed demo data (default 100 records, idempotent — existing emails/RUTs are skipped):
 
 ```bash
-npm run seed                  # 100 users on http://localhost:3000
-npm run seed -- 25            # custom count
-npm run seed:patients         # 100 Chilean patients (deterministic valid RUTs)
-npm run seed:patients -- 50   # custom count
+pnpm run seed                  # 100 users on http://localhost:3000
+pnpm run seed -- 25            # custom count
+pnpm run seed:patients         # 100 Chilean patients (deterministic valid RUTs)
+pnpm run seed:patients -- 50   # custom count
 ```
 
 #### Dental clinical record (ficha dental, HCU-form.033)
@@ -582,7 +582,7 @@ never opens it.
 ```bash
 cp .env.postgres.example .env.postgres
 # edit .env.postgres and set strong passwords
-npm run db:pg:up
+pnpm run db:pg:up
 ```
 
 - PostgreSQL: `localhost:5433`, databases `hexa` and `hexa_test`.
@@ -592,8 +592,8 @@ npm run db:pg:up
 - Add `DATABASE_URL` to `.env`, using the same credentials as `.env.postgres`.
 
 ```bash
-npm run db:pg:up       # start PostgreSQL + pgAdmin
-npm run db:pg:down     # stop them (volumes are preserved)
+pnpm run db:pg:up       # start PostgreSQL + pgAdmin
+pnpm run db:pg:down     # stop them (volumes are preserved)
 ```
 
 The schema is created idempotently by `PostgresDatabase.onModuleInit` and lives in
@@ -604,9 +604,9 @@ The schema is created idempotently by `PostgresDatabase.onModuleInit` and lives 
 ### Importing a legacy SQLite database
 
 ```bash
-npm run build
-npm run db:pg:migrate                  # reads data/hexa.sqlite
-SQLITE_PATH=backups/hexa.sqlite npm run db:pg:migrate
+pnpm run build
+pnpm run db:pg:migrate                  # reads data/hexa.sqlite
+SQLITE_PATH=backups/hexa.sqlite pnpm run db:pg:migrate
 ```
 
 The script creates the schema, copies all tables in one transaction with deferred
@@ -674,31 +674,31 @@ One command (backend + microfrontends):
 Or in separate terminals:
 
 ```bash
-npm run start:dev              # backend on :3000
+pnpm run start:dev              # backend on :3000
 cd frontend
-npm install                    # first time only
-npm run start:all              # shell + patients + users + dashboard + admin (concurrently)
+pnpm install                    # first time only
+pnpm run start:all              # shell + patients + users + dashboard + admin (concurrently)
 ```
 
 Open <http://localhost:4200> — the shell lazily loads each remote from its own dev
 server through `loadRemoteModule` (see `projects/shell/src/app/app.routes.ts`). Each
-remote also runs standalone (`npm run start:patients` → :4203,
-`npm run start:users` → :4201, `npm run start:admin` → :4204) thanks to its own
+remote also runs standalone (`pnpm run start:patients` → :4203,
+`pnpm run start:users` → :4201, `pnpm run start:admin` → :4204) thanks to its own
 `app.config.ts` + `bootstrap.ts`.
 
 More scripts (inside `frontend/`):
 
 ```bash
-npm run build:all              # production builds of shell + remotes
-npm run test:all               # vitest (libs + apps)
+pnpm run build:all              # production builds of shell + remotes
+pnpm run test:all               # vitest (libs + apps)
 ```
 
 ### Adding another remote
 
 ```bash
 cd frontend
-npm i -D @angular-architects/native-federation   # already installed
-ng g @angular-architects/native-federation:init --project <name> --port <port>
+pnpm add -D @angular-architects/native-federation   # already installed
+pnpm exec ng g @angular-architects/native-federation:init --project <name> --port <port>
 ```
 
 Then: expose `./routes` in the new `federation.config.mjs`, register the remote URL
@@ -847,9 +847,9 @@ Guidelines when writing adapters:
   + lock (`423`) and the derived indices.
 
 ```bash
-npm run db:pg:up
-npm test
-npm run test:e2e
+pnpm run db:pg:up
+pnpm test
+pnpm run test:e2e
 ```
 
 ## 📐 Conventions & decisions
