@@ -53,11 +53,7 @@ describe('LoginPage', () => {
     return fixture.nativeElement as HTMLElement;
   }
 
-  function setInput(
-    fixture: ComponentFixture<LoginPage>,
-    testId: string,
-    value: string,
-  ): void {
+  function setInput(fixture: ComponentFixture<LoginPage>, testId: string, value: string): void {
     const input = native(fixture).querySelector<HTMLInputElement>(`[data-testid="${testId}"]`);
     expect(input).not.toBeNull();
     input!.value = value;
@@ -87,16 +83,34 @@ describe('LoginPage', () => {
     expect(native(fixture).querySelector('[data-testid="login-error"]')).toBeNull();
   });
 
+  it('toggles the password visibility without submitting', () => {
+    const fixture = render();
+    const input = native(fixture).querySelector<HTMLInputElement>('[data-testid="login-password"]');
+    const toggle = input?.parentElement?.querySelector<HTMLButtonElement>('button[aria-pressed]');
+
+    expect(input?.type).toBe('password');
+    expect(toggle?.getAttribute('aria-pressed')).toBe('false');
+
+    toggle!.click();
+    fixture.detectChanges();
+
+    expect(input?.type).toBe('text');
+    expect(toggle?.getAttribute('aria-pressed')).toBe('true');
+    expect(http.match(LOGIN_URL).length).toBe(0);
+  });
+
   it('shows an inline error for invalid credentials', async () => {
     const fixture = render();
     setInput(fixture, 'login-email', 'ada@example.com');
     setInput(fixture, 'login-password', 'wrong');
     click(fixture, 'login-submit');
 
-    http.expectOne(LOGIN_URL).flush(
-      { statusCode: 401, error: 'InvalidCredentialsError', message: 'Invalid email or password' },
-      { status: 401, statusText: 'Unauthorized' },
-    );
+    http
+      .expectOne(LOGIN_URL)
+      .flush(
+        { statusCode: 401, error: 'InvalidCredentialsError', message: 'Invalid email or password' },
+        { status: 401, statusText: 'Unauthorized' },
+      );
     await fixture.whenStable();
     fixture.detectChanges();
 
@@ -206,7 +220,9 @@ describe('LoginPage', () => {
     await fixture.whenStable();
     fixture.detectChanges();
 
-    const violations = native(fixture).querySelector('[data-testid="login-violations"]')?.textContent;
+    const violations = native(fixture).querySelector(
+      '[data-testid="login-violations"]',
+    )?.textContent;
     expect(violations).toContain('longitud mínima');
     expect(violations).toContain('mayúscula');
   });

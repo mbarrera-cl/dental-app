@@ -4,7 +4,7 @@ import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { ActivatedRoute, Router } from '@angular/router';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { lucideHexagon, lucideTriangleAlert } from '@ng-icons/lucide';
+import { lucideEye, lucideEyeOff, lucideTriangleAlert } from '@ng-icons/lucide';
 import { HlmButton } from '@ui/button';
 import { HlmInput } from '@ui/input';
 import { HlmLabel } from '@ui/label';
@@ -13,6 +13,7 @@ import { SessionStore } from 'auth';
 import { mapApiError } from 'data-access';
 import { formatDateTime } from 'ui';
 import { BrandingStore } from '../branding/branding-store';
+import { LanguageSwitcher } from '../language-switcher';
 import {
   errorDetailsOf,
   errorNameOf,
@@ -32,9 +33,19 @@ import {
  */
 @Component({
   selector: 'app-login-page',
-  imports: [ReactiveFormsModule, TranslocoPipe, NgIcon, HlmButton, HlmInput, HlmLabel, HlmSpinner],
-  providers: [provideIcons({ lucideHexagon, lucideTriangleAlert })],
+  imports: [
+    ReactiveFormsModule,
+    TranslocoPipe,
+    NgIcon,
+    HlmButton,
+    HlmInput,
+    HlmLabel,
+    HlmSpinner,
+    LanguageSwitcher,
+  ],
+  providers: [provideIcons({ lucideEye, lucideEyeOff, lucideTriangleAlert })],
   templateUrl: './login-page.html',
+  styleUrl: './login-page.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class LoginPage {
@@ -43,7 +54,7 @@ export class LoginPage {
   private readonly route = inject(ActivatedRoute);
   private readonly transloco = inject(TranslocoService);
 
-  /** Public branding: the login screen wears the clinic's face. */
+  /** Clinic name for the panel; the logo is intentionally left out here. */
   protected readonly branding = inject(BrandingStore);
 
   protected readonly mode = signal<'credentials' | 'expired'>('credentials');
@@ -52,6 +63,8 @@ export class LoginPage {
   protected readonly errorKey = signal<string | null>(null);
   protected readonly errorParams = signal<Record<string, string>>({});
   protected readonly violations = signal<readonly PasswordViolation[]>([]);
+  protected readonly showPassword = signal(false);
+  protected readonly showNewPassword = signal(false);
 
   protected readonly form = new FormGroup({
     email: new FormControl('', {
@@ -142,10 +155,20 @@ export class LoginPage {
     return control.invalid && control.touched;
   }
 
+  protected togglePassword(): void {
+    this.showPassword.update((visible) => !visible);
+  }
+
+  protected toggleNewPassword(): void {
+    this.showNewPassword.update((visible) => !visible);
+  }
+
   protected emailErrorKey(): string {
     const control = this.form.controls.email;
 
-    return control.hasError('required') ? 'login.validation.emailRequired' : 'login.validation.emailInvalid';
+    return control.hasError('required')
+      ? 'login.validation.emailRequired'
+      : 'login.validation.emailInvalid';
   }
 
   protected confirmErrorKey(): string {

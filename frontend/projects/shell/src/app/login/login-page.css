@@ -1,0 +1,72 @@
+/* The login owns the whole viewport: a deep brand field on the left and a
+ * quiet, porcelain form on the right. The clinic's primary colour drenches
+ * the panel, so changing the branding repaints the screen without touching
+ * the layout. */
+.login-brand-panel {
+  background-color: color-mix(in oklab, var(--primary) 16%, #06161b);
+  background-image:
+    radial-gradient(
+      90% 72% at 12% 0%,
+      color-mix(in oklab, var(--primary) 46%, transparent) 0%,
+      transparent 58%
+    ),
+    radial-gradient(
+      70% 58% at 92% 100%,
+      color-mix(in oklab, var(--accent) 12%, transparent) 0%,
+      transparent 64%
+    );
+}
+
+.dark .login-brand-panel {
+  background-color: color-mix(in oklab, var(--primary) 12%, #04141a);
+  background-image:
+    radial-gradient(
+      90% 72% at 12% 0%,
+      color-mix(in oklab, var(--primary) 28%, transparent) 0%,
+      transparent 58%
+    ),
+    radial-gradient(
+      70% 58% at 92% 100%,
+      color-mix(in oklab, var(--accent) 10%, transparent) 0%,
+      transparent 64%
+    );
+}
+
+.login-brand-panel::before {
+  position: absolute;
+  inset: 0;
+  background-image: repeating-radial-gradient(
+    circle at 82% 18%,
+    transparent 0 46px,
+    rgb(255 255 255 / 0.05) 47px 48px
+  );
+  content: '';
+  opacity: 0.9;
+  pointer-events: none;
+}
+
+.login-brand-copy {
+  animation: login-reveal 700ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+.login-form-inner {
+  animation: login-reveal 550ms 80ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+@keyframes login-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .login-brand-copy,
+  .login-form-inner {
+    animation: none;
+  }
+}
