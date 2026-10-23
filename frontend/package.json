@@ -8,7 +8,7 @@
     "start:users": "ng serve users",
     "start:patients": "ng serve patients",
     "start:dashboard": "ng serve dashboard",
-    "start:all": "concurrently -k -n shell,patients,users,dashboard,admin,quotes,agenda -c blue,yellow,green,magenta,cyan,red,white \"npm:start:shell\" \"npm:start:patients\" \"npm:start:users\" \"npm:start:dashboard\" \"npm:start:admin\" \"npm:start:quotes\" \"npm:start:agenda\"",
+    "start:all": "concurrently -k -n shell,patients,users,dashboard,admin,quotes,agenda -c blue,yellow,green,magenta,cyan,red,white \"pnpm start:shell\" \"pnpm start:patients\" \"pnpm start:users\" \"pnpm start:dashboard\" \"pnpm start:admin\" \"pnpm start:quotes\" \"pnpm start:agenda\"",
     "build": "ng build",
     "build:all": "ng build shell && ng build patients && ng build users && ng build dashboard && ng build admin && ng build quotes && ng build agenda",
     "test": "ng test",
@@ -18,7 +18,7 @@
     "start:agenda": "ng serve agenda"
   },
   "private": true,
-  "packageManager": "npm@11.16.0",
+  "packageManager": "pnpm@12.15.0",
   "dependencies": {
     "@angular/cdk": "22.0.0",
     "@angular/common": "^22.2.0",

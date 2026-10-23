@@ -1,11 +1,13 @@
 FROM node:24-bookworm-slim AS build
 WORKDIR /app
 
-COPY package.json package-lock.json ./
-RUN npm ci
+RUN npm install -g pnpm@12.15.0
+
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+RUN pnpm install --frozen-lockfile
 
 COPY . .
-RUN npm run build:all
+RUN pnpm run build:all
 
 FROM node:24-bookworm-slim AS runtime
 WORKDIR /app

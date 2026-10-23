@@ -1,0 +1,12 @@
+# pnpm settings for the frontend project.
+# This is an independent project (not part of a monorepo workspace), so
+# `packages` is intentionally omitted.
+allowBuilds:
+  "@parcel/watcher": true
+  esbuild: true
+  lmdb: true
+  msgpackr-extract: true
+  nx: true
+  sharp: true
+skills:
+  dirs: []
