@@ -19,7 +19,7 @@
               {{ brandInitial() }}
             </span>
           }
-          <span class="font-display text-xl tracking-[-0.01em]">
+          <span class="font-display text-xl font-medium tracking-[-0.02em]">
             @if (branding.name(); as name) {
               {{ name }}
             } @else {
@@ -30,7 +30,7 @@
 
         <div class="login-brand-copy mt-8 max-w-[38rem] lg:my-auto">
           <h2
-            class="font-display text-[2.5rem] leading-[0.96] tracking-[-0.03em] text-white sm:text-5xl lg:text-[clamp(3rem,5vw,5.5rem)] lg:leading-[0.95] lg:tracking-[-0.035em]"
+            class="font-display text-[2.5rem] font-medium leading-[0.98] tracking-[-0.03em] text-white sm:text-5xl lg:text-[clamp(3rem,5vw,5.25rem)] lg:leading-[0.96] lg:tracking-[-0.04em]"
           >
             {{ 'login.panelHeadline' | transloco }}
           </h2>
@@ -57,7 +57,7 @@
       <div class="flex flex-1 items-center py-10 sm:py-14">
         <div class="login-form-inner mx-auto w-full max-w-[26rem]">
           <h1
-            class="font-display text-[2.75rem] leading-[1.02] tracking-[-0.03em] text-foreground sm:text-5xl"
+            class="font-display text-[2.75rem] font-medium leading-[1.04] tracking-[-0.03em] text-foreground sm:text-5xl"
           >
             {{ (mode() === 'credentials' ? 'login.heading' : 'login.expired.heading') | transloco }}
           </h1>

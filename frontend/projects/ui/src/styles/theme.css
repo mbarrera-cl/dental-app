@@ -3,14 +3,13 @@
 @import 'tailwindcss/preflight.css' layer(base);
 @import 'tailwindcss/utilities.css';
 
-@import '@fontsource-variable/manrope/index.css';
-@import '@fontsource-variable/bodoni-moda/index.css';
+@import '@fontsource-variable/roboto/index.css';
 
 @import '@spartan-ng/brain/hlm-tailwind-preset.css';
 
 @theme {
-  --font-sans: 'Manrope Variable', ui-sans-serif, system-ui, sans-serif;
-  --font-display: 'Bodoni Moda Variable', 'Bodoni Moda', Georgia, serif;
+  --font-sans: 'Roboto Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Roboto Variable', ui-sans-serif, system-ui, sans-serif;
 }
 
 :root {
@@ -98,7 +97,6 @@
   body {
     @apply bg-background text-foreground;
     font-family: var(--font-sans);
-    font-feature-settings: 'ss01' 1;
   }
   ::selection {
     background: color-mix(in oklab, var(--primary) 24%, transparent);
