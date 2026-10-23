@@ -5,12 +5,7 @@ import { NgIcon, provideIcons } from '@ng-icons/core';
 import { lucideArrowLeft, lucidePrinter } from '@ng-icons/lucide';
 import { HlmButton } from '@ui/button';
 import { HlmSkeleton } from '@ui/skeleton';
-import {
-  BrandingApi,
-  ConsentsApi,
-  type ClinicBranding,
-  type ConsentRecord,
-} from 'data-access';
+import { BrandingApi, ConsentsApi, type ClinicBranding, type ConsentRecord } from 'data-access';
 
 /**
  * A4 printable proof of an accepted informed consent. The body is the frozen
@@ -44,19 +39,25 @@ import {
             @if (branding()?.logoUrl; as logo) {
               <img [src]="logo" class="h-14 w-auto max-w-40 object-contain" alt="" />
             } @else {
-              <span class="flex size-12 items-center justify-center rounded-lg bg-neutral-800 text-xl font-bold text-white">
+              <span
+                class="flex size-12 items-center justify-center rounded-lg bg-neutral-800 text-xl font-bold text-white"
+              >
                 {{ initial() }}
               </span>
             }
             <div class="grid gap-0.5">
-              <h1 class="text-lg font-semibold tracking-tight">{{ branding()?.name ?? 'Hexa' }}</h1>
+              <h1 class="text-lg font-semibold tracking-tight">
+                {{ branding()?.name ?? 'Clínica' }}
+              </h1>
               @if (branding()?.slogan; as slogan) {
                 <p class="text-xs text-neutral-600">{{ slogan }}</p>
               }
             </div>
           </div>
           <div class="grid gap-0.5 text-right text-sm">
-            <p class="text-base font-bold tracking-wide">{{ 'consents.print.title' | transloco }}</p>
+            <p class="text-base font-bold tracking-wide">
+              {{ 'consents.print.title' | transloco }}
+            </p>
             <p>{{ 'consents.print.version' | transloco }}: v{{ record.templateVersion }}</p>
           </div>
         </header>
@@ -66,11 +67,16 @@ import {
             {{ 'consents.print.patient' | transloco }}
           </h2>
           <p class="font-medium">{{ record.patientName }}</p>
-          <p>{{ 'consents.print.rut' | transloco }}: <span class="font-mono">{{ record.patientRut }}</span></p>
+          <p>
+            {{ 'consents.print.rut' | transloco }}:
+            <span class="font-mono">{{ record.patientRut }}</span>
+          </p>
           @if (record.procedure) {
             <p>{{ 'consents.print.procedure' | transloco }}: {{ record.procedure }}</p>
           }
-          <p>{{ 'consents.print.acceptedAt' | transloco }}: {{ formatDateTime(record.acceptedAt) }}</p>
+          <p>
+            {{ 'consents.print.acceptedAt' | transloco }}: {{ formatDateTime(record.acceptedAt) }}
+          </p>
         </section>
 
         <section class="mb-6 grid gap-2 text-sm leading-relaxed">
@@ -131,9 +137,7 @@ export class ConsentPrint {
   protected readonly backLink = computed(() => {
     const record = this.record();
 
-    return record === null
-      ? ['/patients']
-      : ['/patients', record.patientId, 'consentimientos'];
+    return record === null ? ['/patients'] : ['/patients', record.patientId, 'consentimientos'];
   });
 
   constructor() {

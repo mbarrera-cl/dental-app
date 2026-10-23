@@ -22,7 +22,10 @@ const stubMatchMedia = (matches: boolean): MediaQueryStub => {
     },
   };
 
-  vi.stubGlobal('matchMedia', vi.fn(() => stub));
+  vi.stubGlobal(
+    'matchMedia',
+    vi.fn(() => stub),
+  );
 
   return stub;
 };
@@ -116,8 +119,8 @@ describe('ThemeService', () => {
     service.apply({ ...BRANDING, faviconUrl: null });
 
     const icon = document.head.querySelector<HTMLLinkElement>('link[rel="icon"]');
-    expect(icon?.getAttribute('href')).toBe('favicon.ico');
-    expect(icon?.type).toBe('image/x-icon');
+    expect(icon?.getAttribute('href')).toBe('favicon.svg');
+    expect(icon?.type).toBe('image/svg+xml');
   });
 
   it('follows the system scheme in auto mode and reacts to changes', () => {
@@ -196,7 +199,7 @@ describe('ThemeService', () => {
       name: string;
       icons?: unknown;
     };
-    expect(first.name).toBe('Hexa');
+    expect(first.name).toBe('Clínica');
     expect(first.icons).toBeUndefined();
 
     const second = JSON.parse(await readBlob(objectUrls.blobs[1]!)) as {

@@ -20,11 +20,7 @@ const BRANDING_URL = `${API}/clinic/branding`;
 const AUDIT_URL = `${API}/settings/audit?limit=5`;
 const STORAGE_KEY = 'hexa.branding';
 
-const setting = (
-  key: string,
-  value: SettingValue,
-  overrides: Partial<Setting> = {},
-): Setting => ({
+const setting = (key: string, value: SettingValue, overrides: Partial<Setting> = {}): Setting => ({
   key,
   group: 'clinic',
   type: 'string',
@@ -37,6 +33,11 @@ const setting = (
 const CLINIC_SETTINGS: Setting[] = [
   setting('clinic.name', 'Mi clínica', { maxLength: 60, default: 'Mi clínica' }),
   setting('clinic.slogan', 'Odontología familiar', { maxLength: 120 }),
+  setting('clinic.login.headline', '', { maxLength: 120 }),
+  setting('clinic.login.body', '', { maxLength: 320 }),
+  setting('clinic.login.point1', '', { maxLength: 80 }),
+  setting('clinic.login.point2', '', { maxLength: 80 }),
+  setting('clinic.login.point3', '', { maxLength: 80 }),
   setting('clinic.timeZone', 'America/Santiago'),
   setting('clinic.legalName', ''),
   setting('clinic.rut', ''),
@@ -193,7 +194,9 @@ describe('ClinicPage', () => {
   it('prefills the form from the clinic settings and starts clean', async () => {
     const fixture = await render();
 
-    expect(find<HTMLInputElement>(fixture, '[data-testid="clinic-name"]')!.value).toBe('Mi clínica');
+    expect(find<HTMLInputElement>(fixture, '[data-testid="clinic-name"]')!.value).toBe(
+      'Mi clínica',
+    );
     expect(find<HTMLInputElement>(fixture, '[data-testid="clinic-primary-hex"]')!.value).toBe(
       '#0284c7',
     );
@@ -229,6 +232,38 @@ describe('ClinicPage', () => {
     expect(find<HTMLButtonElement>(fixture, '[data-testid="clinic-save"]')!.disabled).toBe(true);
   });
 
+  it('saves the login panel copy', async () => {
+    const fixture = await render();
+
+    setInput(fixture, 'clinic-login-headline', 'Bienvenido a tu clínica');
+    expect(find(fixture, '[data-testid="clinic-dirty"]')!.textContent).toContain('1');
+
+    find<HTMLButtonElement>(fixture, '[data-testid="clinic-save"]')!.click();
+    fixture.detectChanges();
+
+    const request = http.expectOne(`${API}/settings`);
+    expect(request.request.body).toEqual({
+      values: { 'clinic.login.headline': 'Bienvenido a tu clínica' },
+    });
+
+    request.flush(
+      CLINIC_SETTINGS.map((entry) =>
+        entry.key === 'clinic.login.headline'
+          ? { ...entry, value: 'Bienvenido a tu clínica' }
+          : entry,
+      ),
+    );
+    http.expectOne(BRANDING_URL).flush(BRANDING);
+    http.expectOne(AUDIT_URL).flush([]);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(find<HTMLInputElement>(fixture, '[data-testid="clinic-login-headline"]')!.value).toBe(
+      'Bienvenido a tu clínica',
+    );
+    expect(find(fixture, '[data-testid="clinic-dirty"]')).toBeNull();
+  });
+
   it('discards pending changes back to the baseline', async () => {
     const fixture = await render();
 
@@ -236,7 +271,9 @@ describe('ClinicPage', () => {
     find<HTMLButtonElement>(fixture, '[data-testid="clinic-discard"]')!.click();
     fixture.detectChanges();
 
-    expect(find<HTMLInputElement>(fixture, '[data-testid="clinic-name"]')!.value).toBe('Mi clínica');
+    expect(find<HTMLInputElement>(fixture, '[data-testid="clinic-name"]')!.value).toBe(
+      'Mi clínica',
+    );
     expect(find(fixture, '[data-testid="clinic-dirty"]')).toBeNull();
   });
 
@@ -245,9 +282,7 @@ describe('ClinicPage', () => {
 
     setInput(fixture, 'clinic-primary-hex', '#0f172a');
 
-    expect(
-      find(fixture, '[data-testid="clinic-primary-contrast"]')!.textContent,
-    ).toContain('AAA');
+    expect(find(fixture, '[data-testid="clinic-primary-contrast"]')!.textContent).toContain('AAA');
 
     setInput(fixture, 'clinic-primary-hex', 'not-a-color');
 

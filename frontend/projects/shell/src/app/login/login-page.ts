@@ -54,7 +54,7 @@ export class LoginPage {
   private readonly route = inject(ActivatedRoute);
   private readonly transloco = inject(TranslocoService);
 
-  /** Clinic name for the panel; the logo is intentionally left out here. */
+  /** Clinic name and panel copy; the logo is intentionally left out here. */
   protected readonly branding = inject(BrandingStore);
 
   protected readonly mode = signal<'credentials' | 'expired'>('credentials');

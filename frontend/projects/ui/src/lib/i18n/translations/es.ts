@@ -9,7 +9,7 @@
  */
 export const ES = {
   common: {
-    appName: 'Hexa',
+    appName: 'Clínica',
     users: 'Usuarios',
     patients: 'Pacientes',
     dashboard: 'Dashboard',
@@ -119,8 +119,8 @@ export const ES = {
     },
   },
   shell: {
-    title: 'Hexa',
-    subtitle: 'Microfrontends sobre una API hexagonal',
+    title: 'Clínica',
+    subtitle: 'Gestión clínica',
     navPatients: 'Pacientes',
     navAgenda: 'Agenda',
     navUsers: 'Usuarios',
@@ -849,7 +849,7 @@ export const ES = {
   },
   login: {
     title: 'Iniciar sesión',
-    subtitle: 'Accede con tu cuenta de Hexa.',
+    subtitle: 'Accede con tu cuenta.',
     heading: 'Entra a tu clínica',
     lead: 'Tu ficha clínica, la agenda y los presupuestos, en un solo lugar.',
     panelHeadline: 'El día de tu clínica, en orden.',
@@ -1294,6 +1294,15 @@ export const ES = {
       'Identidad, contacto, dirección y tema. Se aplican al instante en toda la aplicación.',
     readOnly: 'Solo lectura: necesitas el permiso settings:update.',
     identity: 'Identidad',
+    loginPanel: {
+      title: 'Pantalla de acceso',
+      hint: 'Textos del panel de marca del login. Si un campo queda vacío, se usa el texto traducido por defecto.',
+      headline: 'Titular',
+      body: 'Texto de apoyo',
+      point1: 'Primera capacidad',
+      point2: 'Segunda capacidad',
+      point3: 'Tercera capacidad',
+    },
     contact: 'Contacto',
     address: 'Dirección',
     theme: 'Tema',
@@ -1703,7 +1712,7 @@ export const ES = {
   },
   caroIa: {
     title: 'CaroIA',
-    subtitle: 'Asistente de presupuestos conectado al MCP de Hexa',
+    subtitle: 'Asistente de presupuestos conectado al MCP',
     preview: 'Vista previa · datos simulados',
     chat: 'Chat',
     conversations: 'Conversaciones',
@@ -1713,7 +1722,7 @@ export const ES = {
     emptyConversations: 'Todavía no hay conversaciones.',
     emptyChatTitle: '¿En qué puedo ayudarte?',
     emptyChatHint:
-      'Puedo consultar presupuestos, pacientes y el arancel UCO. Solo respondo con datos del MCP de Hexa.',
+      'Puedo consultar presupuestos, pacientes y el arancel UCO. Solo respondo con datos del MCP.',
     placeholder: 'Pregunta sobre presupuestos, pacientes o el arancel UCO…',
     footer: 'CaroIA solo responde con información del MCP. Las escrituras requieren tu aprobación.',
     suggestions: {

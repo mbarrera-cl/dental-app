@@ -12,7 +12,7 @@ export interface ThemeBranding extends ThemeSeeds {
   readonly logoUrl?: string | null;
 }
 
-const DEFAULT_FAVICON = 'favicon.ico';
+const DEFAULT_FAVICON = 'favicon.svg';
 
 /**
  * Applies the clinic theme to the document: brand tokens as CSS custom
@@ -95,9 +95,10 @@ export class ThemeService {
       return;
     }
 
-    const name = branding.name !== undefined && branding.name !== null && branding.name !== ''
-      ? branding.name
-      : 'Hexa';
+    const name =
+      branding.name !== undefined && branding.name !== null && branding.name !== ''
+        ? branding.name
+        : 'Clínica';
     const icon = branding.logoUrl ?? branding.faviconUrl ?? null;
     const manifest = {
       name,
@@ -106,21 +107,27 @@ export class ThemeService {
       display: 'standalone',
       background_color: '#ffffff',
       theme_color: branding.primary,
-      ...(icon === null
-        ? {}
-        : { icons: [{ src: icon, sizes: 'any', type: 'image/png' }] }),
+      ...(icon === null ? {} : { icons: [{ src: icon, sizes: 'any', type: 'image/png' }] }),
     };
-    const url = this.safeCreateObjectUrl(view.URL, createObjectUrl, new Blob([JSON.stringify(manifest)], {
-      type: 'application/manifest+json',
-    }));
+    const url = this.safeCreateObjectUrl(
+      view.URL,
+      createObjectUrl,
+      new Blob([JSON.stringify(manifest)], {
+        type: 'application/manifest+json',
+      }),
+    );
 
     if (url === null) {
       return;
     }
 
-    const link = this.ensureHeadElement<HTMLLinkElement>('link[rel="manifest"]', 'link', (element) => {
-      element.rel = 'manifest';
-    });
+    const link = this.ensureHeadElement<HTMLLinkElement>(
+      'link[rel="manifest"]',
+      'link',
+      (element) => {
+        element.rel = 'manifest';
+      },
+    );
 
     link.href = url;
 
@@ -153,7 +160,7 @@ export class ThemeService {
     });
 
     link.href = url ?? DEFAULT_FAVICON;
-    link.type = url === null ? 'image/x-icon' : 'image/png';
+    link.type = url === null ? 'image/svg+xml' : 'image/png';
   }
 
   private applyThemeColor(primary: string): void {

@@ -12,16 +12,22 @@
           <h2
             class="font-display text-[2.5rem] font-medium leading-[0.98] tracking-[-0.03em] text-white sm:text-5xl lg:text-[clamp(3rem,5vw,5.25rem)] lg:leading-[0.96] lg:tracking-[-0.04em]"
           >
-            {{ 'login.panelHeadline' | transloco }}
+            {{ branding.login()?.headline || ('login.panelHeadline' | transloco) }}
           </h2>
           <p class="mt-7 hidden max-w-md text-sm leading-6 text-white/70 lg:block">
-            {{ 'login.panelBody' | transloco }}
+            {{ branding.login()?.body || ('login.panelBody' | transloco) }}
           </p>
 
           <ul class="mt-10 hidden max-w-md border-t border-white/15 text-sm text-white/75 lg:block">
-            <li class="border-b border-white/15 py-3">{{ 'login.panelPoint1' | transloco }}</li>
-            <li class="border-b border-white/15 py-3">{{ 'login.panelPoint2' | transloco }}</li>
-            <li class="border-b border-white/15 py-3">{{ 'login.panelPoint3' | transloco }}</li>
+            <li class="border-b border-white/15 py-3">
+              {{ branding.login()?.point1 || ('login.panelPoint1' | transloco) }}
+            </li>
+            <li class="border-b border-white/15 py-3">
+              {{ branding.login()?.point2 || ('login.panelPoint2' | transloco) }}
+            </li>
+            <li class="border-b border-white/15 py-3">
+              {{ branding.login()?.point3 || ('login.panelPoint3' | transloco) }}
+            </li>
           </ul>
         </div>
       </div>
