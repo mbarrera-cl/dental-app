@@ -23,6 +23,8 @@ data/
 # Logs
 *.log
 npm-debug.log*
+pnpm-debug.log*
+.pnpm-store/
 
 # Editors / OS
 .DS_Store

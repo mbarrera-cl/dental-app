@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # End-to-end authentication walkthrough against a running API
-# (`npm run start:dev`):
+# (`pnpm run start:dev`):
 #
 #   login (refresh cookie) -> me -> users with Bearer -> 401 anonymous ->
 #   refresh with rotation -> API key lifecycle (create -> X-Api-Key -> scoped

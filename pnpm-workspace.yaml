@@ -1,0 +1,12 @@
+# pnpm settings for the backend project.
+# There is no monorepo workspace: `packages` is intentionally omitted, so only
+# this project is managed here. The frontend has its own pnpm-workspace.yaml.
+allowBuilds:
+  "@scarf/scarf": false
+  esbuild: true
+  sharp: true
+skills:
+  dirs: []
+# Security fix: GHSA-27r3-jxmh-p828 (body-parser < 2.4.0).
+overrides:
+  body-parser: ^2.4.0

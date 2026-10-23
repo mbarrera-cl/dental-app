@@ -6,16 +6,18 @@
   "private": true,
   "license": "UNLICENSED",
   "type": "module",
+  "packageManager": "pnpm@12.15.0",
   "engines": {
-    "node": ">=24.0.0"
+    "node": ">=24.0.0",
+    "pnpm": ">=12.0.0"
   },
   "scripts": {
     "build": "nest build",
     "deploy": "nest deploy",
     "dev:all": "./scripts/dev-all.sh",
-    "frontend:start": "npm --prefix frontend run start:all",
-    "frontend:build": "npm --prefix frontend run build:all",
-    "frontend:test": "npm --prefix frontend run test:all",
+    "frontend:start": "pnpm -C frontend run start:all",
+    "frontend:build": "pnpm -C frontend run build:all",
+    "frontend:test": "pnpm -C frontend run test:all",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
     "start:dev": "nest start --watch",
@@ -30,7 +32,7 @@
     "admin:rescue": "node scripts/rescue-admin.mjs",
     "backup": "node --env-file-if-exists=.env scripts/backup.mjs",
     "lint": "oxlint --type-aware src/ test/",
-    "audit:prod": "npm audit --omit=dev --audit-level=high",
+    "audit:prod": "pnpm audit --prod --audit-level=high",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:cov": "vitest run --coverage",

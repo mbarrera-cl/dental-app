@@ -13,7 +13,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 if [[ "${1:-}" != "--skip-build" ]]; then
-  npm run build
+  pnpm run build
 fi
 
 # `PORT` is honored by the backend *and* by the Angular dev servers (they
@@ -41,4 +41,4 @@ echo
 
 # Never leak the backend's PORT into the frontends (see above).
 unset PORT
-npm --prefix frontend run start:all
+pnpm -C frontend run start:all

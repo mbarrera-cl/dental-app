@@ -3,7 +3,7 @@
  * One-time SQLite -> PostgreSQL data migration.
  *
  * Usage (local Docker):
- *   npm run build
+ *   pnpm run build
  *   node --env-file=.env.postgres scripts/migrate-sqlite-to-postgres.mjs
  *
  * Environment:

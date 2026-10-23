@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Full CRUD walkthrough against a running API (npm run start:dev).
+# Full CRUD walkthrough against a running API (pnpm run start:dev).
 # Usage: ./scripts/crud-demo.sh [base-url]
 set -euo pipefail
 
