@@ -31,7 +31,18 @@ const ONBOARDING_KEY = 'hexa.onboarding.clinic.dismissed';
  */
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, RouterLink, TranslocoPipe, NgIcon, HlmButton, HlmToaster, ActivityMenu, LanguageSwitcher, UserMenu, Sidebar],
+  imports: [
+    RouterOutlet,
+    RouterLink,
+    TranslocoPipe,
+    NgIcon,
+    HlmButton,
+    HlmToaster,
+    ActivityMenu,
+    LanguageSwitcher,
+    UserMenu,
+    Sidebar,
+  ],
   providers: [provideIcons({ lucideHexagon, lucideMenu, lucideSparkles, lucideX })],
   templateUrl: './app.html',
   styleUrl: './app.css',
@@ -65,7 +76,19 @@ export class App {
     { initialValue: this.router.url.startsWith('/agenda') },
   );
 
-  protected readonly isFullBleed = computed(() => this.isCaroIa() || this.isAgenda());
+  /** The login screen owns its own chrome: no shell header or footer. */
+  protected readonly isLogin = toSignal(
+    this.router.events.pipe(
+      filter((event): event is NavigationEnd => event instanceof NavigationEnd),
+      map((event) => event.urlAfterRedirects.startsWith('/login')),
+      startWith(this.router.url.startsWith('/login')),
+    ),
+    { initialValue: this.router.url.startsWith('/login') },
+  );
+
+  protected readonly isFullBleed = computed(
+    () => this.isCaroIa() || this.isAgenda() || this.isLogin(),
+  );
 
   /**
    * Shown to users who can edit settings while the branding is untouched:

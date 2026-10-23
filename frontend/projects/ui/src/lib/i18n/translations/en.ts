@@ -33,7 +33,8 @@ export const EN = {
     invalidName: 'The name is not valid.',
     patientAlreadyExists: 'A patient with that RUT already exists.',
     patientNotFound: 'The patient does not exist (it may have been deleted).',
-    patientHasRecords: 'The patient has quotations or account entries: void or remove them before deleting the patient.',
+    patientHasRecords:
+      'The patient has quotations or account entries: void or remove them before deleting the patient.',
     patientRutNotFound: 'No patient is registered with that RUT.',
     invalidRut: 'The RUT is not valid (check the check digit).',
     invalidFechaNacimiento: 'The date of birth is not valid.',
@@ -50,7 +51,8 @@ export const EN = {
     clinicalFindingAlreadyVoided: 'The finding was already voided.',
     planItemAlreadyDeleted: 'That procedure is already in the trash.',
     planItemNotDeleted: 'That procedure is not in the trash.',
-    quoteNotImportable: 'That quotation cannot be imported into the plan (it must be approved and belong to this patient).',
+    quoteNotImportable:
+      'That quotation cannot be imported into the plan (it must be approved and belong to this patient).',
     invalidMovement:
       'The movement is not valid: the amount must be a positive integer (CLP has no decimals) and the payment needs a method.',
     movementNotFound: 'The movement does not exist (it may have been voided along the way).',
@@ -72,7 +74,8 @@ export const EN = {
     roleNameReserved: 'That name is reserved by the system.',
     roleProtected:
       'The admin role is protected: it cannot be renamed or deleted and must keep every administration permission.',
-    roleAssigned: 'You cannot delete a role that still has users assigned. Reassign those accounts first.',
+    roleAssigned:
+      'You cannot delete a role that still has users assigned. Reassign those accounts first.',
     roleNotFound: 'The role does not exist (it may have been deleted).',
     apiKeyLimit: 'The configured maximum of active keys for that user was reached.',
     apiKeyScopes: 'One of the key permissions is not in the catalog. Reload the page.',
@@ -217,7 +220,8 @@ export const EN = {
       subtitle: 'This is how the selected role would see the menu.',
       role: 'View as',
       asSelf: 'Your current view',
-      rolesUnavailable: 'You cannot list roles (missing roles:read): only your own view can be previewed.',
+      rolesUnavailable:
+        'You cannot list roles (missing roles:read): only your own view can be previewed.',
       empty: 'No item would be visible with those permissions.',
     },
     toasts: {
@@ -288,7 +292,8 @@ export const EN = {
       description: 'Set a new password for "{{name}}" or let the system generate a strong one.',
       modeTyped: 'Type a password',
       modeGenerate: 'Generate a strong password',
-      generateHint: 'It will be shown exactly once after confirming. The user must change it on next login.',
+      generateHint:
+        'It will be shown exactly once after confirming. The user must change it on next login.',
       password: 'New password',
       passwordPlaceholder: 'Temporary password',
       passwordRequired: 'Type a password or choose to generate one.',
@@ -302,8 +307,10 @@ export const EN = {
     permissions: {
       action: 'Direct permissions',
       title: 'Direct permissions',
-      description: 'Permissions of "{{name}}" outside of their roles. Role-inherited ones are locked.',
-      rolesUnavailable: 'The roles could not be loaded: inherited permissions cannot be told apart right now.',
+      description:
+        'Permissions of "{{name}}" outside of their roles. Role-inherited ones are locked.',
+      rolesUnavailable:
+        'The roles could not be loaded: inherited permissions cannot be told apart right now.',
       submit: 'Save permissions',
       saved: 'Permissions updated successfully.',
     },
@@ -831,6 +838,17 @@ export const EN = {
   login: {
     title: 'Sign in',
     subtitle: 'Sign in with your Hexa account.',
+    heading: 'Sign in to your clinic',
+    lead: 'Your clinical record, schedule and quotes, in one place.',
+    panelHeadline: 'Your clinic’s day, in order.',
+    panelBody:
+      'Clinical records, schedule and quotes connected in one workflow, from the first appointment to the final close.',
+    panelPoint1: 'Clinical record and treatment plan',
+    panelPoint2: 'Schedule and quotes connected',
+    panelPoint3: 'Secure access by role',
+    passwordShow: 'Show password',
+    passwordHide: 'Hide password',
+    help: 'Can’t sign in? Contact your clinic administrator.',
     email: 'Email',
     emailPlaceholder: 'you@email.com',
     password: 'Password',
@@ -839,6 +857,7 @@ export const EN = {
     submitting: 'Signing in…',
     lockedUntil: 'The account is temporarily locked. Try again at {{time}}.',
     expired: {
+      heading: 'Create a new password',
       description: 'Your password must be changed before signing in.',
       reasonExpired: 'Your password has expired.',
       reasonReset: 'An administrator reset your password.',
@@ -864,7 +883,8 @@ export const EN = {
   account: {
     changePassword: {
       title: 'Change password',
-      description: 'Enter your current password and the new one. The current policy applies on save.',
+      description:
+        'Enter your current password and the new one. The current policy applies on save.',
       current: 'Current password',
       newPassword: 'New password',
       confirm: 'Repeat the new password',
@@ -876,7 +896,8 @@ export const EN = {
   },
   apiKeys: {
     title: 'My API keys',
-    subtitle: 'Personal credentials for scripts and services; they inherit your current permissions.',
+    subtitle:
+      'Personal credentials for scripts and services; they inherit your current permissions.',
     newKey: 'New key',
     empty: 'You do not have API keys yet.',
     scopesAll: 'All my permissions',
@@ -918,12 +939,14 @@ export const EN = {
     },
     rotate: {
       title: 'Rotate the key?',
-      description: 'A new secret will be issued and the previous one will stop working immediately.',
+      description:
+        'A new secret will be issued and the previous one will stop working immediately.',
       action: 'Rotate',
     },
     revoke: {
       title: 'Revoke the key?',
-      description: 'The key "{{name}}" will stop working immediately. This action cannot be undone.',
+      description:
+        'The key "{{name}}" will stop working immediately. This action cannot be undone.',
       action: 'Revoke',
     },
     toasts: {
@@ -1123,7 +1146,8 @@ export const EN = {
     },
     delete: {
       title: 'Delete the role?',
-      description: 'The role "{{name}}" will be deleted. Only possible while no users are assigned to it.',
+      description:
+        'The role "{{name}}" will be deleted. Only possible while no users are assigned to it.',
       action: 'Delete',
     },
     form: {
@@ -1137,7 +1161,8 @@ export const EN = {
       description: 'Description',
       descriptionPlaceholder: 'What this role is for',
       permissions: 'Permissions',
-      permissionsHint: 'Check the permissions granted by the role. They apply to every user holding it.',
+      permissionsHint:
+        'Check the permissions granted by the role. They apply to every user holding it.',
       permissionsCount: '{{count}} selected',
       submitCreate: 'Create role',
       submitEdit: 'Save changes',
@@ -1292,7 +1317,8 @@ export const EN = {
       replace: 'Replace logo',
       remove: 'Remove logo',
       removeTitle: 'Remove the logo?',
-      removeDescription: 'The previous version is restored; if none exists, the clinic stays without a logo.',
+      removeDescription:
+        'The previous version is restored; if none exists, the clinic stays without a logo.',
       none: 'No logo configured.',
       noColors: 'No colors could be extracted from the logo.',
     },
@@ -1555,7 +1581,8 @@ export const EN = {
       trash: 'Trash',
     },
     trash: {
-      banner: 'Quotations in the trash cannot be edited or printed. Restore them to use them again.',
+      banner:
+        'Quotations in the trash cannot be edited or printed. Restore them to use them again.',
       empty: 'The trash is empty.',
       deletedAt: 'Deleted on {{date}}',
       move: 'Move to the trash',

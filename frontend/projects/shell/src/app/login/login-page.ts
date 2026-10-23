@@ -1,10 +1,10 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { lucideHexagon, lucideTriangleAlert } from '@ng-icons/lucide';
+import { lucideEye, lucideEyeOff, lucideTriangleAlert } from '@ng-icons/lucide';
 import { HlmButton } from '@ui/button';
 import { HlmInput } from '@ui/input';
 import { HlmLabel } from '@ui/label';
@@ -13,6 +13,7 @@ import { SessionStore } from 'auth';
 import { mapApiError } from 'data-access';
 import { formatDateTime } from 'ui';
 import { BrandingStore } from '../branding/branding-store';
+import { LanguageSwitcher } from '../language-switcher';
 import {
   errorDetailsOf,
   errorNameOf,
@@ -32,9 +33,20 @@ import {
  */
 @Component({
   selector: 'app-login-page',
-  imports: [ReactiveFormsModule, TranslocoPipe, NgIcon, HlmButton, HlmInput, HlmLabel, HlmSpinner],
-  providers: [provideIcons({ lucideHexagon, lucideTriangleAlert })],
+  imports: [
+    ReactiveFormsModule,
+    RouterLink,
+    TranslocoPipe,
+    NgIcon,
+    HlmButton,
+    HlmInput,
+    HlmLabel,
+    HlmSpinner,
+    LanguageSwitcher,
+  ],
+  providers: [provideIcons({ lucideEye, lucideEyeOff, lucideTriangleAlert })],
   templateUrl: './login-page.html',
+  styleUrl: './login-page.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class LoginPage {
@@ -45,6 +57,12 @@ export class LoginPage {
 
   /** Public branding: the login screen wears the clinic's face. */
   protected readonly branding = inject(BrandingStore);
+  /** Oversized typographic mark on the brand panel. */
+  protected readonly brandInitial = computed(() => {
+    const name = this.branding.name()?.trim();
+
+    return name === undefined || name === '' ? 'H' : name.charAt(0).toUpperCase();
+  });
 
   protected readonly mode = signal<'credentials' | 'expired'>('credentials');
   protected readonly reason = signal<'expired' | 'reset' | null>(null);
@@ -52,6 +70,8 @@ export class LoginPage {
   protected readonly errorKey = signal<string | null>(null);
   protected readonly errorParams = signal<Record<string, string>>({});
   protected readonly violations = signal<readonly PasswordViolation[]>([]);
+  protected readonly showPassword = signal(false);
+  protected readonly showNewPassword = signal(false);
 
   protected readonly form = new FormGroup({
     email: new FormControl('', {
@@ -142,10 +162,20 @@ export class LoginPage {
     return control.invalid && control.touched;
   }
 
+  protected togglePassword(): void {
+    this.showPassword.update((visible) => !visible);
+  }
+
+  protected toggleNewPassword(): void {
+    this.showNewPassword.update((visible) => !visible);
+  }
+
   protected emailErrorKey(): string {
     const control = this.form.controls.email;
 
-    return control.hasError('required') ? 'login.validation.emailRequired' : 'login.validation.emailInvalid';
+    return control.hasError('required')
+      ? 'login.validation.emailRequired'
+      : 'login.validation.emailInvalid';
   }
 
   protected confirmErrorKey(): string {

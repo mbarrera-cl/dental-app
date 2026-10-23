@@ -41,7 +41,8 @@ export const ES = {
     invalidName: 'El nombre no es válido.',
     patientAlreadyExists: 'Ya existe un paciente con ese RUT.',
     patientNotFound: 'El paciente no existe (puede haber sido eliminado).',
-    patientHasRecords: 'El paciente tiene presupuestos o movimientos en su cuenta: anúlalos o elimínalos antes de borrarlo.',
+    patientHasRecords:
+      'El paciente tiene presupuestos o movimientos en su cuenta: anúlalos o elimínalos antes de borrarlo.',
     patientRutNotFound: 'No hay ningún paciente registrado con ese RUT.',
     invalidRut: 'El RUT no es válido (revisa el dígito verificador).',
     invalidFechaNacimiento: 'La fecha de nacimiento no es válida.',
@@ -58,7 +59,8 @@ export const ES = {
     clinicalFindingAlreadyVoided: 'El hallazgo ya estaba anulado.',
     planItemAlreadyDeleted: 'Ese procedimiento ya está en la papelera.',
     planItemNotDeleted: 'Ese procedimiento no está en la papelera.',
-    quoteNotImportable: 'Ese presupuesto no se puede importar al plan (debe estar aprobado y ser de este paciente).',
+    quoteNotImportable:
+      'Ese presupuesto no se puede importar al plan (debe estar aprobado y ser de este paciente).',
     invalidMovement:
       'El movimiento no es válido: el monto debe ser un entero positivo (el CLP no tiene decimales) y el abono necesita un método.',
     movementNotFound: 'El movimiento no existe (puede haber sido anulado).',
@@ -75,7 +77,8 @@ export const ES = {
     lastAdmin:
       'La operación dejaría al sistema sin ningún administrador activo. Asigna el rol admin a otra cuenta antes de continuar.',
     unknownRole: 'Uno de los roles seleccionados ya no existe. Recarga la página.',
-    unknownPermission: 'Uno de los permisos seleccionados no está en el catálogo. Recarga la página.',
+    unknownPermission:
+      'Uno de los permisos seleccionados no está en el catálogo. Recarga la página.',
     roleNameTaken: 'Ya existe un rol con ese nombre.',
     roleNameReserved: 'Ese nombre está reservado por el sistema.',
     roleProtected:
@@ -100,7 +103,8 @@ export const ES = {
     menuItemNotFound: 'El ítem de menú no existe (puede haber sido eliminado).',
     menuDestination:
       'El destino no es válido: un enlace necesita una ruta o una URL https, y un grupo o separador no admiten destino.',
-    menuRouteKey: 'La clave de ruta no es válida (identificador en minúsculas, p. ej. settings.menu).',
+    menuRouteKey:
+      'La clave de ruta no es válida (identificador en minúsculas, p. ej. settings.menu).',
     menuExternalUrl: 'La URL externa debe ser absoluta, https:// y sin credenciales.',
     menuNestedGroup: 'Los grupos solo pueden estar en el primer nivel.',
     menuParentNotGroup: 'El contenedor seleccionado no existe o no es un grupo.',
@@ -295,10 +299,12 @@ export const ES = {
     reset: {
       action: 'Restablecer contraseña',
       title: 'Restablecer contraseña',
-      description: 'Define una contraseña nueva para "{{name}}" o deja que el sistema genere una segura.',
+      description:
+        'Define una contraseña nueva para "{{name}}" o deja que el sistema genere una segura.',
       modeTyped: 'Escribir una contraseña',
       modeGenerate: 'Generar una contraseña segura',
-      generateHint: 'Se mostrará una sola vez al confirmar. El usuario deberá cambiarla al iniciar sesión.',
+      generateHint:
+        'Se mostrará una sola vez al confirmar. El usuario deberá cambiarla al iniciar sesión.',
       password: 'Nueva contraseña',
       passwordPlaceholder: 'Contraseña temporal',
       passwordRequired: 'Escribe una contraseña o elige generarla automáticamente.',
@@ -312,8 +318,10 @@ export const ES = {
     permissions: {
       action: 'Permisos directos',
       title: 'Permisos directos',
-      description: 'Permisos de "{{name}}" fuera de sus roles. Los heredados por un rol aparecen bloqueados.',
-      rolesUnavailable: 'No se pudieron cargar los roles: los permisos heredados no se distinguen ahora mismo.',
+      description:
+        'Permisos de "{{name}}" fuera de sus roles. Los heredados por un rol aparecen bloqueados.',
+      rolesUnavailable:
+        'No se pudieron cargar los roles: los permisos heredados no se distinguen ahora mismo.',
       submit: 'Guardar permisos',
       saved: 'Permisos actualizados correctamente.',
     },
@@ -570,7 +578,8 @@ export const ES = {
     plan: {
       title: 'Plan de tratamiento',
       subtitle: 'Procedimientos provenientes de presupuestos aprobados, con su estado de avance.',
-      empty: 'Todavía no hay procedimientos en el plan. Importa un presupuesto aprobado para comenzar.',
+      empty:
+        'Todavía no hay procedimientos en el plan. Importa un presupuesto aprobado para comenzar.',
       toothLabel: 'Pieza {{tooth}}',
       realizadoAt: 'Realizado el {{date}}',
       form: {
@@ -841,6 +850,17 @@ export const ES = {
   login: {
     title: 'Iniciar sesión',
     subtitle: 'Accede con tu cuenta de Hexa.',
+    heading: 'Entra a tu clínica',
+    lead: 'Tu ficha clínica, la agenda y los presupuestos, en un solo lugar.',
+    panelHeadline: 'El día de tu clínica, en orden.',
+    panelBody:
+      'Ficha, agenda y presupuestos conectados en un mismo flujo de trabajo, desde la primera consulta hasta el cierre.',
+    panelPoint1: 'Ficha clínica y plan de tratamiento',
+    panelPoint2: 'Agenda y presupuestos conectados',
+    panelPoint3: 'Acceso seguro según tu rol',
+    passwordShow: 'Mostrar contraseña',
+    passwordHide: 'Ocultar contraseña',
+    help: '¿No puedes entrar? Contacta al administrador de tu clínica.',
     email: 'Email',
     emailPlaceholder: 'tu@email.com',
     password: 'Contraseña',
@@ -849,6 +869,7 @@ export const ES = {
     submitting: 'Entrando…',
     lockedUntil: 'La cuenta está bloqueada temporalmente. Inténtalo de nuevo a las {{time}}.',
     expired: {
+      heading: 'Crea una contraseña nueva',
       description: 'Tu contraseña debe cambiarse antes de entrar.',
       reasonExpired: 'Tu contraseña ha caducado.',
       reasonReset: 'Un administrador ha restablecido tu contraseña.',
@@ -874,7 +895,8 @@ export const ES = {
   account: {
     changePassword: {
       title: 'Cambiar contraseña',
-      description: 'Introduce tu contraseña actual y la nueva. La política vigente se aplica al guardar.',
+      description:
+        'Introduce tu contraseña actual y la nueva. La política vigente se aplica al guardar.',
       current: 'Contraseña actual',
       newPassword: 'Nueva contraseña',
       confirm: 'Repite la nueva contraseña',
@@ -922,7 +944,8 @@ export const ES = {
     },
     secret: {
       title: 'Copia tu clave ahora',
-      description: 'Esta es la única vez que se mostrará el secreto completo. Guárdalo en un lugar seguro.',
+      description:
+        'Esta es la única vez que se mostrará el secreto completo. Guárdalo en un lugar seguro.',
       copy: 'Copiar',
       done: 'Hecho',
     },
@@ -933,7 +956,8 @@ export const ES = {
     },
     revoke: {
       title: '¿Revocar la clave?',
-      description: 'La clave "{{name}}" dejará de funcionar de inmediato. Esta acción no se puede deshacer.',
+      description:
+        'La clave "{{name}}" dejará de funcionar de inmediato. Esta acción no se puede deshacer.',
       action: 'Revocar',
     },
     toasts: {
@@ -1266,7 +1290,8 @@ export const ES = {
   },
   clinic: {
     title: 'Configuración de la clínica',
-    subtitle: 'Identidad, contacto, dirección y tema. Se aplican al instante en toda la aplicación.',
+    subtitle:
+      'Identidad, contacto, dirección y tema. Se aplican al instante en toda la aplicación.',
     readOnly: 'Solo lectura: necesitas el permiso settings:update.',
     identity: 'Identidad',
     contact: 'Contacto',
@@ -1303,7 +1328,8 @@ export const ES = {
       replace: 'Reemplazar logo',
       remove: 'Quitar logo',
       removeTitle: '¿Quitar el logo?',
-      removeDescription: 'Se restaura la versión anterior; si no existe, la clínica queda sin logo.',
+      removeDescription:
+        'Se restaura la versión anterior; si no existe, la clínica queda sin logo.',
       none: 'Sin logo configurado.',
       noColors: 'No se pudieron extraer colores del logo.',
     },
@@ -1567,7 +1593,8 @@ export const ES = {
       trash: 'Papelera',
     },
     trash: {
-      banner: 'Las cotizaciones en la papelera no se pueden editar ni imprimir. Restáuralas para volver a usarlas.',
+      banner:
+        'Las cotizaciones en la papelera no se pueden editar ni imprimir. Restáuralas para volver a usarlas.',
       empty: 'La papelera está vacía.',
       deletedAt: 'Eliminada el {{date}}',
       move: 'Mover a la papelera',
