@@ -126,6 +126,25 @@ interface DraftItem {
               </span>
               <span class="text-muted-foreground text-xs">{{ 'quotes.editor.patientLocked' | transloco }}</span>
             </div>
+          } @else if (selectedPatientId() !== null && selectedPatientName() !== null) {
+            <div
+              class="border-input flex items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm"
+              data-testid="quote-patient-selected"
+            >
+              <span class="font-medium">
+                {{ selectedPatientName() }} · {{ formatRut(selectedPatientRut() ?? '') }}
+              </span>
+              <button
+                hlmBtn
+                variant="ghost"
+                size="sm"
+                type="button"
+                data-testid="quote-patient-change"
+                (click)="changePatient()"
+              >
+                {{ 'quotes.editor.changePatient' | transloco }}
+              </button>
+            </div>
           } @else {
             <input
               hlmInput
@@ -148,12 +167,6 @@ interface DraftItem {
                 </button>
               }
             </div>
-          }
-
-          @if (quote()?.patientName; as name) {
-            <p class="text-muted-foreground text-sm">
-              {{ 'quotes.editor.selectedPatient' | transloco }}: <span class="font-medium">{{ name }}</span>
-            </p>
           }
         </div>
       </div>
@@ -372,6 +385,8 @@ export class QuoteEditor {
   protected readonly patientQuery = signal('');
   protected readonly patients = signal<Patient[]>([]);
   protected readonly selectedPatientId = signal<string | null>(null);
+  protected readonly selectedPatientName = signal<string | null>(null);
+  protected readonly selectedPatientRut = signal<string | null>(null);
   /** Patient fixed by the URL context or by the quote being edited. */
   protected readonly lockedPatientName = signal<string | null>(null);
   protected readonly lockedPatientRut = signal<string | null>(null);
@@ -453,10 +468,10 @@ export class QuoteEditor {
 
     this.patientsApi.getById(patientId).subscribe({
       next: (patient) => {
-        this.lockedPatientName.set(
-          `${patient.nombres} ${patient.apellidoPaterno} ${patient.apellidoMaterno}`.trim(),
-        );
+        this.lockedPatientName.set(this.patientLabel(patient));
         this.lockedPatientRut.set(patient.rut);
+        this.selectedPatientName.set(this.patientLabel(patient));
+        this.selectedPatientRut.set(patient.rut);
       },
       // The id is still usable; the API validates the patient on save.
       error: () => undefined,
@@ -475,6 +490,8 @@ export class QuoteEditor {
       next: (quote) => {
         this.quote.set(quote);
         this.selectedPatientId.set(quote.patientId);
+        this.selectedPatientName.set(quote.patientName);
+        this.selectedPatientRut.set(quote.patientRut);
         // An existing quote belongs to its patient: the patient never changes.
         this.lockedPatientName.set(quote.patientName);
         this.lockedPatientRut.set(quote.patientRut);
@@ -499,6 +516,20 @@ export class QuoteEditor {
 
   protected selectPatient(patient: Patient): void {
     this.selectedPatientId.set(patient.id);
+    this.selectedPatientName.set(this.patientLabel(patient));
+    this.selectedPatientRut.set(patient.rut);
+    this.patientQuery.set('');
+  }
+
+  private patientLabel(patient: Patient): string {
+    return `${patient.nombres} ${patient.apellidoPaterno} ${patient.apellidoMaterno}`.trim();
+  }
+
+  /** Clears the current selection so the search field is shown again. */
+  protected changePatient(): void {
+    this.selectedPatientId.set(null);
+    this.selectedPatientName.set(null);
+    this.selectedPatientRut.set(null);
     this.patientQuery.set('');
   }
 

@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import {
   FormControl,
   FormGroup,
@@ -9,7 +9,7 @@ import {
 } from '@angular/forms';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { lucideSave } from '@ng-icons/lucide';
+import { lucideLock, lucideSave } from '@ng-icons/lucide';
 import { toast } from '@spartan-ng/brain/sonner';
 import { HlmButton } from '@ui/button';
 import { HlmInput } from '@ui/input';
@@ -91,7 +91,7 @@ function buildRegiones(): RegionesGroup {
 @Component({
   selector: 'app-clinical-record-page',
   imports: [ReactiveFormsModule, TranslocoPipe, NgIcon, HlmButton, HlmInput, HlmLabel],
-  providers: [provideIcons({ lucideSave })],
+  providers: [provideIcons({ lucideLock, lucideSave })],
   templateUrl: './clinical-record-page.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -104,6 +104,9 @@ export class ClinicalRecordPage {
   protected readonly regionesKeys = REGIONES_ESTOMATOGNATICAS;
 
   protected readonly saving = signal(false);
+
+  /** A finalized ficha is sealed: the form renders disabled and read-only. */
+  protected readonly finalized = computed(() => this.store.record()?.status === 'finalizada');
 
   protected readonly form = new FormGroup({
     categoria: new FormControl<CategoriaEtaria>('5-9-programado', { nonNullable: true }),
@@ -167,6 +170,10 @@ export class ClinicalRecordPage {
           notes: record.antecedentes[key].notes ?? '',
         });
       }
+
+      if (record.status === 'finalizada') {
+        this.form.disable();
+      }
     }
   }
 
@@ -207,6 +214,10 @@ export class ClinicalRecordPage {
   }
 
   protected save(): void {
+    if (this.finalized()) {
+      return;
+    }
+
     this.form.markAllAsTouched();
 
     if (this.form.invalid) {

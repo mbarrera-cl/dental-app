@@ -45,6 +45,7 @@ interface ClinicalRecordRow {
   updated_at: Date;
   finalized_at: Date | null;
   finalized_by: string | null;
+  integrity_hash: string | null;
 }
 
 interface FindingRow {
@@ -88,9 +89,9 @@ export class PostgresClinicalRecordRepository extends ClinicalRecordRepositoryPo
            motivo_consulta, enfermedad_actual,
            antecedentes, signos_vitales, examen_estomatognatico, indicadores,
            status, created_by, updated_by, created_at, updated_at,
-           finalized_at, finalized_by
+           finalized_at, finalized_by, integrity_hash
          ) VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8::jsonb, $9::jsonb, $10::jsonb,
-                   $11, $12, $13, $14, $15, $16, $17)`,
+                   $11, $12, $13, $14, $15, $16, $17, $18)`,
         [
           record.id,
           record.patientId,
@@ -109,6 +110,7 @@ export class PostgresClinicalRecordRepository extends ClinicalRecordRepositoryPo
           record.updatedAt,
           record.finalizedAt,
           record.finalizedBy,
+          record.integrityHash,
         ],
       );
     } catch (error) {
@@ -128,8 +130,8 @@ export class PostgresClinicalRecordRepository extends ClinicalRecordRepositoryPo
          antecedentes = $5::jsonb, signos_vitales = $6::jsonb,
          examen_estomatognatico = $7::jsonb, indicadores = $8::jsonb,
          status = $9, updated_by = $10, updated_at = $11,
-         finalized_at = $12, finalized_by = $13
-       WHERE id = $14`,
+         finalized_at = $12, finalized_by = $13, integrity_hash = $14
+       WHERE id = $15`,
       [
         record.categoria,
         record.embarazada,
@@ -144,6 +146,7 @@ export class PostgresClinicalRecordRepository extends ClinicalRecordRepositoryPo
         record.updatedAt,
         record.finalizedAt,
         record.finalizedBy,
+        record.integrityHash,
         record.id,
       ],
     );
@@ -327,6 +330,7 @@ export class PostgresClinicalRecordRepository extends ClinicalRecordRepositoryPo
         updatedAt: new Date(row.updated_at),
         finalizedAt: row.finalized_at === null ? null : new Date(row.finalized_at),
         finalizedBy: row.finalized_by,
+        integrityHash: row.integrity_hash,
       },
       row.id,
     );

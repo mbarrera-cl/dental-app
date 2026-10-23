@@ -218,4 +218,23 @@ describe('QuoteEditor', () => {
     });
     request.flush({ id: 'quote-1' });
   });
+
+  it('shows the selected patient for a new quote and lets you change it', () => {
+    const fixture = render();
+    const page = handle(fixture);
+
+    page.selectPatient(PATIENT);
+    fixture.detectChanges();
+
+    const native = fixture.nativeElement as HTMLElement;
+    const selected = native.querySelector('[data-testid="quote-patient-selected"]');
+    expect(selected?.textContent).toContain('Camila');
+    expect(native.querySelector('[data-testid="quote-patient-search"]')).toBeNull();
+
+    native.querySelector<HTMLButtonElement>('[data-testid="quote-patient-change"]')!.click();
+    fixture.detectChanges();
+
+    expect(native.querySelector('[data-testid="quote-patient-selected"]')).toBeNull();
+    expect(native.querySelector('[data-testid="quote-patient-search"]')).not.toBeNull();
+  });
 });

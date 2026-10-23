@@ -86,6 +86,7 @@ describe('FichaClinica', () => {
       updatedAt: new Date('2026-01-02T00:00:00.000Z'),
       finalizedAt: new Date('2026-01-02T00:00:00.000Z'),
       finalizedBy: 'user-1',
+      integrityHash: 'abc123',
     };
     const locked = FichaClinica.reconstitute(props, 'record-1');
 
@@ -96,5 +97,21 @@ describe('FichaClinica', () => {
     expect(() => locked.changeEmbarazada(true)).toThrow(
       ClinicalRecordLockedError,
     );
+  });
+
+  it('finalizes once, seals the hash and rejects a second finalize', () => {
+    const record = createDraft();
+    const when = new Date('2026-10-18T12:00:00.000Z');
+
+    record.finalize('user-1', 'sha256-seal', when);
+
+    expect(record.status).toBe('finalizada');
+    expect(record.isDraft).toBe(false);
+    expect(record.finalizedAt).toEqual(when);
+    expect(record.finalizedBy).toBe('user-1');
+    expect(record.integrityHash).toBe('sha256-seal');
+
+    expect(() => record.finalize('user-2', 'again')).toThrow(ClinicalRecordLockedError);
+    expect(() => record.changeMotivoConsulta('x')).toThrow(ClinicalRecordLockedError);
   });
 });

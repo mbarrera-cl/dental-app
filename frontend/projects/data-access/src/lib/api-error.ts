@@ -36,6 +36,14 @@ const ERROR_NAME_TO_KEY: Readonly<Record<string, string>> = {
   EmptyClinicalRecordUpdateError: 'errors.emptyUpdate',
   ClinicalFindingNotFoundError: 'errors.clinicalFindingNotFound',
   ClinicalFindingAlreadyVoidedError: 'errors.clinicalFindingAlreadyVoided',
+  // treatment plan context
+  TreatmentPlanNotFoundError: 'errors.notFound',
+  TreatmentPlanItemNotFoundError: 'errors.notFound',
+  InvalidTreatmentPlanError: 'errors.validation',
+  EmptyTreatmentPlanItemUpdateError: 'errors.emptyUpdate',
+  TreatmentPlanItemAlreadyDeletedError: 'errors.planItemAlreadyDeleted',
+  TreatmentPlanItemNotDeletedError: 'errors.planItemNotDeleted',
+  QuoteNotImportableError: 'errors.quoteNotImportable',
   // accounts / rbac context
   LastAdminError: 'errors.lastAdmin',
   UnknownRoleError: 'errors.unknownRole',

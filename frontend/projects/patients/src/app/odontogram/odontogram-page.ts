@@ -1,6 +1,8 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideLock } from '@ng-icons/lucide';
 import { HlmAlertDialogImports } from '@ui/alert-dialog';
 import { HlmBadge } from '@ui/badge';
 import { HlmButton } from '@ui/button';
@@ -26,7 +28,16 @@ import { OdontogramChart, type Dentition } from './odontogram-chart';
  */
 @Component({
   selector: 'app-odontogram-page',
-  imports: [OdontogramChart, TranslocoPipe, HlmAlertDialogImports, HlmBadge, HlmButton, HlmLabel],
+  imports: [
+    OdontogramChart,
+    TranslocoPipe,
+    NgIcon,
+    HlmAlertDialogImports,
+    HlmBadge,
+    HlmButton,
+    HlmLabel,
+  ],
+  providers: [provideIcons({ lucideLock })],
   templateUrl: './odontogram-page.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -38,6 +49,9 @@ export class OdontogramPage {
   protected readonly language = toSignal(this.transloco.langChanges$, {
     initialValue: this.transloco.getActiveLang(),
   });
+
+  /** A finalized ficha is sealed: recording and voiding are disabled. */
+  protected readonly finalized = computed(() => this.store.record()?.status === 'finalizada');
 
   protected readonly dentitions: readonly Dentition[] = ['permanente', 'temporal'];
   protected readonly grades = [1, 2, 3] as const;

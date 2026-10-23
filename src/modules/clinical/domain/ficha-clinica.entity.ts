@@ -29,6 +29,7 @@ export interface FichaClinicaProps {
   updatedAt: Date;
   finalizedAt: Date | null;
   finalizedBy: string | null;
+  integrityHash: string | null;
 }
 
 export interface CreateFichaClinicaProps {
@@ -79,6 +80,7 @@ export class FichaClinica extends Entity<FichaClinicaProps> {
       updatedAt: now,
       finalizedAt: null,
       finalizedBy: null,
+      integrityHash: null,
     });
   }
 
@@ -150,6 +152,10 @@ export class FichaClinica extends Entity<FichaClinicaProps> {
     return this.props.finalizedBy;
   }
 
+  get integrityHash(): string | null {
+    return this.props.integrityHash;
+  }
+
   get isDraft(): boolean {
     return this.props.status === 'borrador';
   }
@@ -206,6 +212,22 @@ export class FichaClinica extends Entity<FichaClinicaProps> {
   touch(actorId: string | null, when: Date = new Date()): void {
     this.props.updatedBy = actorId;
     this.props.updatedAt = when;
+  }
+
+  /**
+   * Locks the record and seals it with an integrity hash (SHA-256 over a
+   * canonical serialization of the record and its non-voided findings). Once
+   * finalized the record is immutable: every mutator rejects with
+   * `ClinicalRecordLockedError`.
+   */
+  finalize(actorId: string | null, integrityHash: string, when: Date = new Date()): void {
+    this.assertEditable();
+
+    this.props.status = 'finalizada';
+    this.props.finalizedAt = when;
+    this.props.finalizedBy = actorId;
+    this.props.integrityHash = integrityHash;
+    this.touch(actorId, when);
   }
 
   private assertEditable(): void {

@@ -7,9 +7,15 @@ import type {
   ClinicalEvent,
   ClinicalFinding,
   ClinicalIndices,
+  ClinicalIntegrity,
   ClinicalRecord,
   CreateClinicalRecordPayload,
+  ImportQuotePayload,
+  QuoteImportPreview,
+  TreatmentPlan,
+  TreatmentPlanItem,
   UpdateClinicalRecordPayload,
+  UpdateTreatmentPlanItemPayload,
 } from './clinical.model';
 
 /**
@@ -83,6 +89,85 @@ export class ClinicalApi {
   listEvents(recordId: string): Observable<ClinicalEvent[]> {
     return this.http.get<ClinicalEvent[]>(
       `${this.baseUrl}/clinical-records/${encodeURIComponent(recordId)}/events`,
+    );
+  }
+
+  /** Seals the ficha with an integrity hash and locks it (423 on later edits). */
+  finalize(id: string): Observable<ClinicalRecord> {
+    return this.http.post<ClinicalRecord>(
+      `${this.baseUrl}/clinical-records/${encodeURIComponent(id)}/finalize`,
+      {},
+    );
+  }
+
+  /** Recomputes the integrity hash and compares it to the stored seal. */
+  getIntegrity(id: string): Observable<ClinicalIntegrity> {
+    return this.http.get<ClinicalIntegrity>(
+      `${this.baseUrl}/clinical-records/${encodeURIComponent(id)}/integrity`,
+    );
+  }
+
+  /** Treatment plan of a record (the plan is created lazily by the API). */
+  getTreatmentPlan(
+    recordId: string,
+    options: { deleted?: boolean } = {},
+  ): Observable<TreatmentPlan> {
+    return this.http.get<TreatmentPlan>(
+      `${this.baseUrl}/clinical-records/${encodeURIComponent(recordId)}/treatment-plan`,
+      { params: options.deleted === true ? { deleted: 'true' } : {} },
+    );
+  }
+
+  /** Dry-run of importing an approved quotation (flags per line, no writes). */
+  previewQuoteImport(recordId: string, quoteId: string): Observable<QuoteImportPreview> {
+    return this.http.post<QuoteImportPreview>(
+      `${this.baseUrl}/clinical-records/${encodeURIComponent(recordId)}/treatment-plan/import/preview`,
+      { quoteId },
+    );
+  }
+
+  /** Imports the chosen lines of an approved quotation into the plan. */
+  importQuote(
+    recordId: string,
+    payload: ImportQuotePayload,
+  ): Observable<TreatmentPlanItem[]> {
+    return this.http.post<TreatmentPlanItem[]>(
+      `${this.baseUrl}/clinical-records/${encodeURIComponent(recordId)}/treatment-plan/import`,
+      payload,
+    );
+  }
+
+  /** Replaces the plan-level rich-text note. */
+  updatePlanNotes(recordId: string, notes: string | null): Observable<TreatmentPlan> {
+    return this.http.patch<TreatmentPlan>(
+      `${this.baseUrl}/clinical-records/${encodeURIComponent(recordId)}/treatment-plan/notes`,
+      { notes },
+    );
+  }
+
+  updateTreatmentPlanItem(
+    itemId: string,
+    payload: UpdateTreatmentPlanItemPayload,
+  ): Observable<TreatmentPlanItem> {
+    return this.http.patch<TreatmentPlanItem>(
+      `${this.baseUrl}/treatment-plan-items/${encodeURIComponent(itemId)}`,
+      payload,
+    );
+  }
+
+  /** Moves a plan item to the trash (soft delete, mandatory reason). */
+  deleteTreatmentPlanItem(itemId: string, reason: string): Observable<TreatmentPlanItem> {
+    return this.http.delete<TreatmentPlanItem>(
+      `${this.baseUrl}/treatment-plan-items/${encodeURIComponent(itemId)}`,
+      { body: { reason } },
+    );
+  }
+
+  /** Brings a plan item back from the trash. */
+  restoreTreatmentPlanItem(itemId: string): Observable<TreatmentPlanItem> {
+    return this.http.post<TreatmentPlanItem>(
+      `${this.baseUrl}/treatment-plan-items/${encodeURIComponent(itemId)}/restore`,
+      {},
     );
   }
 }

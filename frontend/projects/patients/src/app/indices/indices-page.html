@@ -4,6 +4,15 @@
   class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_24rem]"
   novalidate
 >
+  @if (finalized()) {
+    <div
+      class="text-muted-foreground flex items-center gap-3 rounded-lg border bg-muted/40 px-4 py-3 text-sm xl:col-span-2"
+      data-testid="indices-readonly-notice"
+    >
+      <ng-icon name="lucideLock" class="shrink-0" />
+      <p class="flex-1">{{ 'clinical.readonly.notice' | transloco }}</p>
+    </div>
+  }
   <section class="bg-card grid content-start gap-4 rounded-lg border p-4">
     <div class="grid gap-1">
       <h3 class="text-lg font-semibold tracking-tight">
@@ -136,10 +145,12 @@
         </select>
       </div>
 
-      <button hlmBtn type="submit" [disabled]="saving()" data-testid="indices-save">
-        <ng-icon name="lucideSave" />
-        {{ (saving() ? 'clinical.indicators.saving' : 'clinical.indicators.save') | transloco }}
-      </button>
+      @if (!finalized()) {
+        <button hlmBtn type="submit" [disabled]="saving()" data-testid="indices-save">
+          <ng-icon name="lucideSave" />
+          {{ (saving() ? 'clinical.indicators.saving' : 'clinical.indicators.save') | transloco }}
+        </button>
+      }
     </section>
 
     @if (indices(); as computed) {
