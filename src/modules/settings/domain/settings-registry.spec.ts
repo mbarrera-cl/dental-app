@@ -129,6 +129,47 @@ describe('settings registry', () => {
     expect(findSettingDefinition('clinic.address.comuna')?.type).toBe('string');
   });
 
+  it('declares every configurable login copy key with its length limit', () => {
+    const keys = [
+      'clinic.login.heading',
+      'clinic.login.lead',
+      'clinic.login.headline',
+      'clinic.login.body',
+      'clinic.login.point1',
+      'clinic.login.point2',
+      'clinic.login.point3',
+    ];
+
+    for (const key of keys) {
+      expect(findSettingDefinition(key)?.default).toBe('');
+      expect(findSettingDefinition(key)?.type).toBe('string');
+    }
+
+    expect(invalidReason('clinic.login.heading', 'a'.repeat(120))).toBeNull();
+    expect(invalidReason('clinic.login.heading', 'a'.repeat(121))).toBe(
+      'must have at most 120 characters',
+    );
+    expect(invalidReason('clinic.login.lead', 'a'.repeat(240))).toBeNull();
+    expect(invalidReason('clinic.login.lead', 'a'.repeat(241))).toBe(
+      'must have at most 240 characters',
+    );
+    expect(invalidReason('clinic.login.headline', 'a'.repeat(121))).toBe(
+      'must have at most 120 characters',
+    );
+    expect(invalidReason('clinic.login.body', 'a'.repeat(321))).toBe(
+      'must have at most 320 characters',
+    );
+    expect(invalidReason('clinic.login.point1', 'a'.repeat(81))).toBe(
+      'must have at most 80 characters',
+    );
+    expect(invalidReason('clinic.login.point2', 'a'.repeat(81))).toBe(
+      'must have at most 80 characters',
+    );
+    expect(invalidReason('clinic.login.point3', 'a'.repeat(81))).toBe(
+      'must have at most 80 characters',
+    );
+  });
+
   it('marks only module-managed keys as `managed`', () => {
     expect(findSettingDefinition('clinic.logo.version')?.managed).toBe(true);
 

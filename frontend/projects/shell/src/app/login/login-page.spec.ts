@@ -10,6 +10,27 @@ import { LoginPage } from './login-page';
 const LOGIN_URL = 'http://localhost:3000/auth/login';
 const CHANGE_EXPIRED_URL = 'http://localhost:3000/auth/change-expired-password';
 
+const BRANDING = {
+  branding: {
+    name: 'Clínica Los Andes',
+    slogan: 'Odontología familiar',
+    logoUrl: null,
+    faviconUrl: null,
+    colors: { primary: '#0284c7', accent: '#f59e0b', mode: 'light' },
+    login: {
+      heading: 'Entra a Los Andes',
+      lead: 'Tu equipo y tus pacientes, en un solo lugar.',
+      headline: 'Tu clínica, en orden.',
+      body: 'Ficha, agenda y presupuestos conectados.',
+      point1: 'Ficha clínica',
+      point2: 'Agenda',
+      point3: 'Acceso por rol',
+    },
+    version: 0,
+  },
+  etag: null,
+};
+
 const SESSION: AuthSession = {
   accessToken: 'token-1',
   expiresIn: 900,
@@ -23,6 +44,8 @@ describe('LoginPage', () => {
   let navigateByUrl: ReturnType<typeof vi.spyOn>;
 
   beforeEach(async () => {
+    localStorage.clear();
+
     await TestBed.configureTestingModule({
       imports: [LoginPage],
       providers: [
@@ -65,6 +88,31 @@ describe('LoginPage', () => {
     native(fixture).querySelector<HTMLButtonElement>(`[data-testid="${testId}"]`)!.click();
     fixture.detectChanges();
   }
+
+  it('renders the login copy configured by the clinic', () => {
+    localStorage.setItem('hexa.branding', JSON.stringify(BRANDING));
+
+    const fixture = render();
+    const text = native(fixture).textContent;
+
+    expect(text).toContain('Entra a Los Andes');
+    expect(text).toContain('Tu equipo y tus pacientes, en un solo lugar.');
+    expect(text).toContain('Tu clínica, en orden.');
+    expect(text).toContain('Ficha, agenda y presupuestos conectados.');
+    expect(text).toContain('Ficha clínica');
+    expect(text).toContain('Agenda');
+    expect(text).toContain('Acceso por rol');
+    expect(text).not.toContain('El día de tu clínica, en orden.');
+  });
+
+  it('falls back to the translated login copy when nothing is configured', () => {
+    const fixture = render();
+    const text = native(fixture).textContent;
+
+    expect(text).toContain('Entra a tu clínica');
+    expect(text).toContain('Tu ficha clínica, la agenda y los presupuestos, en un solo lugar.');
+    expect(text).toContain('El día de tu clínica, en orden.');
+  });
 
   it('signs in and honours the returnUrl query parameter', async () => {
     const fixture = render();

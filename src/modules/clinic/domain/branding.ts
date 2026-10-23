@@ -20,6 +20,8 @@ export interface ClinicBranding {
  * translation", so a clinic that never edits these keeps the localized copy.
  */
 export interface ClinicBrandingLogin {
+  readonly heading: string;
+  readonly lead: string;
   readonly headline: string;
   readonly body: string;
   readonly point1: string;
