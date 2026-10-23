@@ -219,6 +219,45 @@
             </p>
           </div>
           <div class="grid gap-4 p-4">
+            <p class="text-sm font-medium">{{ 'clinic.loginPanel.form' | transloco }}</p>
+
+            <div class="grid gap-2">
+              <label hlmLabel for="clinic-login-heading">
+                {{ 'clinic.loginPanel.heading' | transloco }}
+              </label>
+              <input
+                hlmInput
+                id="clinic-login-heading"
+                formControlName="loginHeading"
+                [placeholder]="'login.heading' | transloco"
+                data-testid="clinic-login-heading"
+              />
+              @if (errorOf(form.controls.loginHeading); as errorKey) {
+                <p class="text-destructive text-xs">{{ errorKey | transloco }}</p>
+              }
+            </div>
+
+            <div class="grid gap-2">
+              <label hlmLabel for="clinic-login-lead">
+                {{ 'clinic.loginPanel.lead' | transloco }}
+              </label>
+              <textarea
+                hlmTextarea
+                id="clinic-login-lead"
+                formControlName="loginLead"
+                rows="2"
+                [placeholder]="'login.lead' | transloco"
+                data-testid="clinic-login-lead"
+              ></textarea>
+              @if (errorOf(form.controls.loginLead); as errorKey) {
+                <p class="text-destructive text-xs">{{ errorKey | transloco }}</p>
+              }
+            </div>
+
+            <p class="mt-2 border-t pt-4 text-sm font-medium">
+              {{ 'clinic.loginPanel.panel' | transloco }}
+            </p>
+
             <div class="grid gap-2">
               <label hlmLabel for="clinic-login-headline">
                 {{ 'clinic.loginPanel.headline' | transloco }}

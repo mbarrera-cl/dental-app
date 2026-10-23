@@ -33,6 +33,8 @@ const setting = (key: string, value: SettingValue, overrides: Partial<Setting> =
 const CLINIC_SETTINGS: Setting[] = [
   setting('clinic.name', 'Mi clínica', { maxLength: 60, default: 'Mi clínica' }),
   setting('clinic.slogan', 'Odontología familiar', { maxLength: 120 }),
+  setting('clinic.login.heading', '', { maxLength: 120 }),
+  setting('clinic.login.lead', '', { maxLength: 240 }),
   setting('clinic.login.headline', '', { maxLength: 120 }),
   setting('clinic.login.body', '', { maxLength: 320 }),
   setting('clinic.login.point1', '', { maxLength: 80 }),
@@ -232,25 +234,37 @@ describe('ClinicPage', () => {
     expect(find<HTMLButtonElement>(fixture, '[data-testid="clinic-save"]')!.disabled).toBe(true);
   });
 
-  it('saves the login panel copy', async () => {
+  it('saves every login copy field', async () => {
     const fixture = await render();
+    const copy = {
+      'clinic.login.heading': 'Entra a tu espacio',
+      'clinic.login.lead': 'Tu equipo y tus pacientes, en un solo lugar.',
+      'clinic.login.headline': 'Tu clínica, en orden.',
+      'clinic.login.body': 'Ficha, agenda y presupuestos conectados.',
+      'clinic.login.point1': 'Ficha clínica',
+      'clinic.login.point2': 'Agenda',
+      'clinic.login.point3': 'Acceso por rol',
+    };
 
-    setInput(fixture, 'clinic-login-headline', 'Bienvenido a tu clínica');
-    expect(find(fixture, '[data-testid="clinic-dirty"]')!.textContent).toContain('1');
+    setInput(fixture, 'clinic-login-heading', copy['clinic.login.heading']);
+    setInput(fixture, 'clinic-login-lead', copy['clinic.login.lead']);
+    setInput(fixture, 'clinic-login-headline', copy['clinic.login.headline']);
+    setInput(fixture, 'clinic-login-body', copy['clinic.login.body']);
+    setInput(fixture, 'clinic-login-point1', copy['clinic.login.point1']);
+    setInput(fixture, 'clinic-login-point2', copy['clinic.login.point2']);
+    setInput(fixture, 'clinic-login-point3', copy['clinic.login.point3']);
+
+    expect(find(fixture, '[data-testid="clinic-dirty"]')!.textContent).toContain('7');
 
     find<HTMLButtonElement>(fixture, '[data-testid="clinic-save"]')!.click();
     fixture.detectChanges();
 
     const request = http.expectOne(`${API}/settings`);
-    expect(request.request.body).toEqual({
-      values: { 'clinic.login.headline': 'Bienvenido a tu clínica' },
-    });
+    expect(request.request.body).toEqual({ values: copy });
 
     request.flush(
       CLINIC_SETTINGS.map((entry) =>
-        entry.key === 'clinic.login.headline'
-          ? { ...entry, value: 'Bienvenido a tu clínica' }
-          : entry,
+        entry.key in copy ? { ...entry, value: copy[entry.key as keyof typeof copy] } : entry,
       ),
     );
     http.expectOne(BRANDING_URL).flush(BRANDING);
@@ -258,9 +272,10 @@ describe('ClinicPage', () => {
     await fixture.whenStable();
     fixture.detectChanges();
 
-    expect(find<HTMLInputElement>(fixture, '[data-testid="clinic-login-headline"]')!.value).toBe(
-      'Bienvenido a tu clínica',
-    );
+    for (const [key, value] of Object.entries(copy)) {
+      const control = key.replace('clinic.login.', 'clinic-login-');
+      expect(find<HTMLInputElement>(fixture, `[data-testid="${control}"]`)!.value).toBe(value);
+    }
     expect(find(fixture, '[data-testid="clinic-dirty"]')).toBeNull();
   });
 

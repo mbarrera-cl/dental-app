@@ -15,6 +15,8 @@ export interface BrandingColors {
 
 export interface BrandingLogin {
   /** Empty strings fall back to the localized copy. */
+  heading: string;
+  lead: string;
   headline: string;
   body: string;
   point1: string;

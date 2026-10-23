@@ -36,7 +36,15 @@ describe('GetBrandingUseCase', () => {
       logoUrl: null,
       faviconUrl: null,
       colors: { primary: '#0284c7', accent: '#f59e0b', mode: 'auto' },
-      login: { headline: '', body: '', point1: '', point2: '', point3: '' },
+      login: {
+        heading: '',
+        lead: '',
+        headline: '',
+        body: '',
+        point1: '',
+        point2: '',
+        point3: '',
+      },
       version: 0,
     });
   });
@@ -48,6 +56,8 @@ describe('GetBrandingUseCase', () => {
       'clinic.slogan': 'Odontología familiar',
       'clinic.theme.primary': '#112233',
       'clinic.theme.mode': 'light',
+      'clinic.login.heading': 'Entra a Los Andes',
+      'clinic.login.lead': 'Tu equipo, en un solo lugar.',
       'clinic.login.headline': 'Tu clínica, en orden.',
       'clinic.login.body': 'Ficha y agenda conectadas.',
       'clinic.login.point1': 'Ficha clínica',
@@ -64,6 +74,8 @@ describe('GetBrandingUseCase', () => {
       faviconUrl: '/clinic/assets/favicon?v=fav-hash',
       colors: { primary: '#112233', accent: '#f59e0b', mode: 'light' },
       login: {
+        heading: 'Entra a Los Andes',
+        lead: 'Tu equipo, en un solo lugar.',
         headline: 'Tu clínica, en orden.',
         body: 'Ficha y agenda conectadas.',
         point1: 'Ficha clínica',

@@ -14,6 +14,12 @@ export class ClinicBrandingColorsDto {
 
 /** Copy for the login brand panel; empty strings fall back to the UI language. */
 export class ClinicBrandingLoginDto {
+  @ApiProperty({ example: 'Entra a tu clínica' })
+  heading: string;
+
+  @ApiProperty({ example: 'Tu ficha clínica, la agenda y los presupuestos, en un solo lugar.' })
+  lead: string;
+
   @ApiProperty({ example: 'El día de tu clínica, en orden.' })
   headline: string;
 
@@ -69,6 +75,8 @@ export class ClinicBrandingResponseDto {
       mode: branding.colors.mode,
     };
     dto.login = {
+      heading: branding.login.heading,
+      lead: branding.login.lead,
       headline: branding.login.headline,
       body: branding.login.body,
       point1: branding.login.point1,

@@ -85,6 +85,8 @@ interface ClinicFormValue {
   name: string;
   timeZone: string;
   slogan: string;
+  loginHeading: string;
+  loginLead: string;
   loginHeadline: string;
   loginBody: string;
   loginPoint1: string;
@@ -110,6 +112,8 @@ const KEY: Record<Exclude<keyof ClinicFormValue, 'autoDark'>, string> = {
   name: 'clinic.name',
   timeZone: 'clinic.timeZone',
   slogan: 'clinic.slogan',
+  loginHeading: 'clinic.login.heading',
+  loginLead: 'clinic.login.lead',
   loginHeadline: 'clinic.login.headline',
   loginBody: 'clinic.login.body',
   loginPoint1: 'clinic.login.point1',
@@ -285,6 +289,11 @@ export class ClinicPage implements OnInit {
       validators: [timeZoneValidator],
     }),
     slogan: new FormControl('', { nonNullable: true, validators: [Validators.maxLength(120)] }),
+    loginHeading: new FormControl('', {
+      nonNullable: true,
+      validators: [Validators.maxLength(120)],
+    }),
+    loginLead: new FormControl('', { nonNullable: true, validators: [Validators.maxLength(240)] }),
     loginHeadline: new FormControl('', {
       nonNullable: true,
       validators: [Validators.maxLength(120)],
@@ -877,6 +886,8 @@ export class ClinicPage implements OnInit {
       name: text(KEY.name),
       timeZone: text(KEY.timeZone) || 'America/Santiago',
       slogan: text(KEY.slogan),
+      loginHeading: text(KEY.loginHeading),
+      loginLead: text(KEY.loginLead),
       loginHeadline: text(KEY.loginHeadline),
       loginBody: text(KEY.loginBody),
       loginPoint1: text(KEY.loginPoint1),

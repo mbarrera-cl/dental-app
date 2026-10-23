@@ -26,6 +26,22 @@ export const CLINIC_SETTING_DEFINITIONS: readonly SettingDefinition[] = [
     description: 'Short tagline shown next to the name',
   },
   {
+    key: 'clinic.login.heading',
+    group: 'clinic',
+    type: 'string',
+    default: '',
+    maxLength: 120,
+    description: 'Heading above the login form; empty uses the interface translation',
+  },
+  {
+    key: 'clinic.login.lead',
+    group: 'clinic',
+    type: 'string',
+    default: '',
+    maxLength: 240,
+    description: 'Supporting text above the login form; empty uses the interface translation',
+  },
+  {
     key: 'clinic.login.headline',
     group: 'clinic',
     type: 'string',
