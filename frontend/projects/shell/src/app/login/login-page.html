@@ -1,34 +1,10 @@
 <div class="login-page h-full overflow-x-hidden overflow-y-auto">
   <div class="grid min-h-full grid-cols-1 lg:grid-cols-[1.08fr_1fr]">
     <section
-      class="login-brand-panel relative isolate flex min-h-[280px] min-w-0 overflow-hidden lg:min-h-dvh"
+      class="login-brand-panel relative isolate flex min-h-[220px] min-w-0 overflow-hidden lg:min-h-dvh"
     >
       <div class="relative z-10 flex w-full flex-1 flex-col p-6 sm:p-8 lg:p-10 xl:p-14">
-        <a routerLink="/" class="inline-flex w-fit items-center gap-3 text-white">
-          @if (branding.logoUrl(); as logo) {
-            <img
-              [src]="logo"
-              alt=""
-              data-testid="login-logo"
-              class="h-9 w-auto max-w-32 rounded-md object-contain"
-            />
-          } @else {
-            <span
-              class="flex size-10 items-center justify-center rounded-md border border-white/25 bg-white/10 text-base font-semibold leading-none"
-            >
-              {{ brandInitial() }}
-            </span>
-          }
-          <span class="font-display text-xl font-medium tracking-[-0.02em]">
-            @if (branding.name(); as name) {
-              {{ name }}
-            } @else {
-              {{ 'shell.title' | transloco }}
-            }
-          </span>
-        </a>
-
-        <div class="login-brand-copy mt-8 max-w-[38rem] lg:my-auto">
+        <div class="login-brand-copy max-w-[38rem]">
           <h2
             class="font-display text-[2.5rem] font-medium leading-[0.98] tracking-[-0.03em] text-white sm:text-5xl lg:text-[clamp(3rem,5vw,5.25rem)] lg:leading-[0.96] lg:tracking-[-0.04em]"
           >
@@ -48,7 +24,7 @@
     </section>
 
     <section
-      class="flex min-h-[calc(100dvh-280px)] min-w-0 flex-col px-6 py-6 sm:px-10 lg:min-h-0 lg:px-14 xl:px-20"
+      class="flex min-h-[calc(100dvh-220px)] min-w-0 flex-col px-6 py-6 sm:px-10 lg:min-h-0 lg:px-14 xl:px-20"
     >
       <div class="flex items-center justify-end gap-4">
         <app-language-switcher />

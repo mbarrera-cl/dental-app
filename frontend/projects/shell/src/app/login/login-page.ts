@@ -1,7 +1,7 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { lucideEye, lucideEyeOff, lucideTriangleAlert } from '@ng-icons/lucide';
@@ -12,7 +12,6 @@ import { HlmSpinner } from '@ui/spinner';
 import { SessionStore } from 'auth';
 import { mapApiError } from 'data-access';
 import { formatDateTime } from 'ui';
-import { BrandingStore } from '../branding/branding-store';
 import { LanguageSwitcher } from '../language-switcher';
 import {
   errorDetailsOf,
@@ -35,7 +34,6 @@ import {
   selector: 'app-login-page',
   imports: [
     ReactiveFormsModule,
-    RouterLink,
     TranslocoPipe,
     NgIcon,
     HlmButton,
@@ -54,15 +52,6 @@ export class LoginPage {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly transloco = inject(TranslocoService);
-
-  /** Public branding: the login screen wears the clinic's face. */
-  protected readonly branding = inject(BrandingStore);
-  /** Oversized typographic mark on the brand panel. */
-  protected readonly brandInitial = computed(() => {
-    const name = this.branding.name()?.trim();
-
-    return name === undefined || name === '' ? 'H' : name.charAt(0).toUpperCase();
-  });
 
   protected readonly mode = signal<'credentials' | 'expired'>('credentials');
   protected readonly reason = signal<'expired' | 'reset' | null>(null);
