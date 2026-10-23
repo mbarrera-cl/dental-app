@@ -1638,6 +1638,7 @@ export const ES = {
       searchPatient: 'Buscar paciente por nombre o RUT…',
       patientLocked: 'Paciente fijo',
       selectedPatient: 'Paciente seleccionado',
+      changePatient: 'Cambiar',
       items: 'Prestaciones',
       searchUco: 'Buscar en el arancel UCO…',
       description: 'Descripción',

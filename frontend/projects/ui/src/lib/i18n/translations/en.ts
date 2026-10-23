@@ -1626,6 +1626,7 @@ export const EN = {
       searchPatient: 'Search patient by name or RUT…',
       patientLocked: 'Fixed patient',
       selectedPatient: 'Selected patient',
+      changePatient: 'Change',
       items: 'Procedures',
       searchUco: 'Search the UCO fee catalog…',
       description: 'Description',
