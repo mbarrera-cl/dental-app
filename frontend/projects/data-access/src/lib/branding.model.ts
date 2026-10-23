@@ -13,6 +13,15 @@ export interface BrandingColors {
   mode: ThemeMode;
 }
 
+export interface BrandingLogin {
+  /** Empty strings fall back to the localized copy. */
+  headline: string;
+  body: string;
+  point1: string;
+  point2: string;
+  point3: string;
+}
+
 export interface ClinicBranding {
   name: string;
   slogan: string;
@@ -20,6 +29,8 @@ export interface ClinicBranding {
   logoUrl: string | null;
   faviconUrl: string | null;
   colors: BrandingColors;
+  /** Login panel copy; optional so older cached payloads still parse. */
+  login?: BrandingLogin;
   /** Logo generation; `0` means the clinic has no logo. */
   version: number;
 }

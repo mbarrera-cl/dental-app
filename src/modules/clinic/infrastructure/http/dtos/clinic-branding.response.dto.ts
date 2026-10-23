@@ -12,6 +12,24 @@ export class ClinicBrandingColorsDto {
   mode: string;
 }
 
+/** Copy for the login brand panel; empty strings fall back to the UI language. */
+export class ClinicBrandingLoginDto {
+  @ApiProperty({ example: 'El día de tu clínica, en orden.' })
+  headline: string;
+
+  @ApiProperty({ example: 'Ficha, agenda y presupuestos conectados.' })
+  body: string;
+
+  @ApiProperty({ example: 'Ficha clínica y plan de tratamiento' })
+  point1: string;
+
+  @ApiProperty({ example: 'Agenda y presupuestos conectados' })
+  point2: string;
+
+  @ApiProperty({ example: 'Acceso seguro según tu rol' })
+  point3: string;
+}
+
 /**
  * Public branding payload (`GET /clinic/branding`). The URLs carry the asset
  * hash, so clients can cache them forever: a new logo always ships new URLs
@@ -33,6 +51,9 @@ export class ClinicBrandingResponseDto {
   @ApiProperty({ type: ClinicBrandingColorsDto })
   colors: ClinicBrandingColorsDto;
 
+  @ApiProperty({ type: ClinicBrandingLoginDto })
+  login: ClinicBrandingLoginDto;
+
   @ApiProperty({ example: 3, description: 'Logo generation; 0 means no logo' })
   version: number;
 
@@ -46,6 +67,13 @@ export class ClinicBrandingResponseDto {
       primary: branding.colors.primary,
       accent: branding.colors.accent,
       mode: branding.colors.mode,
+    };
+    dto.login = {
+      headline: branding.login.headline,
+      body: branding.login.body,
+      point1: branding.login.point1,
+      point2: branding.login.point2,
+      point3: branding.login.point3,
     };
     dto.version = branding.version;
     return dto;

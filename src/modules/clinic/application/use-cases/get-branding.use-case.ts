@@ -19,12 +19,30 @@ export class GetBrandingUseCase implements UseCase<void, ClinicBranding> {
   ) {}
 
   async execute(): Promise<ClinicBranding> {
-    const [name, slogan, primary, accent, mode, version, active] = await Promise.all([
+    const [
+      name,
+      slogan,
+      primary,
+      accent,
+      mode,
+      loginHeadline,
+      loginBody,
+      loginPoint1,
+      loginPoint2,
+      loginPoint3,
+      version,
+      active,
+    ] = await Promise.all([
       this.settings.getValue('clinic.name'),
       this.settings.getValue('clinic.slogan'),
       this.settings.getValue('clinic.theme.primary'),
       this.settings.getValue('clinic.theme.accent'),
       this.settings.getValue('clinic.theme.mode'),
+      this.settings.getValue('clinic.login.headline'),
+      this.settings.getValue('clinic.login.body'),
+      this.settings.getValue('clinic.login.point1'),
+      this.settings.getValue('clinic.login.point2'),
+      this.settings.getValue('clinic.login.point3'),
       this.settings.getValue('clinic.logo.version'),
       this.assets.listActive(),
     ]);
@@ -40,6 +58,13 @@ export class GetBrandingUseCase implements UseCase<void, ClinicBranding> {
         primary: String(primary),
         accent: String(accent),
         mode: String(mode),
+      },
+      login: {
+        headline: String(loginHeadline),
+        body: String(loginBody),
+        point1: String(loginPoint1),
+        point2: String(loginPoint2),
+        point3: String(loginPoint3),
       },
       version: Number(version),
     };

@@ -6,12 +6,7 @@ import { NgIcon, provideIcons } from '@ng-icons/core';
 import { lucideArrowLeft, lucidePrinter } from '@ng-icons/lucide';
 import { HlmButton } from '@ui/button';
 import { HlmSkeleton } from '@ui/skeleton';
-import {
-  BrandingApi,
-  QuotesApi,
-  type ClinicBranding,
-  type Quote,
-} from 'data-access';
+import { BrandingApi, QuotesApi, type ClinicBranding, type Quote } from 'data-access';
 
 /**
  * A4 printable document of a quotation (F4). Renders the clinic identity,
@@ -52,7 +47,9 @@ import {
               </span>
             }
             <div class="grid gap-0.5">
-              <h1 class="text-lg font-semibold tracking-tight">{{ branding()?.name ?? 'Hexa' }}</h1>
+              <h1 class="text-lg font-semibold tracking-tight">
+                {{ branding()?.name ?? 'Clínica' }}
+              </h1>
               @if (branding()?.slogan; as slogan) {
                 <p class="text-xs text-neutral-600">{{ slogan }}</p>
               }
@@ -95,11 +92,17 @@ import {
 
         <table class="mb-6 w-full border-collapse text-sm">
           <thead>
-            <tr class="border-b border-neutral-300 text-left text-xs uppercase tracking-wide text-neutral-500">
+            <tr
+              class="border-b border-neutral-300 text-left text-xs uppercase tracking-wide text-neutral-500"
+            >
               <th class="py-1.5 pe-2 font-medium">{{ 'quotes.print.code' | transloco }}</th>
               <th class="py-1.5 pe-2 font-medium">{{ 'quotes.print.description' | transloco }}</th>
-              <th class="py-1.5 pe-2 text-center font-medium">{{ 'quotes.print.qty' | transloco }}</th>
-              <th class="py-1.5 pe-2 text-right font-medium">{{ 'quotes.print.value' | transloco }}</th>
+              <th class="py-1.5 pe-2 text-center font-medium">
+                {{ 'quotes.print.qty' | transloco }}
+              </th>
+              <th class="py-1.5 pe-2 text-right font-medium">
+                {{ 'quotes.print.value' | transloco }}
+              </th>
               <th class="py-1.5 text-right font-medium">{{ 'quotes.print.net' | transloco }}</th>
             </tr>
           </thead>
@@ -215,7 +218,9 @@ export class QuotePrint {
   protected readonly quote = signal<Quote | null>(null);
   protected readonly branding = signal<ClinicBranding | null>(null);
 
-  protected readonly initial = computed(() => (this.branding()?.name ?? 'H').slice(0, 1).toUpperCase());
+  protected readonly initial = computed(() =>
+    (this.branding()?.name ?? 'H').slice(0, 1).toUpperCase(),
+  );
 
   constructor() {
     const id = this.route.snapshot.paramMap.get('id');

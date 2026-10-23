@@ -1,7 +1,7 @@
 /** English translations. Must mirror the key structure of {@link ES}. */
 export const EN = {
   common: {
-    appName: 'Hexa',
+    appName: 'Clinic',
     users: 'Users',
     patients: 'Patients',
     dashboard: 'Dashboard',
@@ -109,8 +109,8 @@ export const EN = {
     },
   },
   shell: {
-    title: 'Hexa',
-    subtitle: 'Microfrontends on a hexagonal API',
+    title: 'Clinic',
+    subtitle: 'Clinic management',
     navPatients: 'Patients',
     navAgenda: 'Agenda',
     navUsers: 'Users',
@@ -837,7 +837,7 @@ export const EN = {
   },
   login: {
     title: 'Sign in',
-    subtitle: 'Sign in with your Hexa account.',
+    subtitle: 'Sign in with your account.',
     heading: 'Sign in to your clinic',
     lead: 'Your clinical record, schedule and quotes, in one place.',
     panelHeadline: 'Your clinic’s day, in order.',
@@ -1283,6 +1283,15 @@ export const EN = {
     subtitle: 'Identity, contact, address and theme. They apply instantly across the app.',
     readOnly: 'Read-only: settings:update required.',
     identity: 'Identity',
+    loginPanel: {
+      title: 'Sign-in screen',
+      hint: 'Copy for the login brand panel. Empty fields fall back to the translated default.',
+      headline: 'Headline',
+      body: 'Supporting text',
+      point1: 'First capability',
+      point2: 'Second capability',
+      point3: 'Third capability',
+    },
     contact: 'Contact',
     address: 'Address',
     theme: 'Theme',
@@ -1691,7 +1700,7 @@ export const EN = {
   },
   caroIa: {
     title: 'CaroIA',
-    subtitle: 'Quotation assistant connected to the Hexa MCP',
+    subtitle: 'Quotation assistant connected to the MCP',
     preview: 'Preview · simulated data',
     chat: 'Chat',
     conversations: 'Conversations',
@@ -1701,7 +1710,7 @@ export const EN = {
     emptyConversations: 'There are no conversations yet.',
     emptyChatTitle: 'How can I help?',
     emptyChatHint:
-      'I can look up quotations, patients and the UCO fee catalog. I only answer with data from the Hexa MCP.',
+      'I can look up quotations, patients and the UCO fee catalog. I only answer with data from the MCP.',
     placeholder: 'Ask about quotations, patients or the UCO catalog…',
     footer: 'CaroIA only answers from the MCP. Writes require your approval.',
     suggestions: {

@@ -36,6 +36,7 @@ describe('GetBrandingUseCase', () => {
       logoUrl: null,
       faviconUrl: null,
       colors: { primary: '#0284c7', accent: '#f59e0b', mode: 'auto' },
+      login: { headline: '', body: '', point1: '', point2: '', point3: '' },
       version: 0,
     });
   });
@@ -47,6 +48,11 @@ describe('GetBrandingUseCase', () => {
       'clinic.slogan': 'Odontología familiar',
       'clinic.theme.primary': '#112233',
       'clinic.theme.mode': 'light',
+      'clinic.login.headline': 'Tu clínica, en orden.',
+      'clinic.login.body': 'Ficha y agenda conectadas.',
+      'clinic.login.point1': 'Ficha clínica',
+      'clinic.login.point2': 'Agenda',
+      'clinic.login.point3': 'Acceso por rol',
     });
     await assets.saveVersion([asset('logo', 4, 'logo-hash'), asset('favicon', 4, 'fav-hash')]);
     await settings.update({ 'clinic.logo.version': 4 });
@@ -57,6 +63,13 @@ describe('GetBrandingUseCase', () => {
       logoUrl: '/clinic/assets/logo?v=logo-hash',
       faviconUrl: '/clinic/assets/favicon?v=fav-hash',
       colors: { primary: '#112233', accent: '#f59e0b', mode: 'light' },
+      login: {
+        headline: 'Tu clínica, en orden.',
+        body: 'Ficha y agenda conectadas.',
+        point1: 'Ficha clínica',
+        point2: 'Agenda',
+        point3: 'Acceso por rol',
+      },
       version: 4,
     });
   });

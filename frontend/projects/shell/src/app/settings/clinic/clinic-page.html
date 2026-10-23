@@ -210,6 +210,89 @@
           </div>
         </section>
 
+        <!-- Pantalla de acceso -->
+        <section class="bg-card rounded-lg border" data-testid="clinic-login-panel">
+          <div class="border-b px-4 py-3">
+            <h2 class="text-sm font-semibold">{{ 'clinic.loginPanel.title' | transloco }}</h2>
+            <p class="text-muted-foreground mt-0.5 text-xs">
+              {{ 'clinic.loginPanel.hint' | transloco }}
+            </p>
+          </div>
+          <div class="grid gap-4 p-4">
+            <div class="grid gap-2">
+              <label hlmLabel for="clinic-login-headline">
+                {{ 'clinic.loginPanel.headline' | transloco }}
+              </label>
+              <input
+                hlmInput
+                id="clinic-login-headline"
+                formControlName="loginHeadline"
+                [placeholder]="'login.panelHeadline' | transloco"
+                data-testid="clinic-login-headline"
+              />
+              @if (errorOf(form.controls.loginHeadline); as errorKey) {
+                <p class="text-destructive text-xs">{{ errorKey | transloco }}</p>
+              }
+            </div>
+
+            <div class="grid gap-2">
+              <label hlmLabel for="clinic-login-body">
+                {{ 'clinic.loginPanel.body' | transloco }}
+              </label>
+              <textarea
+                hlmTextarea
+                id="clinic-login-body"
+                formControlName="loginBody"
+                rows="3"
+                [placeholder]="'login.panelBody' | transloco"
+                data-testid="clinic-login-body"
+              ></textarea>
+              @if (errorOf(form.controls.loginBody); as errorKey) {
+                <p class="text-destructive text-xs">{{ errorKey | transloco }}</p>
+              }
+            </div>
+
+            <div class="grid gap-4 sm:grid-cols-3">
+              <div class="grid gap-2">
+                <label hlmLabel for="clinic-login-point1">
+                  {{ 'clinic.loginPanel.point1' | transloco }}
+                </label>
+                <input
+                  hlmInput
+                  id="clinic-login-point1"
+                  formControlName="loginPoint1"
+                  [placeholder]="'login.panelPoint1' | transloco"
+                  data-testid="clinic-login-point1"
+                />
+              </div>
+              <div class="grid gap-2">
+                <label hlmLabel for="clinic-login-point2">
+                  {{ 'clinic.loginPanel.point2' | transloco }}
+                </label>
+                <input
+                  hlmInput
+                  id="clinic-login-point2"
+                  formControlName="loginPoint2"
+                  [placeholder]="'login.panelPoint2' | transloco"
+                  data-testid="clinic-login-point2"
+                />
+              </div>
+              <div class="grid gap-2">
+                <label hlmLabel for="clinic-login-point3">
+                  {{ 'clinic.loginPanel.point3' | transloco }}
+                </label>
+                <input
+                  hlmInput
+                  id="clinic-login-point3"
+                  formControlName="loginPoint3"
+                  [placeholder]="'login.panelPoint3' | transloco"
+                  data-testid="clinic-login-point3"
+                />
+              </div>
+            </div>
+          </div>
+        </section>
+
         <!-- Contacto -->
         <section class="bg-card rounded-lg border" data-testid="clinic-contact">
           <div class="border-b px-4 py-3">
@@ -415,8 +498,14 @@
                     [attr.data-testid]="'theme-preset-' + preset.id"
                     (click)="applyPreset(preset)"
                   >
-                    <span class="size-3 rounded-full border" [style.background]="preset.primary"></span>
-                    <span class="size-3 rounded-full border" [style.background]="preset.accent"></span>
+                    <span
+                      class="size-3 rounded-full border"
+                      [style.background]="preset.primary"
+                    ></span>
+                    <span
+                      class="size-3 rounded-full border"
+                      [style.background]="preset.accent"
+                    ></span>
                     {{ 'theme.presets.' + preset.id | transloco }}
                   </button>
                 }
@@ -455,7 +544,9 @@
                     <span class="font-mono">{{ suggestion.color }}</span>
                   </button>
                 } @empty {
-                  <p class="text-muted-foreground text-xs">{{ 'theme.logoColorsHint' | transloco }}</p>
+                  <p class="text-muted-foreground text-xs">
+                    {{ 'theme.logoColorsHint' | transloco }}
+                  </p>
                 }
               </div>
             </div>
@@ -469,7 +560,9 @@
               />
               <span class="grid gap-0.5">
                 <span class="font-medium">{{ 'theme.autoDark' | transloco }}</span>
-                <span class="text-muted-foreground text-xs">{{ 'theme.autoDarkHint' | transloco }}</span>
+                <span class="text-muted-foreground text-xs">{{
+                  'theme.autoDarkHint' | transloco
+                }}</span>
               </span>
             </label>
           </div>
@@ -494,7 +587,8 @@
                 <div class="flex flex-wrap gap-1.5">
                   @for (change of entry.changes; track change.key) {
                     <span hlmBadge variant="outline" class="font-mono text-[10px]">
-                      {{ change.key }}: {{ change.from === null ? '∅' : change.from }} → {{ change.to }}
+                      {{ change.key }}: {{ change.from === null ? '∅' : change.from }} →
+                      {{ change.to }}
                     </span>
                   }
                 </div>
@@ -564,25 +658,28 @@
             </div>
 
             <!-- Login simulado -->
-            <div class="rounded-lg border px-3 py-4" data-testid="preview-login">
-              <div class="mx-auto flex w-full max-w-36 flex-col items-center gap-1.5 text-center">
-                @if (logoUrl(); as logo) {
-                  <img [src]="logo" alt="" class="h-8 w-auto max-w-28 object-contain" />
-                } @else {
-                  <span
-                    class="flex size-8 items-center justify-center rounded-md"
-                    [style.background]="palette().light['--primary']"
-                    [style.color]="primaryForeground()"
-                  >
-                    <ng-icon name="lucideHexagon" class="text-sm" />
-                  </span>
-                }
-                <span class="w-full truncate text-xs font-semibold">
-                  {{ formValue().name || ('login.title' | transloco) }}
+            <div class="overflow-hidden rounded-lg border" data-testid="preview-login">
+              <div
+                class="flex flex-col gap-2 px-3 py-4"
+                [style.background]="
+                  'color-mix(in oklab, ' + palette().light['--primary'] + ' 16%, #06161b)'
+                "
+              >
+                <span class="text-[10px] font-medium text-white/80">
+                  {{ formValue().name || ('shell.title' | transloco) }}
                 </span>
-                <span class="bg-muted h-6 w-full rounded-md"></span>
+                <p class="text-sm leading-tight font-medium text-white">
+                  {{ formValue().loginHeadline || ('login.panelHeadline' | transloco) }}
+                </p>
+                <span class="mt-1 bg-white/10 px-2 py-1 text-[10px] text-white/70">
+                  {{ formValue().loginBody || ('login.panelBody' | transloco) }}
+                </span>
+              </div>
+              <div class="grid gap-2 px-3 py-3">
+                <span class="bg-muted h-5 w-full rounded-md"></span>
+                <span class="bg-muted h-5 w-full rounded-md"></span>
                 <span
-                  class="w-full rounded-md px-2 py-1 text-[10px] font-medium"
+                  class="w-full rounded-md px-2 py-1 text-center text-[10px] font-medium"
                   [style.background]="palette().light['--primary']"
                   [style.color]="primaryForeground()"
                 >
@@ -680,7 +777,11 @@
 
 <!-- Diálogo de recorte -->
 <hlm-dialog [state]="cropOpen() ? 'open' : 'closed'" (stateChanged)="onCropStateChanged($event)">
-  <hlm-dialog-content *hlmDialogPortal="let ctx" class="sm:max-w-lg" data-testid="clinic-crop-dialog">
+  <hlm-dialog-content
+    *hlmDialogPortal="let ctx"
+    class="sm:max-w-lg"
+    data-testid="clinic-crop-dialog"
+  >
     <hlm-dialog-header>
       <h3 hlmDialogTitle>{{ 'crop.title' | transloco }}</h3>
       <p hlmDialogDescription>{{ 'crop.description' | transloco }}</p>
@@ -768,14 +869,19 @@
 </hlm-dialog>
 
 <!-- Confirmación de quitar logo -->
-<hlm-alert-dialog [state]="removeOpen() ? 'open' : 'closed'" (stateChanged)="onRemoveStateChanged($event)">
+<hlm-alert-dialog
+  [state]="removeOpen() ? 'open' : 'closed'"
+  (stateChanged)="onRemoveStateChanged($event)"
+>
   <hlm-alert-dialog-content *hlmAlertDialogPortal="let ctx">
     <hlm-alert-dialog-header>
       <h2 hlmAlertDialogTitle>{{ 'clinic.logo.removeTitle' | transloco }}</h2>
       <p hlmAlertDialogDescription>{{ 'clinic.logo.removeDescription' | transloco }}</p>
     </hlm-alert-dialog-header>
     <hlm-alert-dialog-footer>
-      <button hlmAlertDialogCancel [disabled]="removing()">{{ 'common.cancel' | transloco }}</button>
+      <button hlmAlertDialogCancel [disabled]="removing()">
+        {{ 'common.cancel' | transloco }}
+      </button>
       <button
         hlmAlertDialogAction
         variant="destructive"

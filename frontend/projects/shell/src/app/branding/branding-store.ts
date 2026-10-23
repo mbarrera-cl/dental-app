@@ -35,6 +35,8 @@ export class BrandingStore {
   /** Absolute logo URL for `[src]` bindings; null when there is no logo. */
   readonly logoUrl = computed(() => this.absolute(this.brandingSignal()?.logoUrl));
   readonly faviconUrl = computed(() => this.absolute(this.brandingSignal()?.faviconUrl));
+  /** Configured login panel copy; null falls back to the localized strings. */
+  readonly login = computed(() => this.brandingSignal()?.login ?? null);
 
   constructor() {
     const cached = this.readCache();

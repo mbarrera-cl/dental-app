@@ -5,12 +5,7 @@ import { NgIcon, provideIcons } from '@ng-icons/core';
 import { lucideArrowLeft, lucidePrinter } from '@ng-icons/lucide';
 import { HlmButton } from '@ui/button';
 import { HlmSkeleton } from '@ui/skeleton';
-import {
-  BrandingApi,
-  PrescriptionsApi,
-  type ClinicBranding,
-  type Prescription,
-} from 'data-access';
+import { BrandingApi, PrescriptionsApi, type ClinicBranding, type Prescription } from 'data-access';
 
 /**
  * A4 printable prescription (receta). Renders the clinic identity, the
@@ -44,20 +39,28 @@ import {
             @if (branding()?.logoUrl; as logo) {
               <img [src]="logo" class="h-14 w-auto max-w-40 object-contain" alt="" />
             } @else {
-              <span class="flex size-12 items-center justify-center rounded-lg bg-neutral-800 text-xl font-bold text-white">
+              <span
+                class="flex size-12 items-center justify-center rounded-lg bg-neutral-800 text-xl font-bold text-white"
+              >
                 {{ initial() }}
               </span>
             }
             <div class="grid gap-0.5">
-              <h1 class="text-lg font-semibold tracking-tight">{{ branding()?.name ?? 'Hexa' }}</h1>
+              <h1 class="text-lg font-semibold tracking-tight">
+                {{ branding()?.name ?? 'Clínica' }}
+              </h1>
               @if (branding()?.slogan; as slogan) {
                 <p class="text-xs text-neutral-600">{{ slogan }}</p>
               }
             </div>
           </div>
           <div class="grid gap-0.5 text-right text-sm">
-            <p class="text-base font-bold tracking-wide">{{ 'prescriptions.print.title' | transloco }}</p>
-            <p>{{ 'prescriptions.print.date' | transloco }}: {{ formatDate(prescription.issuedAt) }}</p>
+            <p class="text-base font-bold tracking-wide">
+              {{ 'prescriptions.print.title' | transloco }}
+            </p>
+            <p>
+              {{ 'prescriptions.print.date' | transloco }}: {{ formatDate(prescription.issuedAt) }}
+            </p>
           </div>
         </header>
 
@@ -66,15 +69,24 @@ import {
             {{ 'prescriptions.print.patient' | transloco }}
           </h2>
           <p class="font-medium">{{ prescription.patientName }}</p>
-          <p>{{ 'prescriptions.print.rut' | transloco }}: <span class="font-mono">{{ prescription.patientRut }}</span></p>
+          <p>
+            {{ 'prescriptions.print.rut' | transloco }}:
+            <span class="font-mono">{{ prescription.patientRut }}</span>
+          </p>
         </section>
 
         <table class="mb-6 w-full border-collapse text-sm">
           <thead>
-            <tr class="border-b border-neutral-300 text-left text-xs uppercase tracking-wide text-neutral-500">
-              <th class="py-1.5 pe-2 font-medium">{{ 'prescriptions.form.medication' | transloco }}</th>
+            <tr
+              class="border-b border-neutral-300 text-left text-xs uppercase tracking-wide text-neutral-500"
+            >
+              <th class="py-1.5 pe-2 font-medium">
+                {{ 'prescriptions.form.medication' | transloco }}
+              </th>
               <th class="py-1.5 pe-2 font-medium">{{ 'prescriptions.form.dose' | transloco }}</th>
-              <th class="py-1.5 pe-2 font-medium">{{ 'prescriptions.form.frequency' | transloco }}</th>
+              <th class="py-1.5 pe-2 font-medium">
+                {{ 'prescriptions.form.frequency' | transloco }}
+              </th>
               <th class="py-1.5 font-medium">{{ 'prescriptions.form.duration' | transloco }}</th>
             </tr>
           </thead>
@@ -136,16 +148,16 @@ export class PrescriptionPrint {
   protected readonly backLink = computed(() => {
     const prescription = this.prescription();
 
-    return prescription === null
-      ? ['/patients']
-      : ['/patients', prescription.patientId, 'recetas'];
+    return prescription === null ? ['/patients'] : ['/patients', prescription.patientId, 'recetas'];
   });
 
   constructor() {
     const id = this.route.snapshot.paramMap.get('prescriptionId');
 
     if (id !== null) {
-      this.api.getById(id).subscribe({ next: (prescription) => this.prescription.set(prescription) });
+      this.api
+        .getById(id)
+        .subscribe({ next: (prescription) => this.prescription.set(prescription) });
     }
 
     this.brandingApi.get().subscribe({

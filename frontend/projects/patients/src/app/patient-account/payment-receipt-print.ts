@@ -55,15 +55,21 @@ import {
               </span>
             }
             <div class="grid gap-0.5">
-              <h1 class="text-lg font-semibold tracking-tight">{{ branding()?.name ?? 'Hexa' }}</h1>
+              <h1 class="text-lg font-semibold tracking-tight">
+                {{ branding()?.name ?? 'Clínica' }}
+              </h1>
               @if (branding()?.slogan; as slogan) {
                 <p class="text-xs text-neutral-600">{{ slogan }}</p>
               }
             </div>
           </div>
           <div class="grid gap-0.5 text-right text-sm">
-            <p class="text-base font-bold tracking-wide">{{ 'patientAccount.print.title' | transloco }}</p>
-            <p>{{ 'patientAccount.print.date' | transloco }}: {{ formatDate(movement.createdAt) }}</p>
+            <p class="text-base font-bold tracking-wide">
+              {{ 'patientAccount.print.title' | transloco }}
+            </p>
+            <p>
+              {{ 'patientAccount.print.date' | transloco }}: {{ formatDate(movement.createdAt) }}
+            </p>
           </div>
         </header>
 
@@ -124,7 +130,8 @@ import {
                 {{
                   (movement.voidedAt === null
                     ? 'patientAccount.status.active'
-                    : 'patientAccount.status.voided') | transloco
+                    : 'patientAccount.status.voided'
+                  ) | transloco
                 }}
               </td>
             </tr>
@@ -199,7 +206,9 @@ export class PaymentReceiptPrint {
           this.movement.set(movement);
 
           // The receipt snapshots the patient and the balance that movement left.
-          this.patients.getById(movement.patientId).subscribe((patient) => this.patient.set(patient));
+          this.patients
+            .getById(movement.patientId)
+            .subscribe((patient) => this.patient.set(patient));
           this.payments
             .ledger(movement.patientId, { limit: 1 })
             .subscribe({ next: (ledger) => this.balance.set(ledger.balance) });

@@ -10,8 +10,21 @@ export interface ClinicBranding {
   readonly logoUrl: string | null;
   readonly faviconUrl: string | null;
   readonly colors: ClinicBrandingColors;
+  readonly login: ClinicBrandingLogin;
   /** Current logo generation; `0` means the clinic has no logo. */
   readonly version: number;
+}
+
+/**
+ * Copy for the login brand panel. Empty strings mean "use the interface
+ * translation", so a clinic that never edits these keeps the localized copy.
+ */
+export interface ClinicBrandingLogin {
+  readonly headline: string;
+  readonly body: string;
+  readonly point1: string;
+  readonly point2: string;
+  readonly point3: string;
 }
 
 export interface ClinicBrandingColors {

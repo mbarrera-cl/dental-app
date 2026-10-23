@@ -1,5 +1,12 @@
 import { DatePipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, inject, OnInit, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  OnInit,
+  signal,
+} from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import {
   FormControl,
@@ -52,6 +59,7 @@ import { HlmInput } from '@ui/input';
 import { HlmLabel } from '@ui/label';
 import { HlmSkeleton } from '@ui/skeleton';
 import { HlmSpinner } from '@ui/spinner';
+import { HlmTextarea } from '@ui/textarea';
 import { HasPermissionDirective, PERMISSION_KEYS, SessionStore } from 'auth';
 import {
   BrandingApi,
@@ -65,13 +73,7 @@ import {
   isValidRut,
   isValidTelefono,
 } from 'data-access';
-import {
-  DEFAULT_THEME_SEEDS,
-  buildThemePalette,
-  contrastRatio,
-  readableOn,
-  wcagLevel,
-} from 'ui';
+import { DEFAULT_THEME_SEEDS, buildThemePalette, contrastRatio, readableOn, wcagLevel } from 'ui';
 import { map } from 'rxjs';
 import { BrandingStore } from '../../branding/branding-store';
 import { clampTransform, computeCropRect, cropFrame, IDENTITY_TRANSFORM } from './logo-crop';
@@ -83,6 +85,11 @@ interface ClinicFormValue {
   name: string;
   timeZone: string;
   slogan: string;
+  loginHeadline: string;
+  loginBody: string;
+  loginPoint1: string;
+  loginPoint2: string;
+  loginPoint3: string;
   legalName: string;
   rut: string;
   region: string;
@@ -103,6 +110,11 @@ const KEY: Record<Exclude<keyof ClinicFormValue, 'autoDark'>, string> = {
   name: 'clinic.name',
   timeZone: 'clinic.timeZone',
   slogan: 'clinic.slogan',
+  loginHeadline: 'clinic.login.headline',
+  loginBody: 'clinic.login.body',
+  loginPoint1: 'clinic.login.point1',
+  loginPoint2: 'clinic.login.point2',
+  loginPoint3: 'clinic.login.point3',
   legalName: 'clinic.legalName',
   rut: 'clinic.rut',
   region: 'clinic.address.region',
@@ -226,6 +238,7 @@ const readText = (file: File): Promise<string> => file.text();
     HlmLabel,
     HlmSkeleton,
     HlmSpinner,
+    HlmTextarea,
   ],
   providers: [
     provideIcons({
@@ -272,6 +285,14 @@ export class ClinicPage implements OnInit {
       validators: [timeZoneValidator],
     }),
     slogan: new FormControl('', { nonNullable: true, validators: [Validators.maxLength(120)] }),
+    loginHeadline: new FormControl('', {
+      nonNullable: true,
+      validators: [Validators.maxLength(120)],
+    }),
+    loginBody: new FormControl('', { nonNullable: true, validators: [Validators.maxLength(320)] }),
+    loginPoint1: new FormControl('', { nonNullable: true, validators: [Validators.maxLength(80)] }),
+    loginPoint2: new FormControl('', { nonNullable: true, validators: [Validators.maxLength(80)] }),
+    loginPoint3: new FormControl('', { nonNullable: true, validators: [Validators.maxLength(80)] }),
     legalName: new FormControl('', { nonNullable: true, validators: [Validators.maxLength(120)] }),
     rut: new FormControl('', { nonNullable: true, validators: [rutValidator] }),
     region: new FormControl('', { nonNullable: true }),
@@ -331,8 +352,12 @@ export class ClinicPage implements OnInit {
   protected readonly palette = computed(() =>
     buildThemePalette({ primary: this.formValue().primary, accent: this.formValue().accent }),
   );
-  protected readonly primaryForeground = computed(() => this.palette().light['--primary-foreground']!);
-  protected readonly accentForeground = computed(() => this.palette().light['--accent-foreground']!);
+  protected readonly primaryForeground = computed(
+    () => this.palette().light['--primary-foreground']!,
+  );
+  protected readonly accentForeground = computed(
+    () => this.palette().light['--accent-foreground']!,
+  );
   protected readonly primaryChip = computed(() => this.contrastChip(this.formValue().primary));
   protected readonly accentChip = computed(() => this.contrastChip(this.formValue().accent));
 
@@ -689,7 +714,8 @@ export class ClinicPage implements OnInit {
     }
 
     const frame = this.frame();
-    const scale = Math.max(frame.width / prepared.width, frame.height / prepared.height) * this.zoom();
+    const scale =
+      Math.max(frame.width / prepared.width, frame.height / prepared.height) * this.zoom();
     const left = (frame.width - prepared.width * scale) / 2 + this.pan().x;
     const top = (frame.height - prepared.height * scale) / 2 + this.pan().y;
 
@@ -809,11 +835,11 @@ export class ClinicPage implements OnInit {
       return null;
     }
 
-    return computeCropRect(
-      { width: prepared.width, height: prepared.height },
-      this.frame(),
-      { zoom: this.zoom(), offsetX: this.pan().x, offsetY: this.pan().y },
-    );
+    return computeCropRect({ width: prepared.width, height: prepared.height }, this.frame(), {
+      zoom: this.zoom(),
+      offsetX: this.pan().x,
+      offsetY: this.pan().y,
+    });
   }
 
   private restoreCrop(): void {
@@ -851,6 +877,11 @@ export class ClinicPage implements OnInit {
       name: text(KEY.name),
       timeZone: text(KEY.timeZone) || 'America/Santiago',
       slogan: text(KEY.slogan),
+      loginHeadline: text(KEY.loginHeadline),
+      loginBody: text(KEY.loginBody),
+      loginPoint1: text(KEY.loginPoint1),
+      loginPoint2: text(KEY.loginPoint2),
+      loginPoint3: text(KEY.loginPoint3),
       legalName: text(KEY.legalName),
       rut: text(KEY.rut),
       region: text(KEY.region),
@@ -879,7 +910,11 @@ export class ClinicPage implements OnInit {
       ratio: ratio.toFixed(2),
       level,
       labelKey:
-        level === 'AAA' ? 'theme.contrastAAA' : level === 'AA' ? 'theme.contrastAA' : 'theme.contrastFail',
+        level === 'AAA'
+          ? 'theme.contrastAAA'
+          : level === 'AA'
+            ? 'theme.contrastAA'
+            : 'theme.contrastFail',
     };
   }
 }
