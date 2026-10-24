@@ -367,8 +367,11 @@ export class PatientConsentsPage {
           this.procedure.set('');
           this.selectedKey.set('');
           this.saving.set(false);
-          this.page.set(1);
-          this.loadRecords();
+          if (this.page() !== 1) {
+            this.page.set(1);
+          } else {
+            this.loadRecords();
+          }
         },
         error: (error: unknown) => {
           toast.error(this.transloco.translate(mapApiError(error)));

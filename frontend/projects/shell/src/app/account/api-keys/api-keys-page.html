@@ -50,7 +50,7 @@
           </tr>
         </thead>
         <tbody hlmTBody>
-          @for (key of keys(); track key.id) {
+          @for (key of paged().items; track key.id) {
             <tr hlmTr data-testid="api-key-row" [attr.data-key-id]="key.id">
               <td hlmTd class="font-medium">{{ key.name }}</td>
               <td hlmTd>
@@ -107,6 +107,16 @@
         </tbody>
       </table>
     </div>
+
+    @if (keys().length > 0) {
+      <hexa-paginator
+        [total]="keys().length"
+        [page]="page()"
+        [pageSize]="pageSize()"
+        (pageChange)="page.set($event)"
+        (pageSizeChange)="pageSize.set($event)"
+      />
+    }
   }
 </section>
 

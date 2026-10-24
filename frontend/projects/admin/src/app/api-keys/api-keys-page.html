@@ -97,7 +97,7 @@
             </td>
           </tr>
         } @else {
-          @for (key of filtered(); track key.id) {
+          @for (key of paged().items; track key.id) {
             <tr hlmTr data-testid="admin-key-row">
               <td hlmTd>
                 <div class="grid gap-0.5">
@@ -165,6 +165,16 @@
       </tbody>
     </table>
   </div>
+
+  @if (!loading() && filtered().length > 0) {
+    <hexa-paginator
+      [total]="filtered().length"
+      [page]="page()"
+      [pageSize]="pageSize()"
+      (pageChange)="page.set($event)"
+      (pageSizeChange)="pageSize.set($event)"
+    />
+  }
 </section>
 
 <!-- Create dialog -->

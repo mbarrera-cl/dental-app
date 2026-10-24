@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, linkedSignal, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
@@ -46,10 +46,12 @@ import {
   ApiKeysApi,
   mapApiError,
   PermissionsApi,
+  slicePage,
+  UiSettingsService,
   type ApiKey,
   type PermissionCatalog,
 } from 'data-access';
-import { formatDateTime } from 'ui';
+import { formatDateTime, PaginatorComponent } from 'ui';
 
 type KeyStatus = 'active' | 'expired' | 'revoked';
 type BadgeVariant = 'secondary' | 'outline' | 'destructive';
@@ -103,6 +105,7 @@ const STATUS_VARIANT: Record<KeyStatus, BadgeVariant> = {
     HlmAlertDialogCancel,
     HlmAlertDialogAction,
     PermissionMatrixComponent,
+    PaginatorComponent,
   ],
   providers: [
     provideIcons({
@@ -122,6 +125,7 @@ export class ApiKeysPage {
   private readonly api = inject(ApiKeysApi);
   private readonly permissionsApi = inject(PermissionsApi);
   private readonly transloco = inject(TranslocoService);
+  private readonly uiSettings = inject(UiSettingsService);
 
   protected readonly language = toSignal(this.transloco.langChanges$, {
     initialValue: this.transloco.getActiveLang(),
@@ -132,6 +136,13 @@ export class ApiKeysPage {
   protected readonly loading = signal(true);
   protected readonly loadError = signal<string | null>(null);
   protected readonly skeletonRows = [0, 1, 2];
+
+  // Pagination over the loaded key list.
+  protected readonly page = signal(1);
+  protected readonly pageSize = linkedSignal(() => this.uiSettings.defaultPageSize());
+  protected readonly paged = computed(() =>
+    slicePage(this.keys(), this.page(), this.pageSize()),
+  );
 
   // Create dialog
   protected readonly createOpen = signal(false);
@@ -165,6 +176,7 @@ export class ApiKeysPage {
   protected readonly revoking = signal(false);
 
   constructor() {
+    this.uiSettings.load();
     this.load();
   }
 
