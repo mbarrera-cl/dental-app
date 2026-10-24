@@ -1,4 +1,12 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  HostListener,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { DateTime } from 'luxon';
@@ -7,6 +15,7 @@ import {
   FullCalendarModule,
   type CalendarOptions,
   type DateClickInfo,
+  type DateSelectInfo,
   type DatesSetInfo,
   type EventClickInfo,
   type EventInput,
@@ -76,6 +85,10 @@ export class AgendaPage {
   protected readonly professionals = signal<AgendaProfessional[]>([]);
   protected readonly reasons = signal<AgendaReason[]>([]);
   protected readonly patients = signal<AgendaPatient[]>([]);
+  protected readonly selectedPatient = signal<AgendaPatient | null>(null);
+  protected readonly patientOpen = signal(false);
+  protected readonly patientSearching = signal(false);
+  protected readonly activePatientIndex = signal(-1);
   protected readonly appointments = signal<Appointment[]>([]);
   protected readonly loading = signal(true);
   protected readonly saving = signal(false);
@@ -88,8 +101,9 @@ export class AgendaPage {
   protected readonly form = signal<AgendaForm>(this.emptyForm());
   private range = { from: new Date(), to: new Date() };
   private patientSearchTimer: ReturnType<typeof setTimeout> | null = null;
-
-
+  private patientSearchId = 0;
+  private initialPatients: readonly AgendaPatient[] = [];
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
   protected readonly calendarOptions = computed<CalendarOptions>(() => ({
     plugins: [classicTheme, dayGridPlugin, timeGridPlugin, interactionPlugin],
@@ -107,6 +121,7 @@ export class AgendaPage {
     slotMaxTime: '20:00:00',
     nowIndicator: true,
     selectable: true,
+    select: (info) => this.onSelect(info),
     editable: false,
     eventClick: (info) => this.onEventClick(info),
     dateClick: (info) => this.onDateClick(info),
@@ -137,6 +152,7 @@ export class AgendaPage {
 
   protected openNew(): void {
     const now = DateTime.now().setZone(this.timeZone());
+    this.resetPatientPicker();
     this.form.set({
       ...this.emptyForm(),
       date: now.toFormat('yyyy-MM-dd'),
@@ -150,6 +166,7 @@ export class AgendaPage {
 
   protected closeForm(): void {
     this.formOpen.set(false);
+    this.patientOpen.set(false);
     this.conflicts.set([]);
     this.error.set(null);
   }
@@ -166,16 +183,72 @@ export class AgendaPage {
   protected onPatientQuery(event: Event): void {
     const query = (event.target as HTMLInputElement).value;
     this.patientQuery.set(query);
+    this.patientOpen.set(true);
+    this.activePatientIndex.set(-1);
+
+    const selected = this.selectedPatient();
+
+    if (selected !== null && query !== this.patientName(selected)) {
+      this.selectedPatient.set(null);
+      this.form.update((form) => ({ ...form, patientId: '' }));
+    }
 
     if (this.patientSearchTimer !== null) {
       clearTimeout(this.patientSearchTimer);
     }
 
-    this.patientSearchTimer = setTimeout(() => {
-      void firstValueFrom(this.api.patients(query))
-        .then((patients) => this.patients.set(patients))
-        .catch((error: unknown) => this.error.set(this.transloco.translate(mapApiError(error))));
-    }, 250);
+    // Invalidate any request still in flight for the previous query.
+    this.patientSearchId += 1;
+    this.patientSearching.set(true);
+    this.patientSearchTimer = setTimeout(() => this.searchPatients(query), 250);
+  }
+
+  protected onPatientFocus(): void {
+    this.patientOpen.set(true);
+    this.activePatientIndex.set(-1);
+  }
+
+  protected onPatientKeydown(event: KeyboardEvent): void {
+    const results = this.patients();
+
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      this.patientOpen.set(true);
+      this.activePatientIndex.update((index) => Math.min(index + 1, results.length - 1));
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      this.activePatientIndex.update((index) => Math.max(index - 1, 0));
+    } else if (event.key === 'Enter' && this.patientOpen()) {
+      const patient = results[this.activePatientIndex()];
+
+      if (patient !== undefined) {
+        event.preventDefault();
+        this.selectPatient(patient);
+      }
+    } else if (event.key === 'Escape') {
+      this.patientOpen.set(false);
+    }
+  }
+
+  protected selectPatient(patient: AgendaPatient): void {
+    this.selectedPatient.set(patient);
+    this.patientQuery.set(this.patientName(patient));
+    this.form.update((form) => ({ ...form, patientId: patient.id }));
+    this.patientOpen.set(false);
+    this.activePatientIndex.set(-1);
+  }
+
+  @HostListener('document:click', ['$event'])
+  protected onDocumentClick(event: MouseEvent): void {
+    if (!this.patientOpen()) {
+      return;
+    }
+
+    const picker = this.host.nativeElement.querySelector('.patient-picker');
+
+    if (picker !== null && !picker.contains(event.target as Node)) {
+      this.patientOpen.set(false);
+    }
   }
 
   protected onFilterProfessional(event: Event): void {
@@ -189,7 +262,12 @@ export class AgendaPage {
     this.error.set(null);
     this.message.set(null);
 
-    if (form.patientId === '' || form.professionalId === '' || form.date === '' || form.time === '') {
+    if (
+      form.patientId === '' ||
+      form.professionalId === '' ||
+      form.date === '' ||
+      form.time === ''
+    ) {
       this.error.set('Selecciona paciente, profesional, fecha y hora.');
       return;
     }
@@ -215,7 +293,9 @@ export class AgendaPage {
 
         if (overlaps.length > 0) {
           this.conflicts.set(overlaps);
-          this.error.set('Ese profesional ya tiene una hora en ese rango. Puedes guardar igualmente.');
+          this.error.set(
+            'Ese profesional ya tiene una hora en ese rango. Puedes guardar igualmente.',
+          );
           this.saving.set(false);
           return;
         }
@@ -262,7 +342,10 @@ export class AgendaPage {
   protected async cancelSelected(): Promise<void> {
     const id = this.form().id;
 
-    if (id === null || !window.confirm('¿Cancelar esta hora? Se enviará un aviso si está configurado.')) {
+    if (
+      id === null ||
+      !window.confirm('¿Cancelar esta hora? Se enviará un aviso si está configurado.')
+    ) {
       return;
     }
 
@@ -302,6 +385,7 @@ export class AgendaPage {
       this.config.set(config);
       this.professionals.set(professionals);
       this.reasons.set(reasons);
+      this.initialPatients = patients;
       this.patients.set(patients);
       await this.loadRange(this.range.from, this.range.to);
 
@@ -320,7 +404,11 @@ export class AgendaPage {
         }
 
         if (selected !== undefined) {
-          const start = DateTime.now().setZone(config.timeZone).plus({ hours: 1 }).set({ minute: 0, second: 0, millisecond: 0 });
+          const start = DateTime.now()
+            .setZone(config.timeZone)
+            .plus({ hours: 1 })
+            .set({ minute: 0, second: 0, millisecond: 0 });
+          this.selectedPatient.set(selected);
           this.patientQuery.set(this.patientName(selected));
           this.form.set({
             ...this.emptyForm(),
@@ -364,6 +452,7 @@ export class AgendaPage {
   private onDateClick(info: DateClickInfo): void {
     const local = DateTime.fromJSDate(info.date, { zone: this.timeZone() });
 
+    this.resetPatientPicker();
     this.form.set({
       ...this.emptyForm(),
       date: local.toFormat('yyyy-MM-dd'),
@@ -372,6 +461,31 @@ export class AgendaPage {
     });
     this.conflicts.set([]);
     this.formOpen.set(true);
+  }
+
+  /**
+   * Dragging across calendar slots (for example two 30-minute slots) opens
+   * the form with the exact start and the selected span as the duration.
+   */
+  private onSelect(info: DateSelectInfo): void {
+    const start = DateTime.fromJSDate(info.start, { zone: this.timeZone() });
+    const end = DateTime.fromJSDate(info.end, { zone: this.timeZone() });
+    const defaultDuration = this.config()?.defaultDurationMinutes ?? 30;
+    const duration = info.allDay
+      ? defaultDuration
+      : Math.max(5, Math.min(480, Math.round(end.diff(start, 'minutes').minutes)));
+
+    this.resetPatientPicker();
+    this.form.set({
+      ...this.emptyForm(),
+      date: start.toFormat('yyyy-MM-dd'),
+      time: info.allDay ? '09:00' : start.toFormat('HH:mm'),
+      durationMinutes: duration,
+    });
+    this.conflicts.set([]);
+    this.formOpen.set(true);
+    this.error.set(null);
+    info.view.calendar.unselect();
   }
 
   private onEventClick(info: EventClickInfo): void {
@@ -396,6 +510,8 @@ export class AgendaPage {
       location: appointment.location ?? '',
     });
     this.patientQuery.set(appointment.patient.nombreCompleto);
+    this.selectedPatient.set(appointment.patient);
+    this.patientOpen.set(false);
     this.conflicts.set([]);
     this.formOpen.set(true);
     this.error.set(null);
@@ -415,6 +531,38 @@ export class AgendaPage {
             : '#0284c7',
       textColor: '#ffffff',
     }));
+  }
+
+  private searchPatients(query: string): void {
+    const requestId = ++this.patientSearchId;
+    this.patientSearching.set(true);
+
+    firstValueFrom(this.api.patients(query))
+      .then((patients) => {
+        if (requestId !== this.patientSearchId) {
+          return;
+        }
+
+        this.patients.set(patients);
+      })
+      .catch((error: unknown) => {
+        if (requestId === this.patientSearchId) {
+          this.error.set(this.transloco.translate(mapApiError(error)));
+        }
+      })
+      .finally(() => {
+        if (requestId === this.patientSearchId) {
+          this.patientSearching.set(false);
+        }
+      });
+  }
+
+  private resetPatientPicker(): void {
+    this.patientQuery.set('');
+    this.selectedPatient.set(null);
+    this.patientOpen.set(false);
+    this.activePatientIndex.set(-1);
+    this.patients.set([...this.initialPatients]);
   }
 
   private localToUtc(date: string, time: string): string {

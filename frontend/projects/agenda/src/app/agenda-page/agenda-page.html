@@ -2,9 +2,7 @@
   <header class="flex flex-wrap items-center justify-between gap-3">
     <div class="grid gap-0.5">
       <h2 class="text-xl font-semibold tracking-tight">Agenda</h2>
-      <p class="text-muted-foreground text-xs">
-        Horas del equipo · {{ timeZone() }}
-      </p>
+      <p class="text-muted-foreground text-xs">Horas del equipo · {{ timeZone() }}</p>
     </div>
 
     <div class="flex flex-wrap items-center gap-2">
@@ -24,13 +22,17 @@
   </header>
 
   @if (message(); as text) {
-    <div class="rounded-md border border-emerald-300 bg-emerald-50 px-3 py-2 text-xs text-emerald-900">
+    <div
+      class="rounded-md border border-emerald-300 bg-emerald-50 px-3 py-2 text-xs text-emerald-900"
+    >
       {{ text }}
     </div>
   }
 
   @if (error(); as text) {
-    <div class="border-destructive/30 bg-destructive/5 text-destructive rounded-md border px-3 py-2 text-xs">
+    <div
+      class="border-destructive/30 bg-destructive/5 text-destructive rounded-md border px-3 py-2 text-xs"
+    >
       {{ text }}
     </div>
   }
@@ -65,33 +67,75 @@
             </h3>
             <p class="text-muted-foreground text-xs">Horario en {{ timeZone() }}</p>
           </div>
-          <button hlmBtn variant="ghost" size="sm" type="button" (click)="closeForm()">Cerrar</button>
+          <button hlmBtn variant="ghost" size="sm" type="button" (click)="closeForm()">
+            Cerrar
+          </button>
         </div>
 
         <div class="grid gap-4 overflow-y-auto p-5">
           <div class="grid gap-3 sm:grid-cols-2">
             <label class="grid gap-1 text-sm sm:col-span-2">
               <span>Paciente</span>
-              <input
-                hlmInput
-                type="search"
-                placeholder="Buscar por nombre o RUT…"
-                [value]="patientQuery()"
-                (input)="onPatientQuery($event)"
-              />
-              <select
-                class="border-input bg-background h-9 rounded-md border px-2 text-sm"
-                [value]="form().patientId"
-                (change)="setField('patientId', $any($event.target).value)"
-                data-testid="agenda-patient"
-              >
-                <option value="">Selecciona un paciente</option>
-                @for (patient of patients(); track patient.id) {
-                  <option [value]="patient.id">
-                    {{ patientName(patient) }} · {{ patient.rut }}
-                  </option>
+              <div class="patient-picker relative">
+                <input
+                  hlmInput
+                  type="search"
+                  role="combobox"
+                  autocomplete="off"
+                  aria-autocomplete="list"
+                  aria-controls="agenda-patient-results"
+                  [attr.aria-expanded]="patientOpen()"
+                  placeholder="Buscar por nombre o RUT…"
+                  [value]="patientQuery()"
+                  data-testid="agenda-patient"
+                  (input)="onPatientQuery($event)"
+                  (focus)="onPatientFocus()"
+                  (keydown)="onPatientKeydown($event)"
+                />
+                @if (patientOpen()) {
+                  <div
+                    id="agenda-patient-results"
+                    class="bg-popover text-popover-foreground absolute inset-x-0 top-full z-50 mt-1 max-h-64 overflow-y-auto rounded-md border shadow-lg"
+                    data-testid="agenda-patient-results"
+                  >
+                    @if (patientSearching()) {
+                      <p class="text-muted-foreground px-3 py-2 text-xs">Buscando…</p>
+                    } @else if (patients().length === 0) {
+                      <p class="text-muted-foreground px-3 py-2 text-xs">
+                        Sin resultados para “{{ patientQuery() }}”.
+                      </p>
+                    } @else {
+                      <ul role="listbox">
+                        @for (patient of patients(); track patient.id; let index = $index) {
+                          <li
+                            role="option"
+                            [attr.aria-selected]="patient.id === form().patientId"
+                            [class.bg-muted]="index === activePatientIndex()"
+                          >
+                            <button
+                              type="button"
+                              class="hover:bg-muted flex w-full flex-col px-3 py-2 text-left text-sm"
+                              (mousedown)="$event.preventDefault()"
+                              (click)="selectPatient(patient)"
+                            >
+                              <span class="font-medium">{{ patientName(patient) }}</span>
+                              <span class="text-muted-foreground text-[11px]">
+                                {{ patient.rut }}
+                                @if (patient.email) {
+                                  · {{ patient.email }}
+                                }
+                              </span>
+                            </button>
+                          </li>
+                        }
+                      </ul>
+                    }
+                  </div>
                 }
-              </select>
+              </div>
+              @if (selectedPatient(); as patient) {
+                <span class="text-muted-foreground text-[11px]">{{ patient.rut }}</span>
+              }
             </label>
 
             <label class="grid gap-1 text-sm sm:col-span-2">
@@ -160,7 +204,9 @@
                 data-testid="agenda-reason"
               >
                 <option value="">Sin motivo</option>
-                @if (form().reason !== '' && !reasons().some(reason => reason.name === form().reason)) {
+                @if (
+                  form().reason !== '' && !reasons().some((reason) => reason.name === form().reason)
+                ) {
                   <option [value]="form().reason">{{ form().reason }} (histórico)</option>
                 }
                 @for (reason of reasons(); track reason.id) {
@@ -180,7 +226,9 @@
           </div>
 
           @if (conflicts().length > 0) {
-            <div class="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+            <div
+              class="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900"
+            >
               <p class="font-medium">Horario superpuesto con:</p>
               <ul class="mt-1 list-disc pl-4">
                 @for (conflict of conflicts(); track conflict.id) {
@@ -205,7 +253,13 @@
             </button>
           }
           <button hlmBtn type="button" [disabled]="saving()" (click)="save()">
-            {{ saving() ? 'Guardando…' : conflicts().length > 0 ? 'Guardar de todos modos' : 'Guardar' }}
+            {{
+              saving()
+                ? 'Guardando…'
+                : conflicts().length > 0
+                  ? 'Guardar de todos modos'
+                  : 'Guardar'
+            }}
           </button>
         </div>
       </div>
