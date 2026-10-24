@@ -55,6 +55,7 @@ describe('configureApp CORS hardening', () => {
     expect(enableCors).toHaveBeenCalledWith({
       origin: ['https://app.example.com', 'https://admin.example.com'],
       credentials: true,
+      exposedHeaders: ['Content-Disposition'],
     });
   });
 

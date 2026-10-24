@@ -1,4 +1,4 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams, type HttpResponse } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { API_BASE_URL } from './api-base-url';
@@ -12,6 +12,24 @@ export class PatientsApi {
 
   list(): Observable<Patient[]> {
     return this.http.get<Patient[]>(`${this.baseUrl}/patients`);
+  }
+
+  /**
+   * Downloads the patients workbook. The optional `q` mirrors the list page
+   * filter, so the spreadsheet contains the rows the user is looking at.
+   */
+  exportExcel(q?: string): Observable<HttpResponse<Blob>> {
+    const query = q?.trim() ?? '';
+    const params =
+      query === ''
+        ? undefined
+        : new HttpParams({ fromObject: { q: query } });
+
+    return this.http.get(`${this.baseUrl}/patients/export.xlsx`, {
+      observe: 'response',
+      responseType: 'blob',
+      params,
+    });
   }
 
   getById(id: string): Observable<Patient> {

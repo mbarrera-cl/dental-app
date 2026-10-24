@@ -4,10 +4,27 @@
       <h2 class="text-2xl font-semibold tracking-tight">{{ 'patients.title' | transloco }}</h2>
       <p class="text-muted-foreground text-sm">{{ 'patients.subtitle' | transloco }}</p>
     </div>
-    <button hlmBtn (click)="openCreate()">
-      <ng-icon name="lucidePlus" />
-      {{ 'patients.newPatient' | transloco }}
-    </button>
+    <div class="flex flex-wrap items-center gap-2">
+      <button
+        hlmBtn
+        variant="outline"
+        type="button"
+        data-testid="patients-export"
+        (click)="exportExcel()"
+        [disabled]="exporting()"
+      >
+        @if (exporting()) {
+          <hlm-spinner />
+        } @else {
+          <ng-icon name="lucideDownload" />
+        }
+        {{ (exporting() ? 'patients.exporting' : 'patients.export') | transloco }}
+      </button>
+      <button hlmBtn (click)="openCreate()">
+        <ng-icon name="lucidePlus" />
+        {{ 'patients.newPatient' | transloco }}
+      </button>
+    </div>
   </header>
 
   <div class="flex flex-wrap items-center gap-3">

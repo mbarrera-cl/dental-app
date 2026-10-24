@@ -360,6 +360,8 @@ export const ES = {
     searchPlaceholder: 'Buscar por RUT, nombre o email…',
     empty: 'No hay pacientes que coincidan con la búsqueda.',
     newPatient: 'Nuevo paciente',
+    export: 'Exportar Excel',
+    exporting: 'Generando…',
     ageYears: '{{age}} años',
     columns: {
       rut: 'RUT',
@@ -439,6 +441,8 @@ export const ES = {
       created: 'Paciente creado correctamente.',
       updated: 'Paciente actualizado correctamente.',
       deleted: 'Paciente eliminado correctamente.',
+      exported: 'Pacientes exportados correctamente.',
+      exportError: 'No se pudo generar el Excel de pacientes.',
     },
     validation: {
       rutRequired: 'El RUT es obligatorio.',

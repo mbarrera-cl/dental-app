@@ -1,4 +1,4 @@
-import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClient, type HttpResponse } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -62,6 +62,37 @@ describe('PatientsApi', () => {
     request.flush([CAMILA]);
 
     expect(received).toEqual([CAMILA]);
+  });
+
+  it('downloads the patients workbook with the current search', () => {
+    let received: HttpResponse<Blob> | undefined;
+
+    api.exportExcel('  camila  ').subscribe((response) => (received = response));
+
+    const request = http.expectOne(
+      (candidate) =>
+        candidate.url === 'http://api.test/v1/patients/export.xlsx' &&
+        candidate.params.get('q') === 'camila',
+    );
+    expect(request.request.method).toBe('GET');
+    expect(request.request.responseType).toBe('blob');
+
+    const blob = new Blob(['PK']);
+    request.flush(blob, {
+      headers: {
+        'Content-Disposition': 'attachment; filename="pacientes-2026-10-24.xlsx"',
+      },
+    });
+
+    expect(received?.body).toBe(blob);
+    expect(received?.headers.get('Content-Disposition')).toContain('pacientes-2026-10-24.xlsx');
+  });
+
+  it('omits the q parameter when no search is active', () => {
+    api.exportExcel().subscribe();
+
+    const request = http.expectOne('http://api.test/v1/patients/export.xlsx');
+    expect(request.request.params.keys()).toHaveLength(0);
   });
 
   it('gets a single patient by id', () => {

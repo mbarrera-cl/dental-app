@@ -12,6 +12,7 @@ import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
   lucideClipboardList,
+  lucideDownload,
   lucidePencil,
   lucidePlus,
   lucideRefreshCw,
@@ -158,6 +159,7 @@ function fechaNacimientoValidator(control: AbstractControl): ValidationErrors | 
   providers: [
     provideIcons({
       lucideClipboardList,
+      lucideDownload,
       lucidePencil,
       lucidePlus,
       lucideRefreshCw,
@@ -190,6 +192,7 @@ export class PatientsPage {
   protected readonly loading = signal(true);
   protected readonly loadError = signal<string | null>(null);
   protected readonly query = signal('');
+  protected readonly exporting = signal(false);
 
   // Pagination: the list is already loaded and filtered in memory, so the page
   // is a view over `filtered()`. The size starts from the configured default.
@@ -308,6 +311,30 @@ export class PatientsPage {
   protected onQueryInput(event: Event): void {
     this.query.set((event.target as HTMLInputElement).value);
     this.page.set(1);
+  }
+
+  protected exportExcel(): void {
+    if (this.exporting()) {
+      return;
+    }
+
+    this.exporting.set(true);
+
+    this.api.exportExcel(this.query()).subscribe({
+      next: (response) => {
+        const blob = response.body;
+
+        if (blob === null) {
+          toast.error(this.transloco.translate('patients.toasts.exportError'));
+          return;
+        }
+
+        this.downloadBlob(blob, this.exportFilename(response.headers.get('content-disposition')));
+        toast.success(this.transloco.translate('patients.toasts.exported'));
+      },
+      error: () => toast.error(this.transloco.translate('patients.toasts.exportError')),
+      complete: () => this.exporting.set(false),
+    });
   }
 
   protected formatRut(rut: string): string {
@@ -576,6 +603,38 @@ export class PatientsPage {
         this.load();
       },
     });
+  }
+
+  private downloadBlob(blob: Blob, filename: string): void {
+    try {
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+
+      anchor.href = url;
+      anchor.download = filename;
+      anchor.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      // Constrained environments (tests, old browsers) keep the toast only.
+    }
+  }
+
+  private exportFilename(disposition: string | null): string {
+    const match =
+      disposition === null
+        ? null
+        : /filename\*?=(?:UTF-8'')?"?([^";]+)"?/i.exec(disposition);
+    const serverName = match?.[1];
+
+    if (serverName !== undefined && serverName !== '') {
+      try {
+        return decodeURIComponent(serverName);
+      } catch {
+        return serverName;
+      }
+    }
+
+    return `pacientes-${new Date().toISOString().slice(0, 10)}.xlsx`;
   }
 
   private nameError(control: FormControl<string>, requiredKey: string): string | null {

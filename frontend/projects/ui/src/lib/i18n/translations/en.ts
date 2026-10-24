@@ -349,6 +349,8 @@ export const EN = {
     searchPlaceholder: 'Search by RUT, name or email…',
     empty: 'No patients match your search.',
     newPatient: 'New patient',
+    export: 'Export to Excel',
+    exporting: 'Generating…',
     ageYears: '{{age}} years old',
     columns: {
       rut: 'RUT',
@@ -428,6 +430,8 @@ export const EN = {
       created: 'Patient created successfully.',
       updated: 'Patient updated successfully.',
       deleted: 'Patient deleted successfully.',
+      exported: 'Patients exported successfully.',
+      exportError: 'Could not generate the patients Excel file.',
     },
     validation: {
       rutRequired: 'RUT is required.',

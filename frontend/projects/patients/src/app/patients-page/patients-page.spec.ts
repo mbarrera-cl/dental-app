@@ -2,7 +2,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { provideAppTransloco, provideSpartanHlm } from 'ui';
 import type { Patient } from 'data-access';
 import { PatientsPage } from './patients-page';
@@ -66,6 +66,12 @@ describe('PatientsPage', () => {
     }).compileComponents();
 
     http = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => {
+    Reflect.deleteProperty(URL, 'createObjectURL');
+    Reflect.deleteProperty(URL, 'revokeObjectURL');
+    vi.unstubAllGlobals();
   });
 
   async function render() {
@@ -156,6 +162,54 @@ describe('PatientsPage', () => {
 
     expect(compiled.textContent).toContain('Paciente 10');
     expect(compiled.textContent).toContain('Página 2 de 2');
+  });
+
+  it('exports the filtered patients and re-enables the button', async () => {
+    const revoked: string[] = [];
+
+    Object.defineProperty(URL, 'createObjectURL', {
+      configurable: true,
+      writable: true,
+      value: () => 'blob:patients-export',
+    });
+    Object.defineProperty(URL, 'revokeObjectURL', {
+      configurable: true,
+      writable: true,
+      value: (url: string) => revoked.push(url),
+    });
+
+    const fixture = await render();
+    const compiled = fixture.nativeElement as HTMLElement;
+    const input = compiled.querySelector<HTMLInputElement>('[data-testid="patients-search"]')!;
+
+    input.value = 'camila';
+    input.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+
+    const button = compiled.querySelector<HTMLButtonElement>('[data-testid="patients-export"]')!;
+    button.click();
+    fixture.detectChanges();
+
+    expect(button.disabled).toBe(true);
+
+    const request = http.expectOne(
+      (candidate) =>
+        candidate.url === 'http://localhost:3000/patients/export.xlsx' &&
+        candidate.params.get('q') === 'camila',
+    );
+    expect(request.request.method).toBe('GET');
+    expect(request.request.responseType).toBe('blob');
+
+    request.flush(new Blob(['PK']), {
+      headers: {
+        'Content-Disposition': 'attachment; filename="pacientes-2026-10-24.xlsx"',
+      },
+    });
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(button.disabled).toBe(false);
+    expect(revoked).toEqual(['blob:patients-export']);
   });
 
   it('shows an error banner when the API fails and retries', async () => {

@@ -91,7 +91,12 @@ export function configureApp(app: INestApplication, options: AppSetupOptions = {
 
   // The microfrontends run on their own dev-server origins (:4200-:4204).
   // `credentials: true` lets the browser send the httpOnly refresh cookie.
-  app.enableCors({ origin: corsOrigins, credentials: true });
+  // `Content-Disposition` is exposed so downloads can keep the server filename.
+  app.enableCors({
+    origin: corsOrigins,
+    credentials: true,
+    exposedHeaders: ['Content-Disposition'],
+  });
 
   app.useGlobalPipes(
     new ValidationPipe({

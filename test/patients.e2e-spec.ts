@@ -81,6 +81,42 @@ describe('Patients API (e2e)', () => {
     };
   };
 
+  const binaryParser = (
+    response: NodeJS.ReadableStream,
+    callback: (error: Error | null, body: Buffer) => void,
+  ): void => {
+    const chunks: Buffer[] = [];
+
+    response.on('data', (chunk: Buffer) => chunks.push(chunk));
+    response.on('end', () => callback(null, Buffer.concat(chunks)));
+  };
+
+  /** Creates a user with direct permissions and returns its bearer token. */
+  const createUserWithPermissions = async (
+    email: string,
+    permissions: string[],
+  ): Promise<string> => {
+    const created = await request(app.getHttpServer())
+      .post('/users')
+      .set('Authorization', authorization)
+      .send({ email, name: 'Regular User', password: 'User-Pass-123!' })
+      .expect(201);
+    const id = (created.body as { id: string }).id;
+
+    await request(app.getHttpServer())
+      .put(`/users/${id}/permissions`)
+      .set('Authorization', authorization)
+      .send({ permissions })
+      .expect(200);
+
+    const login = await request(app.getHttpServer())
+      .post('/auth/login')
+      .send({ email, password: 'User-Pass-123!' })
+      .expect(200);
+
+    return `Bearer ${(login.body as { accessToken: string }).accessToken}`;
+  };
+
   const createPatient = (payload: object = validPatient) =>
     api().post('/patients').send(payload);
 
@@ -241,6 +277,47 @@ describe('Patients API (e2e)', () => {
       expect(response.body).toHaveLength(2);
       expect(response.body[0]).toMatchObject({ rut: '12345678-5' });
       expect(response.body[1]).toMatchObject({ rut: '22222222-2' });
+    });
+  });
+
+  describe('GET /patients/export.xlsx', () => {
+    it('returns an XLSX attachment with the expected headers', async () => {
+      await createPatient(fullPatient).expect(201);
+
+      const response = await api()
+        .get('/patients/export.xlsx')
+        .buffer(true)
+        .parse(binaryParser)
+        .expect(200);
+
+      expect(response.headers['content-type']).toBe(
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      );
+      expect(response.headers['content-disposition']).toMatch(
+        /^attachment; filename="pacientes-\d{4}-\d{2}-\d{2}\.xlsx"$/,
+      );
+      expect(response.headers['cache-control']).toBe('no-store');
+      expect(Buffer.isBuffer(response.body)).toBe(true);
+      expect((response.body as Buffer).subarray(0, 2).toString('utf8')).toBe('PK');
+    });
+
+    it('returns a valid workbook when there are no patients', async () => {
+      const response = await api()
+        .get('/patients/export.xlsx')
+        .buffer(true)
+        .parse(binaryParser)
+        .expect(200);
+
+      expect((response.body as Buffer).subarray(0, 2).toString('utf8')).toBe('PK');
+    });
+
+    it('requires patients:read', async () => {
+      const token = await createUserWithPermissions('no-patients@e2e.local', ['users:read']);
+
+      await request(app.getHttpServer())
+        .get('/patients/export.xlsx')
+        .set('Authorization', token)
+        .expect(403);
     });
   });
 

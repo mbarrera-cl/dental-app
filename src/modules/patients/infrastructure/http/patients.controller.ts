@@ -3,11 +3,14 @@ import {
   Controller,
   Delete,
   Get,
+  Header,
   HttpCode,
   HttpStatus,
   Param,
   Patch,
   Post,
+  Query,
+  StreamableFile,
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
@@ -17,10 +20,13 @@ import {
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
+  ApiProduces,
   ApiTags,
 } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { CreatePatientUseCase } from '../../application/use-cases/create-patient.use-case.js';
 import { DeletePatientUseCase } from '../../application/use-cases/delete-patient.use-case.js';
+import { ExportPatientsUseCase } from '../../application/use-cases/export-patients.use-case.js';
 import { GetPatientByRutUseCase } from '../../application/use-cases/get-patient-by-rut.use-case.js';
 import { GetPatientUseCase } from '../../application/use-cases/get-patient.use-case.js';
 import { ListPatientsUseCase } from '../../application/use-cases/list-patients.use-case.js';
@@ -32,6 +38,7 @@ import {
 } from '../../../activity/infrastructure/http/activity-action.decorator.js';
 import { patientsPermissions } from '../../permissions.js';
 import { CreatePatientRequestDto } from './dtos/create-patient.request.dto.js';
+import { ExportPatientsQueryDto } from './dtos/export-patients.query.dto.js';
 import { PatientResponseDto } from './dtos/patient-response.dto.js';
 import { UpdatePatientRequestDto } from './dtos/update-patient.request.dto.js';
 
@@ -47,6 +54,7 @@ export class PatientsController {
     private readonly getPatient: GetPatientUseCase,
     private readonly getPatientByRut: GetPatientByRutUseCase,
     private readonly listPatients: ListPatientsUseCase,
+    private readonly exportPatients: ExportPatientsUseCase,
     private readonly updatePatient: UpdatePatientUseCase,
     private readonly deletePatient: DeletePatientUseCase,
   ) {}
@@ -96,6 +104,29 @@ export class PatientsController {
     const patients = await this.listPatients.execute();
 
     return patients.map((patient) => PatientResponseDto.fromDomain(patient));
+  }
+
+  // Declared before `:id` on purpose: Express resolves routes in order and
+  // this literal segment must win.
+  @Get('export.xlsx')
+  @RequirePermissions(patientsPermissions.read)
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @ActivityAction({ action: 'patients.export' })
+  @ApiOperation({ summary: 'Export patients to an Excel workbook' })
+  @ApiProduces('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+  @ApiOkResponse({
+    description: 'XLSX workbook with the patients matching the optional search.',
+    schema: { type: 'string', format: 'binary' },
+  })
+  @Header('Cache-Control', 'no-store')
+  async export(@Query() query: ExportPatientsQueryDto): Promise<StreamableFile> {
+    const file = await this.exportPatients.execute({ q: query.q });
+
+    return new StreamableFile(file.buffer, {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      disposition: `attachment; filename="${file.filename}"`,
+      length: file.buffer.length,
+    });
   }
 
   // Declared before `:id` on purpose: Express resolves routes in order and

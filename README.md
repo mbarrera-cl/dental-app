@@ -476,6 +476,7 @@ the database. The technical id stays a UUID.
 | ------ | --------------------- | ------- | -------------------------------------------------------------- |
 | POST   | `/patients`           | `201`   | `400` invalid payload · `409` RUT taken                        |
 | GET    | `/patients`           | `200`   |                                                                |
+| GET    | `/patients/export.xlsx` | `200` | `403` missing `patients:read` · `400` invalid search           |
 | GET    | `/patients/:id`       | `200`   | `404` unknown patient                                          |
 | GET    | `/patients/rut/:rut`  | `200`   | `400` malformed RUT · `404` RUT not registered                 |
 | PATCH  | `/patients/:id`       | `200`   | `400` invalid/empty payload · `404` unknown · `409` RUT taken  |
@@ -502,6 +503,10 @@ curl -s -X POST http://localhost:3000/patients \
 # Read (by UUID or by RUT)
 curl -s http://localhost:3000/patients -H "Authorization: Bearer $TOKEN"
 curl -s http://localhost:3000/patients/rut/12.345.678-5 -H "Authorization: Bearer $TOKEN"
+
+# Export the list (optionally filtered with ?q=) to an Excel workbook
+curl -s "http://localhost:3000/patients/export.xlsx?q=camila" \
+  -H "Authorization: Bearer $TOKEN" -o pacientes.xlsx
 
 # Update: omitted fields are untouched, `null` clears an optional group
 curl -s -X PATCH http://localhost:3000/patients/<id> \
