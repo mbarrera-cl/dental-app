@@ -1705,6 +1705,8 @@ export const EN = {
   caroIa: {
     title: 'CaroIA',
     subtitle: 'Quotation assistant connected to the MCP',
+    thinking: 'CaroIA is thinking…',
+    consultingData: 'Looking up your data…',
     preview: 'Preview · simulated data',
     chat: 'Chat',
     conversations: 'Conversations',
