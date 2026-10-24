@@ -106,3 +106,30 @@
   margin: 0.6rem 0;
   padding-left: 0.75rem;
 }
+
+/* CaroIA: the streamed answer keeps a thin caret at the end of the last
+ * markdown block until `message.done` clears the `pk-typing` class. */
+.pk-typing .pk-markdown > :last-child::after {
+  display: inline-block;
+  width: 0.45ch;
+  height: 1.05em;
+  margin-inline-start: 0.12em;
+  border-radius: 1px;
+  background: currentColor;
+  content: '';
+  vertical-align: -0.12em;
+  animation: pk-caret 1s steps(1, end) infinite;
+}
+
+@keyframes pk-caret {
+  50% {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pk-typing .pk-markdown > :last-child::after {
+    animation: none;
+    opacity: 0.6;
+  }
+}

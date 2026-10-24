@@ -163,7 +163,24 @@
                   [modelName]="'CaroIA · DeepSeek'"
                   [streaming]="store.isStreaming(message.id)"
                   [copyText]="message.content"
+                  [attr.aria-busy]="store.isStreaming(message.id)"
                 >
+                  @if (
+                    store.isStreaming(message.id) &&
+                    (store.streamPhase() === 'thinking' || store.streamPhase() === 'tool')
+                  ) {
+                    <div class="mb-1">
+                      <pk-thinking
+                        [label]="
+                          (store.streamPhase() === 'tool'
+                            ? 'caroIa.consultingData'
+                            : 'caroIa.thinking'
+                          ) | transloco
+                        "
+                      />
+                    </div>
+                  }
+
                   @if (message.toolCalls.length > 0) {
                     <div class="mb-3 flex flex-wrap gap-1.5">
                       @for (tool of message.toolCalls; track tool.id) {
@@ -181,7 +198,13 @@
                     </div>
                   }
 
-                  <pk-markdown [class]="'pk-markdown'" [content]="message.content" />
+                  <div
+                    [class.pk-typing]="
+                      store.isStreaming(message.id) && store.streamPhase() === 'writing'
+                    "
+                  >
+                    <pk-markdown [class]="'pk-markdown'" [content]="message.content" />
+                  </div>
 
                   @for (approval of message.approvals; track approval.id) {
                     <div class="mt-4">

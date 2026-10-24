@@ -83,6 +83,35 @@ describe('CaroIaStore', () => {
     expect(store.sending()).toBe(false);
   });
 
+  it('derives the stream phase from real events', () => {
+    openFirst();
+
+    store.send('Resume el presupuesto COT-2026-0001');
+    expect(store.streamPhase()).toBe('thinking');
+
+    // The mock starts a tool at 200 ms, before it streams any text.
+    vi.advanceTimersByTime(250);
+    expect(store.streamPhase()).toBe('tool');
+
+    // Text starts at 760 ms.
+    vi.advanceTimersByTime(600);
+    expect(store.streamPhase()).toBe('writing');
+
+    vi.runAllTimers();
+    expect(store.streamPhase()).toBe('idle');
+  });
+
+  it('returns to idle when the user stops the stream', () => {
+    openFirst();
+
+    store.send('Resume el presupuesto COT-2026-0001');
+    expect(store.streamPhase()).toBe('thinking');
+
+    store.stop();
+    expect(store.streamPhase()).toBe('idle');
+    expect(store.sending()).toBe(false);
+  });
+
   it('pauses on a write and resolves the approval when approved', () => {
     openFirst();
     const approval = store

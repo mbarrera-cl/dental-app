@@ -10,6 +10,9 @@ import {
   type CaroTranscription,
 } from 'data-access';
 
+/** What the assistant turn is doing right now. */
+export type CaroStreamPhase = 'idle' | 'thinking' | 'tool' | 'writing';
+
 /**
  * Estado de CaroIA. Solo conoce `CaroIaGateway`; la rama UI usa el gateway
  * simulado y la rama backend lo sustituye por HTTP/SSE sin tocar la página.
@@ -45,8 +48,9 @@ export class CaroIaStore {
 
   readonly activeConversation = computed(
     () =>
-      this.conversationsSignal().find((conversation) => conversation.id === this.activeIdSignal()) ??
-      null,
+      this.conversationsSignal().find(
+        (conversation) => conversation.id === this.activeIdSignal(),
+      ) ?? null,
   );
 
   readonly readyAttachments = computed(() =>
@@ -58,6 +62,31 @@ export class CaroIaStore {
       (attachment) => attachment.status === 'uploading' || attachment.status === 'processing',
     ),
   );
+
+  /**
+   * Phase of the active stream, derived only from real gateway events:
+   * `thinking` before the first token, `tool` while a tool is running,
+   * `writing` once content starts arriving, `idle` otherwise.
+   */
+  readonly streamPhase = computed<CaroStreamPhase>(() => {
+    const streamingId = this.streamingIdSignal();
+
+    if (streamingId === null || !this.sendingSignal()) {
+      return 'idle';
+    }
+
+    const message = this.messagesSignal().find((row) => row.id === streamingId);
+
+    if (message === undefined) {
+      return 'thinking';
+    }
+
+    if (message.content.trim() !== '') {
+      return 'writing';
+    }
+
+    return message.toolCalls.some((tool) => tool.state === 'running') ? 'tool' : 'thinking';
+  });
 
   loadConversations(): void {
     this.loadingSignal.set(true);
