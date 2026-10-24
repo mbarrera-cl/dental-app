@@ -669,7 +669,17 @@ One command (backend + microfrontends):
 ```bash
 ./scripts/dev-all.sh           # builds the backend and starts :3000, :4200–:4206
 ./scripts/dev-all.sh --skip-build
+pnpm run dev:stop              # stop everything and free the dev ports
+pnpm run dev:status            # check the supervisor, processes and HTTP endpoints
 ```
+
+`dev-all.sh` starts the backend and the remotes first, waits for `/health` and
+every `remoteEntry.json`, and only then starts the shell. This avoids the blank
+shell you get when Native Federation boots before a remote is ready. Each
+service writes its output to `.dev/logs/<service>.log`; add `--verbose` to also
+stream the logs to the terminal. If a previous session (or an older
+`dev-all.sh`) left processes on the dev ports, the next start stops them
+automatically; use `--force` to take over ports held by unrelated processes.
 
 Or in separate terminals:
 
@@ -677,8 +687,12 @@ Or in separate terminals:
 pnpm run start:dev              # backend on :3000
 cd frontend
 pnpm install                    # first time only
-pnpm run start:all              # shell + patients + users + dashboard + admin (concurrently)
+pnpm run start:all              # shell + patients + users + dashboard + admin + quotes + agenda
 ```
+
+The separate-terminal path starts the shell at the same time as the remotes. If
+the shell is blank, let every remote finish compiling and reload
+<http://localhost:4200>.
 
 Open <http://localhost:4200> — the shell lazily loads each remote from its own dev
 server through `loadRemoteModule` (see `projects/shell/src/app/app.routes.ts`). Each

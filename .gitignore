@@ -20,6 +20,9 @@ data/
 !.env.example
 !.env.postgres.example
 
+# Local dev supervisor state and per-service logs
+.dev/
+
 # Logs
 *.log
 npm-debug.log*
