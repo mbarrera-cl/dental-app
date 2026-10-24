@@ -9,29 +9,27 @@ describe('CaroVoiceWaveform', () => {
   let fixture: ComponentFixture<CaroVoiceWaveform>;
   let recording: WritableSignal<boolean>;
   let preparing: WritableSignal<boolean>;
+  let reviewing: WritableSignal<boolean>;
   let service: {
     recording: Signal<boolean>;
     preparing: Signal<boolean>;
-    active: Signal<boolean>;
+    reviewing: Signal<boolean>;
     elapsedLabel: Signal<string>;
     attachCanvas: ReturnType<typeof vi.fn>;
     detach: ReturnType<typeof vi.fn>;
-    stop: ReturnType<typeof vi.fn>;
-    cancel: ReturnType<typeof vi.fn>;
   };
 
   beforeEach(async () => {
     recording = signal(false);
     preparing = signal(false);
+    reviewing = signal(false);
     service = {
       recording: recording.asReadonly(),
       preparing: preparing.asReadonly(),
-      active: computed(() => recording() || preparing()),
+      reviewing: reviewing.asReadonly(),
       elapsedLabel: computed(() => '00:03'),
       attachCanvas: vi.fn(),
       detach: vi.fn(),
-      stop: vi.fn(),
-      cancel: vi.fn(),
     };
 
     await TestBed.configureTestingModule({
@@ -51,9 +49,8 @@ describe('CaroVoiceWaveform', () => {
 
   const host = (): HTMLElement => fixture.nativeElement as HTMLElement;
 
-  it('mounts the canvas hidden until recording starts', () => {
-    expect(host().classList.contains('invisible')).toBe(true);
-    expect(host().querySelector('[data-testid="caro-voice-overlay"]')).not.toBeNull();
+  it('mounts the inline draft and its canvas inside the composer', () => {
+    expect(host().querySelector('[data-testid="caro-voice-draft"]')).not.toBeNull();
     expect(service.attachCanvas).toHaveBeenCalledOnce();
 
     const [canvas] = service.attachCanvas.mock.calls[0] as [HTMLCanvasElement];
@@ -65,51 +62,37 @@ describe('CaroVoiceWaveform', () => {
     preparing.set(true);
     fixture.detectChanges();
 
-    expect(host().classList.contains('invisible')).toBe(false);
     expect(host().textContent).toContain('Preparando micrófono…');
     expect(host().querySelector('[hlmSkeleton]')).not.toBeNull();
   });
 
-  it('shows the live wave and the stop/cancel controls while recording', () => {
+  it('shows the live wave and the release hint while recording', () => {
     recording.set(true);
     fixture.detectChanges();
 
-    expect(host().classList.contains('invisible')).toBe(false);
-    expect(host().textContent).toContain('Escuchando…');
+    expect(host().textContent).toContain('Suelta para detener');
     expect(host().textContent).toContain('00:03');
-
-    const stop = host().querySelector<HTMLButtonElement>('[data-testid="caro-voice-stop"]');
-    const cancel = host().querySelector<HTMLButtonElement>('[data-testid="caro-voice-cancel"]');
-
-    stop?.click();
-    cancel?.click();
-
-    expect(service.stop).toHaveBeenCalledOnce();
-    expect(service.cancel).toHaveBeenCalledOnce();
+    expect(host().querySelector('[hlmSkeleton]')).toBeNull();
   });
 
-  it('stays visible while the audio is being transcribed', () => {
+  it('freezes into a review message after releasing', () => {
+    reviewing.set(true);
+    fixture.detectChanges();
+
+    expect(host().textContent).toContain('¿Transcribir este audio?');
+    expect(host().textContent).toContain('00:03');
+  });
+
+  it('stays visible and shows the transcribing status', () => {
     fixture.componentRef.setInput('transcribing', true);
     fixture.detectChanges();
 
-    expect(host().classList.contains('invisible')).toBe(false);
     expect(host().textContent).toContain('Transcribiendo audio…');
-    expect(host().querySelector('[data-testid="caro-voice-stop"]')).toBeNull();
+    expect(host().querySelector('[data-testid="caro-voice-draft"]')).not.toBeNull();
+    expect(host().querySelector('hlm-spinner')).not.toBeNull();
   });
 
-  it('disappears when the transcription finishes', () => {
-    recording.set(true);
-    fixture.componentRef.setInput('transcribing', true);
-    fixture.detectChanges();
-
-    recording.set(false);
-    fixture.componentRef.setInput('transcribing', false);
-    fixture.detectChanges();
-
-    expect(host().classList.contains('invisible')).toBe(true);
-  });
-
-  it('detaches the canvas when the overlay is destroyed', () => {
+  it('detaches the canvas when the composer draft is destroyed', () => {
     fixture.destroy();
 
     expect(service.detach).toHaveBeenCalledOnce();

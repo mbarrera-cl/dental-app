@@ -149,19 +149,41 @@ describe('CaroVoiceRecorderService', () => {
     expect(service.elapsedLabel()).toBe('00:02');
   });
 
-  it('stops, emits the blob and releases the microphone', async () => {
+  it('stops into review without transcribing until the user confirms', async () => {
     const blobs: Blob[] = [];
     service.recorded$.subscribe((blob) => blobs.push(blob));
 
     await service.start();
     service.stop();
 
+    expect(blobs).toHaveLength(0);
+    expect(service.recording()).toBe(false);
+    expect(service.reviewing()).toBe(true);
+    expect(service.active()).toBe(true);
+    expect(track.stop).toHaveBeenCalledOnce();
+    expect(FakeAudioContext.instances[0].close).toHaveBeenCalledOnce();
+
+    service.confirm();
+
     expect(blobs).toHaveLength(1);
     expect(blobs[0].size).toBeGreaterThan(0);
     expect(blobs[0].type).toBe('audio/webm');
-    expect(service.recording()).toBe(false);
-    expect(track.stop).toHaveBeenCalledOnce();
-    expect(FakeAudioContext.instances[0].close).toHaveBeenCalledOnce();
+    expect(service.reviewing()).toBe(false);
+    expect(service.active()).toBe(false);
+  });
+
+  it('discards the reviewed audio without emitting it', async () => {
+    const blobs: Blob[] = [];
+    service.recorded$.subscribe((blob) => blobs.push(blob));
+
+    await service.start();
+    service.stop();
+    service.discard();
+
+    expect(blobs).toHaveLength(0);
+    expect(service.reviewing()).toBe(false);
+    expect(service.active()).toBe(false);
+    expect(service.elapsedLabel()).toBe('00:00');
   });
 
   it('discards the recording when the user cancels', async () => {
@@ -205,7 +227,7 @@ describe('CaroVoiceRecorderService', () => {
     expect(errors).toEqual(['start']);
   });
 
-  it('draws taller bars when the current frame is louder', async () => {
+  it('draws a growing waveform history from the microphone amplitude', async () => {
     const context = {
       clearRect: vi.fn(),
       fillStyle: '',
@@ -225,12 +247,13 @@ describe('CaroVoiceRecorderService', () => {
 
     FakeAudioContext.amplitude = 0.02;
     await service.start();
-    const quiet = context.roundRect.mock.calls[0][3] as number;
+    const quiet = Math.max(...context.roundRect.mock.calls.map((call) => call[3] as number));
 
     context.roundRect.mockClear();
+    now += 50;
     FakeAudioContext.amplitude = 0.4;
     rafCallback?.(0);
-    const loud = context.roundRect.mock.calls[0][3] as number;
+    const loud = Math.max(...context.roundRect.mock.calls.map((call) => call[3] as number));
 
     expect(context.roundRect).toHaveBeenCalled();
     expect(loud).toBeGreaterThan(quiet);

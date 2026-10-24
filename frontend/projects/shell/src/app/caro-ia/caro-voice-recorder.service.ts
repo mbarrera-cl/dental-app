@@ -16,17 +16,21 @@ const AUDIO_CONSTRAINTS: MediaStreamConstraints = {
   },
 };
 
+/** Cada cuánto se guarda una muestra de amplitud para dibujar la onda. */
+const SAMPLE_INTERVAL_MS = 50;
+
 /**
  * Grabación de voz con APIs nativas del navegador.
  *
- * `MediaRecorder` captura el audio que luego se transcribe y `AnalyserNode`
- * entrega el frame actual para dibujarlo en un `<canvas>`. Cada frame
- * reemplaza al anterior: la onda es fija y no acumula lo ya hablado.
+ * `MediaRecorder` captura el audio y `AnalyserNode` alimenta una pequeña
+ * historia de amplitudes. El canvas dibuja esa historia: en vivo se desplaza
+ * y al soltar se congela completa para revisar antes de transcribir.
  */
 @Injectable()
 export class CaroVoiceRecorderService implements OnDestroy {
   private readonly recordingSignal = signal(false);
   private readonly preparingSignal = signal(false);
+  private readonly reviewingSignal = signal(false);
   private readonly elapsedSignal = signal(0);
 
   private readonly recordedSubject = new Subject<Blob>();
@@ -34,7 +38,10 @@ export class CaroVoiceRecorderService implements OnDestroy {
 
   readonly recording = this.recordingSignal.asReadonly();
   readonly preparing = this.preparingSignal.asReadonly();
-  readonly active = computed(() => this.preparingSignal() || this.recordingSignal());
+  readonly reviewing = this.reviewingSignal.asReadonly();
+  readonly active = computed(
+    () => this.preparingSignal() || this.recordingSignal() || this.reviewingSignal(),
+  );
   readonly elapsedLabel = computed(() => formatElapsed(this.elapsedSignal()));
   readonly recorded$ = this.recordedSubject.asObservable();
   readonly failed$ = this.failedSubject.asObservable();
@@ -47,20 +54,28 @@ export class CaroVoiceRecorderService implements OnDestroy {
   private analyser: AnalyserNode | null = null;
   private chunks: BlobPart[] = [];
   private samples = new Float32Array(2048);
+  private history: number[] = [];
+  private pendingBlob: Blob | null = null;
   private color = 'currentColor';
   private frame = 0;
   private timer: number | null = null;
   private startedAt = 0;
+  private lastSampleAt = 0;
   private cancelled = false;
   private starting = false;
   private startToken = 0;
   private session = 0;
 
-  /** El overlay entrega su canvas cuando aparece en el DOM. */
+  /** El panel de voz entrega su canvas cuando aparece en el DOM. */
   attachCanvas(canvas: HTMLCanvasElement): void {
     this.canvas = canvas;
+    this.color = 'currentColor';
     this.resizeCanvas();
     this.clearCanvas();
+
+    if (!this.recordingSignal() && this.history.length > 0) {
+      this.drawPreview();
+    }
   }
 
   async start(): Promise<void> {
@@ -77,8 +92,12 @@ export class CaroVoiceRecorderService implements OnDestroy {
     this.cancelled = false;
     this.starting = true;
     this.preparingSignal.set(true);
+    this.reviewingSignal.set(false);
     this.elapsedSignal.set(0);
+    this.pendingBlob = null;
     this.chunks = [];
+    this.history = [];
+    this.clearCanvas();
 
     let stream: MediaStream | null = null;
     let recorder: MediaRecorder | null = null;
@@ -126,9 +145,10 @@ export class CaroVoiceRecorderService implements OnDestroy {
       this.preparingSignal.set(false);
       this.recordingSignal.set(true);
       this.startedAt = Date.now();
+      this.lastSampleAt = 0;
       this.timer = window.setInterval(() => this.tick(), 250);
       this.starting = false;
-      this.drawFrame();
+      this.frameLoop();
     } catch (error) {
       if (token !== this.startToken) {
         if (stream !== null) {
@@ -158,26 +178,45 @@ export class CaroVoiceRecorderService implements OnDestroy {
     }
   }
 
+  /** Suelta el botón: termina la captura y deja el audio en revisión. */
   stop(): void {
-    this.stopTimer();
-
-    if (this.recorder !== null && this.recorder.state !== 'inactive') {
-      this.recorder.stop();
+    if (this.preparingSignal() && this.recorder === null) {
+      this.cancel();
       return;
     }
 
-    this.cleanup();
-    this.recordingSignal.set(false);
-    this.preparingSignal.set(false);
+    if (this.recorder !== null && this.recorder.state !== 'inactive') {
+      this.tick();
+      this.stopTimer();
+      this.stopFrameLoop();
+      this.recorder.stop();
+    }
   }
 
+  /** El check del composer: manda el audio a transcribir. */
+  confirm(): void {
+    const blob = this.pendingBlob;
+
+    if (blob === null) {
+      return;
+    }
+
+    this.pendingBlob = null;
+    this.reviewingSignal.set(false);
+    this.recordedSubject.next(blob);
+  }
+
+  /** La X del composer: descarta la grabación sin transcribirla. */
+  discard(): void {
+    this.reset();
+  }
+
+  /** Aborta una captura o una preparación pendiente. */
   cancel(): void {
+    this.startToken += 1;
+    this.starting = false;
     this.session += 1;
     this.cancelled = true;
-    this.recordingSignal.set(false);
-    this.preparingSignal.set(false);
-    this.elapsedSignal.set(0);
-    this.stopTimer();
 
     if (this.recorder !== null && this.recorder.state !== 'inactive') {
       try {
@@ -187,41 +226,17 @@ export class CaroVoiceRecorderService implements OnDestroy {
       }
     }
 
-    // En una cancelación no hace falta esperar al blob: liberamos ya el
-    // micrófono y el `onstop` tardío se descarta por sesión.
-    this.cleanup();
-    this.clearCanvas();
+    this.clearState();
   }
 
-  /** Limpia el estado una vez que la transcripción terminó o falló. */
+  /** Limpia el estado cuando la transcripción terminó o falló. */
   reset(): void {
-    this.recordingSignal.set(false);
-    this.preparingSignal.set(false);
-    this.elapsedSignal.set(0);
     this.cancelled = false;
-    this.stopTimer();
-    this.clearCanvas();
+    this.clearState();
   }
 
   detach(): void {
-    this.startToken += 1;
-    this.session += 1;
-    this.starting = false;
-    this.cancelled = true;
-    this.recordingSignal.set(false);
-    this.preparingSignal.set(false);
-    this.elapsedSignal.set(0);
-    this.stopTimer();
-
-    if (this.recorder !== null && this.recorder.state !== 'inactive') {
-      try {
-        this.recorder.stop();
-      } catch {
-        // El navegador ya había detenido la grabación.
-      }
-    }
-
-    this.cleanup();
+    this.cancel();
     this.canvas = null;
   }
 
@@ -234,38 +249,53 @@ export class CaroVoiceRecorderService implements OnDestroy {
       return;
     }
 
-    this.stopTimer();
     this.recordingSignal.set(false);
     this.preparingSignal.set(false);
+    this.stopTimer();
+    this.stopFrameLoop();
 
     const wasCancelled = this.cancelled;
     this.cancelled = false;
     const type = recorder.mimeType || 'audio/webm';
     const blob = new Blob(this.chunks, { type });
     this.chunks = [];
-    this.cleanup();
 
     if (wasCancelled) {
-      this.clearCanvas();
+      this.clearState();
       return;
     }
 
     if (blob.size === 0) {
       this.fail('start');
-      this.clearCanvas();
+      this.clearState();
       return;
     }
 
-    this.recordedSubject.next(blob);
+    this.pendingBlob = blob;
+    this.reviewingSignal.set(true);
+    this.drawPreview();
+    this.cleanup();
+  }
+
+  private clearState(): void {
+    this.pendingBlob = null;
+    this.recordingSignal.set(false);
+    this.preparingSignal.set(false);
+    this.reviewingSignal.set(false);
+    this.elapsedSignal.set(0);
+    this.chunks = [];
+    this.history = [];
+    this.startedAt = 0;
+    this.lastSampleAt = 0;
+    this.stopTimer();
+    this.stopFrameLoop();
+    this.cleanup();
+    this.clearCanvas();
   }
 
   private cleanup(): void {
     this.stopTimer();
-
-    if (this.frame !== 0) {
-      cancelAnimationFrame(this.frame);
-      this.frame = 0;
-    }
+    this.stopFrameLoop();
 
     if (this.stream !== null) {
       stopStream(this.stream);
@@ -285,6 +315,10 @@ export class CaroVoiceRecorderService implements OnDestroy {
   }
 
   private tick(): void {
+    if (this.startedAt === 0) {
+      return;
+    }
+
     this.elapsedSignal.set(Math.floor((Date.now() - this.startedAt) / 1000));
   }
 
@@ -295,11 +329,79 @@ export class CaroVoiceRecorderService implements OnDestroy {
     }
   }
 
-  private drawFrame = (): void => {
-    const canvas = this.canvas;
+  private frameLoop = (): void => {
+    this.sampleHistory();
+    this.drawLive();
+    this.frame = requestAnimationFrame(this.frameLoop);
+  };
+
+  private stopFrameLoop(): void {
+    if (this.frame !== 0) {
+      cancelAnimationFrame(this.frame);
+      this.frame = 0;
+    }
+  }
+
+  private sampleHistory(): void {
     const analyser = this.analyser;
 
-    if (canvas === null || analyser === null) {
+    if (analyser === null) {
+      return;
+    }
+
+    const now = Date.now();
+
+    if (this.lastSampleAt !== 0 && now - this.lastSampleAt < SAMPLE_INTERVAL_MS) {
+      return;
+    }
+
+    this.lastSampleAt = now;
+    analyser.getFloatTimeDomainData(this.samples);
+
+    let peak = 0;
+
+    for (let index = 0; index < this.samples.length; index++) {
+      const value = Math.abs(this.samples[index]);
+
+      if (value > peak) {
+        peak = value;
+      }
+    }
+
+    this.history.push(peak);
+  }
+
+  private drawLive(): void {
+    const canvas = this.canvas;
+
+    if (canvas === null) {
+      return;
+    }
+
+    this.resizeCanvas();
+    const count = this.barCount(canvas);
+    const visible = this.history.slice(-count);
+    const values = new Array<number>(count).fill(0);
+    values.splice(count - visible.length, visible.length, ...visible);
+    this.drawBars(values);
+  }
+
+  private drawPreview(): void {
+    const canvas = this.canvas;
+
+    if (canvas === null) {
+      return;
+    }
+
+    this.resizeCanvas();
+    const count = this.barCount(canvas);
+    this.drawBars(this.downsample(this.history, count));
+  }
+
+  private drawBars(values: number[]): void {
+    const canvas = this.canvas;
+
+    if (canvas === null) {
       return;
     }
 
@@ -313,35 +415,28 @@ export class CaroVoiceRecorderService implements OnDestroy {
     const width = canvas.width;
     const height = canvas.height;
     const dpr = window.devicePixelRatio || 1;
-    const bars = Math.max(20, Math.floor(width / (7 * dpr)));
-    const perBar = Math.max(1, Math.floor(this.samples.length / bars));
-    const slot = width / bars;
+    const count = this.barCount(canvas);
+    const slot = width / count;
     const gap = Math.min(slot * 0.45, 2 * dpr);
     const barWidth = Math.max(1, slot - gap);
     const maxHeight = Math.max(1, height - 8 * dpr);
     const radius = Math.min(barWidth / 2, 2 * dpr);
     const canRound = typeof context.roundRect === 'function';
 
-    analyser.getFloatTimeDomainData(this.samples);
     context.clearRect(0, 0, width, height);
+
+    if (values.length === 0) {
+      return;
+    }
+
+    if (this.color === 'currentColor') {
+      this.color = this.resolveColor();
+    }
+
     context.fillStyle = this.color;
 
-    for (let bar = 0; bar < bars; bar++) {
-      let peak = 0;
-      const start = bar * perBar;
-      const end = Math.min(this.samples.length, start + perBar);
-
-      for (let index = start; index < end; index++) {
-        const value = Math.abs(this.samples[index]);
-
-        if (value > peak) {
-          peak = value;
-        }
-      }
-
-      // La ganancia sólo hace visible la voz normal; la altura sigue siendo
-      // proporcional a la amplitud real del frame.
-      const amplitude = Math.min(1, peak * 2);
+    for (let bar = 0; bar < values.length && bar < count; bar++) {
+      const amplitude = Math.min(1, values[bar] * 2);
       const barHeight = Math.max(2 * dpr, amplitude * maxHeight);
       const x = bar * slot + gap / 2;
       const y = (height - barHeight) / 2;
@@ -354,9 +449,37 @@ export class CaroVoiceRecorderService implements OnDestroy {
         context.fillRect(x, y, barWidth, barHeight);
       }
     }
+  }
 
-    this.frame = requestAnimationFrame(this.drawFrame);
-  };
+  private downsample(values: number[], count: number): number[] {
+    if (values.length === 0) {
+      return [];
+    }
+
+    const result: number[] = [];
+
+    for (let index = 0; index < count; index++) {
+      const start = Math.floor((index * values.length) / count);
+      const end = Math.max(start + 1, Math.floor(((index + 1) * values.length) / count));
+      let peak = 0;
+
+      for (let cursor = start; cursor < end && cursor < values.length; cursor++) {
+        if (values[cursor] > peak) {
+          peak = values[cursor];
+        }
+      }
+
+      result.push(peak);
+    }
+
+    return result;
+  }
+
+  private barCount(canvas: HTMLCanvasElement): number {
+    const dpr = window.devicePixelRatio || 1;
+
+    return Math.max(20, Math.floor(canvas.width / (7 * dpr)));
+  }
 
   private resizeCanvas(): void {
     if (this.canvas === null) {
@@ -399,7 +522,7 @@ export class CaroVoiceRecorderService implements OnDestroy {
   }
 
   /**
-   * El canvas no resuelve variables CSS, pero sí hereda `color`. El overlay
+   * El canvas no resuelve variables CSS, pero sí hereda `color`. El panel
    * le aplica `text-primary` y aquí se obtiene el color concreto del tema.
    */
   private resolveColor(): string {

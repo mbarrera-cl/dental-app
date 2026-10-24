@@ -28,7 +28,8 @@ let nextId = 0;
  * is no Shift key to reach for; the send button is right there.
  *
  * Slots: `[pkComposerTop]` above the text (attachment chips), `[pkComposerStart]` after the attach
- * button, `[pkComposerEnd]` before the send button (a model selector).
+ * button, `[pkComposerEnd]` before the send button (a model selector). Set `hideTextarea` when
+ * another input mode, such as a voice draft, takes over the body of the composer.
  */
 @Component({
   selector: 'pk-composer',
@@ -42,39 +43,41 @@ let nextId = 0;
   template: `
     <ng-content select="[pkComposerTop]" />
 
-    <div class="relative flex">
-      <label class="sr-only" [for]="textareaId">{{ label() }}</label>
-      <textarea
-        hlmTextarea
-        #textarea
-        rows="1"
-        [id]="textareaId"
-        [value]="value()"
-        [placeholder]="placeholder()"
-        [disabled]="disabled()"
-        [attr.aria-describedby]="describedBy() || null"
-        [class]="textareaClass()"
-        (input)="onInput($event)"
-        (keydown)="onKeydown($event)"
-      ></textarea>
-      @if (overflowing() || expanded()) {
-        <button
-          hlmBtn
-          variant="ghost"
-          size="icon"
-          type="button"
-          class="text-muted-foreground absolute end-0 top-0"
-          [attr.aria-label]="expanded() ? 'Shrink message box' : 'Expand message box'"
-          [attr.aria-pressed]="expanded()"
-          (click)="expanded.set(!expanded())"
-        >
-          <ng-icon
-            [name]="expanded() ? 'lucideMinimize2' : 'lucideMaximize2'"
-            class="text-[length:--spacing(4)]"
-          />
-        </button>
-      }
-    </div>
+    @if (!hideTextarea()) {
+      <div class="relative flex">
+        <label class="sr-only" [for]="textareaId">{{ label() }}</label>
+        <textarea
+          hlmTextarea
+          #textarea
+          rows="1"
+          [id]="textareaId"
+          [value]="value()"
+          [placeholder]="placeholder()"
+          [disabled]="disabled()"
+          [attr.aria-describedby]="describedBy() || null"
+          [class]="textareaClass()"
+          (input)="onInput($event)"
+          (keydown)="onKeydown($event)"
+        ></textarea>
+        @if (overflowing() || expanded()) {
+          <button
+            hlmBtn
+            variant="ghost"
+            size="icon"
+            type="button"
+            class="text-muted-foreground absolute end-0 top-0"
+            [attr.aria-label]="expanded() ? 'Shrink message box' : 'Expand message box'"
+            [attr.aria-pressed]="expanded()"
+            (click)="expanded.set(!expanded())"
+          >
+            <ng-icon
+              [name]="expanded() ? 'lucideMinimize2' : 'lucideMaximize2'"
+              class="text-[length:--spacing(4)]"
+            />
+          </button>
+        }
+      </div>
+    }
 
     <div class="flex items-center gap-1.5">
       @if (attachable()) {
@@ -148,6 +151,8 @@ export class PkComposer {
   public readonly maxHeight = input(200);
   /** Shows the attach button, which opens a file picker. */
   public readonly attachable = input(false);
+  /** Hides the text box, e.g. while a voice-recording panel uses the composer. */
+  public readonly hideTextarea = input(false);
   /** File types the picker offers, as for `<input type="file" accept>`. */
   public readonly accept = input('');
   public readonly describedBy = input('');
@@ -167,7 +172,7 @@ export class PkComposer {
   protected readonly overflowing = signal(false);
   protected readonly textareaId = `pk-composer-${nextId++}`;
 
-  private readonly textarea = viewChild.required<ElementRef<HTMLTextAreaElement>>('textarea');
+  private readonly textarea = viewChild<ElementRef<HTMLTextAreaElement>>('textarea');
   private readonly coarsePointer =
     typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
 
@@ -176,7 +181,11 @@ export class PkComposer {
   );
 
   protected readonly computedClass = computed(() =>
-    cn('flex cursor-text flex-col gap-1.5 py-3 ps-4 pe-3', this.class()),
+    cn(
+      'flex flex-col gap-1.5 py-3 ps-4 pe-3',
+      this.hideTextarea() ? 'cursor-default' : 'cursor-text',
+      this.class(),
+    ),
   );
 
   protected readonly textareaClass = computed(() =>
@@ -193,7 +202,12 @@ export class PkComposer {
     afterRenderEffect(() => {
       this.value();
       const expanded = this.expanded();
-      const element = this.textarea().nativeElement;
+      const element = this.textarea()?.nativeElement;
+
+      if (element === undefined) {
+        return;
+      }
+
       const cap = expanded ? Math.round(window.innerHeight * 0.6) : this.maxHeight();
 
       element.style.height = 'auto';
@@ -207,7 +221,7 @@ export class PkComposer {
   }
 
   focus(): void {
-    this.textarea().nativeElement.focus();
+    this.textarea()?.nativeElement.focus();
   }
 
   protected onInput(event: Event): void {
@@ -226,7 +240,12 @@ export class PkComposer {
     this.value.set('');
     // If Enter lands before the last keystroke has rendered, the [value] binding sees '' before
     // and after and leaves the sent text in the box, so clear the box directly.
-    this.textarea().nativeElement.value = '';
+    const textarea = this.textarea();
+
+    if (textarea !== undefined) {
+      textarea.nativeElement.value = '';
+    }
+
     this.expanded.set(false);
   }
 
