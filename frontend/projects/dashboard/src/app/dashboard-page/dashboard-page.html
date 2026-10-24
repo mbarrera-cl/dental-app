@@ -137,8 +137,14 @@
       <div hlmCardContent class="w-full">
         @if (loading()) {
           <div hlmSkeleton class="h-56 w-full"></div>
-        } @else if (cashChart(); as options) {
-          <tanstack-chart hlmChart class="block w-full" [options]="options" data-testid="dashboard-chart-cash" />
+        } @else if (cashChart(); as data) {
+          <hexa-bar-chart
+            [data]="data"
+            [ariaLabel]="'dashboard.charts.cashAria' | transloco"
+            valueFormat="number"
+            [locale]="locale()"
+            data-testid="dashboard-chart-cash"
+          />
         }
       </div>
     </div>
@@ -151,8 +157,14 @@
       <div hlmCardContent class="w-full">
         @if (loading()) {
           <div hlmSkeleton class="h-56 w-full"></div>
-        } @else if (funnelChart(); as options) {
-          <tanstack-chart hlmChart class="block w-full" [options]="options" data-testid="dashboard-chart-funnel" />
+        } @else if (funnelChart(); as data) {
+          <hexa-bar-chart
+            [data]="data"
+            [ariaLabel]="'dashboard.charts.funnelAria' | transloco"
+            valueFormat="number"
+            [locale]="locale()"
+            data-testid="dashboard-chart-funnel"
+          />
         }
       </div>
     </div>
@@ -165,8 +177,14 @@
       <div hlmCardContent class="w-full">
         @if (loading()) {
           <div hlmSkeleton class="h-56 w-full"></div>
-        } @else if (previsionChart(); as options) {
-          <tanstack-chart hlmChart class="block w-full" [options]="options" data-testid="dashboard-chart-prevision" />
+        } @else if (previsionChart(); as data) {
+          <hexa-bar-chart
+            [data]="data"
+            [ariaLabel]="'dashboard.charts.previsionAria' | transloco"
+            valueFormat="number"
+            [locale]="locale()"
+            data-testid="dashboard-chart-prevision"
+          />
         }
       </div>
     </div>

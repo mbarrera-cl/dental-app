@@ -3,8 +3,12 @@ import type { McpContext } from '@rekog/mcp-nest';
 import { z } from 'zod';
 import type { Principal } from '../../../../shared/security/principal.js';
 import type { DeepSeekToolDefinition } from '../../../caro-ia/application/deepseek.client.js';
+import { CHART_BAR_TOOL_NAME } from '../../domain/bar-chart.js';
 import { ActivityTools } from '../tools/activity.tools.js';
+import { AgendaTools } from '../tools/agenda.tools.js';
 import { CalcTools } from '../tools/calc.tools.js';
+import { ChartTools } from '../tools/chart.tools.js';
+import { AgendaFacade } from '../facades/agenda.facade.js';
 import { PatientsFacade } from '../facades/patients.facade.js';
 import { PatientsTools } from '../tools/patients.tools.js';
 import { QuotesTools } from '../tools/quotes.tools.js';
@@ -44,6 +48,13 @@ export interface ApprovalDescription {
   parameters: Array<{ label: string; value: string }>;
 }
 
+interface ResolvedAppointment {
+  patientName: string;
+  professionalName: string;
+  startsAt: string;
+  status: string;
+}
+
 const ENTRIES: readonly Omit<CatalogEntry, 'instance' | 'method'>[] = [
   {
     name: 'hexa_patients_search',
@@ -72,6 +83,41 @@ const ENTRIES: readonly Omit<CatalogEntry, 'instance' | 'method'>[] = [
     write: false,
     confirm: false,
     label: 'Consultó el arancel UCO',
+  },
+  {
+    name: 'hexa_agenda_appointments',
+    permissions: ['agenda:read'],
+    write: false,
+    confirm: false,
+    label: 'Consultó la agenda',
+  },
+  {
+    name: 'hexa_agenda_summary',
+    permissions: ['agenda:read'],
+    write: false,
+    confirm: false,
+    label: 'Resumió la agenda',
+  },
+  {
+    name: 'hexa_agenda_create',
+    permissions: ['agenda:create'],
+    write: true,
+    confirm: true,
+    label: 'Agendó una cita',
+  },
+  {
+    name: 'hexa_agenda_update',
+    permissions: ['agenda:update'],
+    write: true,
+    confirm: true,
+    label: 'Reagendó una cita',
+  },
+  {
+    name: 'hexa_agenda_cancel',
+    permissions: ['agenda:cancel'],
+    write: true,
+    confirm: true,
+    label: 'Canceló una cita',
   },
   {
     name: 'hexa_quotes_list',
@@ -158,6 +204,13 @@ const ENTRIES: readonly Omit<CatalogEntry, 'instance' | 'method'>[] = [
     label: 'Calculó valores',
   },
   {
+    name: CHART_BAR_TOOL_NAME,
+    permissions: [],
+    write: false,
+    confirm: false,
+    label: 'Graficó datos',
+  },
+  {
     name: 'hexa_activity_list',
     permissions: ['activity:read', 'activity:read-all'],
     match: 'any',
@@ -172,6 +225,11 @@ const METHODS: Readonly<Record<string, string>> = {
   hexa_patients_get: 'get',
   hexa_uco_search: 'search',
   hexa_uco_get: 'get',
+  hexa_agenda_appointments: 'list',
+  hexa_agenda_summary: 'summary',
+  hexa_agenda_create: 'create',
+  hexa_agenda_update: 'update',
+  hexa_agenda_cancel: 'cancel',
   hexa_quotes_list: 'list',
   hexa_quotes_get: 'get',
   hexa_quotes_versions: 'versions',
@@ -184,10 +242,14 @@ const METHODS: Readonly<Record<string, string>> = {
   hexa_quotes_delete: 'remove',
   hexa_quotes_restore: 'restore',
   hexa_calc: 'evaluate',
+  [CHART_BAR_TOOL_NAME]: 'bar',
   hexa_activity_list: 'list',
 };
 
 const APPROVAL_TITLES: Readonly<Record<string, string>> = {
+  hexa_agenda_create: 'Agendar una cita',
+  hexa_agenda_update: 'Reagendar una cita',
+  hexa_agenda_cancel: 'Cancelar una cita',
   hexa_quotes_create: 'Crear presupuesto',
   hexa_quotes_update: 'Actualizar presupuesto',
   hexa_quotes_duplicate: 'Duplicar presupuesto',
@@ -246,7 +308,10 @@ export class McpToolCatalog {
     uco: UcoTools,
     activity: ActivityTools,
     calc: CalcTools,
+    chart: ChartTools,
+    agenda: AgendaTools,
     private readonly patientsFacade: PatientsFacade,
+    private readonly agendaFacade: AgendaFacade,
   ) {
     const instances: Record<string, ToolInstance> = {
       Patients: patients as unknown as ToolInstance,
@@ -254,6 +319,8 @@ export class McpToolCatalog {
       Quotes: quotes as unknown as ToolInstance,
       Activity: activity as unknown as ToolInstance,
       Calc: calc as unknown as ToolInstance,
+      Chart: chart as unknown as ToolInstance,
+      Agenda: agenda as unknown as ToolInstance,
     };
 
     this.entries = ENTRIES.map((entry) => ({
@@ -335,15 +402,45 @@ export class McpToolCatalog {
     name: string,
     arguments_: Record<string, unknown>,
   ): Promise<ApprovalDescription> {
-    const patientName = await this.resolvePatientName(arguments_);
-    const parameters = approvalParameters(arguments_, patientName);
+    const appointment = await this.resolveAppointment(arguments_);
+    const patientName =
+      appointment?.patientName ?? (await this.resolvePatientName(arguments_));
+    const parameters = approvalParameters(arguments_, patientName, appointment);
     const title = APPROVAL_TITLES[name] ?? this.labelOf(name);
     const summary =
       name === 'hexa_quotes_create'
         ? 'Se creará un presupuesto en borrador. Revisa los datos antes de aprobar.'
-        : 'Se ejecutará una acción de escritura en Hexa. Revisa los datos antes de aprobar.';
+        : name === 'hexa_agenda_create'
+          ? 'Se creará una cita y se encolarán los correos de confirmación configurados. Revisa los datos antes de aprobar.'
+          : name === 'hexa_agenda_update'
+            ? 'Se actualizará la cita y se encolarán los correos configurados. Revisa los datos antes de aprobar.'
+            : name === 'hexa_agenda_cancel'
+              ? 'Se cancelará la cita y se encolarán los correos configurados. Revisa los datos antes de aprobar.'
+              : 'Se ejecutará una acción de escritura en Hexa. Revisa los datos antes de aprobar.';
 
     return { title, summary, parameters };
+  }
+
+  private async resolveAppointment(
+    arguments_: Record<string, unknown>,
+  ): Promise<ResolvedAppointment | null> {
+    if (typeof arguments_.appointmentId !== 'string' || arguments_.appointmentId === '') {
+      return null;
+    }
+
+    try {
+      const appointment = await this.agendaFacade.get(arguments_.appointmentId);
+
+      return {
+        patientName: appointment.patient.nombreCompleto,
+        professionalName: appointment.professional.name,
+        startsAt: appointment.startsAt,
+        status: appointment.status,
+      };
+    } catch {
+      // The approval still renders with the raw reference.
+      return null;
+    }
   }
 
   private async resolvePatientName(
@@ -418,12 +515,20 @@ function instanceFor(name: string, instances: Record<string, ToolInstance>): Too
     return instances.Calc!;
   }
 
+  if (name === CHART_BAR_TOOL_NAME) {
+    return instances.Chart!;
+  }
+
   if (name.startsWith('hexa_patients_')) {
     return instances.Patients!;
   }
 
   if (name.startsWith('hexa_uco_')) {
     return instances.Uco!;
+  }
+
+  if (name.startsWith('hexa_agenda_')) {
+    return instances.Agenda!;
   }
 
   if (name.startsWith('hexa_quotes_')) {
@@ -475,6 +580,40 @@ function summarize(name: string, data: unknown): string {
     return `${display(record.quote.folio)} · ${display(record.quote.status)}`;
   }
 
+  if (name === 'hexa_agenda_appointments') {
+    const total = typeof record.total === 'number' ? record.total : 0;
+    const patients = typeof record.patientsTotal === 'number' ? record.patientsTotal : 0;
+
+    return `${total} cita${total === 1 ? '' : 's'} · ${patients} paciente${patients === 1 ? '' : 's'}`;
+  }
+
+  if (name === 'hexa_agenda_summary' && isRecord(record.totals)) {
+    const appointments =
+      typeof record.totals.appointments === 'number' ? record.totals.appointments : 0;
+    const patients = typeof record.totals.patients === 'number' ? record.totals.patients : 0;
+
+    return `${appointments} cita${appointments === 1 ? '' : 's'} · ${patients} paciente${patients === 1 ? '' : 's'}`;
+  }
+
+  if (name.startsWith('hexa_agenda_') && isRecord(record.appointment)) {
+    const appointment = record.appointment;
+    const patient = isRecord(appointment.patient)
+      ? display(appointment.patient.nombreCompleto)
+      : '';
+    const date = display(appointment.date);
+    const time = display(appointment.time);
+    const status = display(appointment.status);
+
+    return `${patient} · ${date} ${time} · ${status}`;
+  }
+
+  if (name === CHART_BAR_TOOL_NAME && isRecord(record.chart)) {
+    const title = display(record.chart.title);
+    const points = Array.isArray(record.chart.data) ? record.chart.data.length : 0;
+
+    return `${points} barra${points === 1 ? '' : 's'} · ${title}`;
+  }
+
   if (name === 'hexa_calc' && typeof record.result === 'number') {
     const values = Array.isArray(record.values) ? record.values.length : 0;
 
@@ -513,6 +652,7 @@ function display(value: unknown): string {
 function approvalParameters(
   arguments_: Record<string, unknown>,
   patientName: string | null,
+  appointment: ResolvedAppointment | null,
 ): Array<{ label: string; value: string }> {
   const parameters: Array<{ label: string; value: string }> = [];
   const add = (label: string, value: unknown): void => {
@@ -524,6 +664,14 @@ function approvalParameters(
   };
 
   add('Paciente', patientName ?? arguments_.patientRut ?? arguments_.patientId);
+  add('Cita', arguments_.appointmentId);
+  add('Profesional', appointment?.professionalName ?? arguments_.professionalId);
+  add('Fecha y hora', appointment?.startsAt ?? arguments_.startsAt);
+  add(
+    'Duración',
+    arguments_.durationMinutes === undefined ? undefined : `${display(arguments_.durationMinutes)} min`,
+  );
+  add('Motivo', arguments_.reason);
   add('Presupuesto', arguments_.quoteId);
   add('Línea', arguments_.itemId);
   add('Estado', arguments_.status);

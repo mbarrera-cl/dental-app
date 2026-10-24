@@ -7,9 +7,9 @@ NestJS microservice transport and reuses the existing use cases, API keys and
 audit trail.
 
 The initial domain is **presupuestos** (quotations), plus the patient and UCO
-catalog reads needed to build them. New domains (clinical records, odontogram,
-…) are added as new tool classes without touching the transport or security
-layers.
+catalog reads needed to build them and the **agenda** reads and writes. New
+domains (clinical records, odontogram, …) are added as new tool classes
+without touching the transport or security layers.
 
 ---
 
@@ -67,10 +67,16 @@ role applies immediately.
 | --- | --- | --- | --- |
 | `hexa_whoami` | authenticated | — | Key owner, type and effective scopes |
 | `hexa_calc` | authenticated | — | Deterministic calculator: `sum`, `mean`, `min`, `max`, `count`, `median`, `range`, `stddev` over a list of numbers |
+| `hexa_chart_bar` | authenticated | — | Render-ready bar chart (up to 20 categories) for CaroIA; pass values already returned by other tools |
 | `hexa_patients_search` | `patients:read` | — | RUT or name; max `mcp.maxResults` |
 | `hexa_patients_get` | `patients:read` | — | By id or RUT |
 | `hexa_uco_search` | `uco:read` | — | Code, name or chapter; CLP price = `units × quotes.ucoRate` |
 | `hexa_uco_get` | `uco:read` | — | Exact code + UCO units + CLP price (`units × quotes.ucoRate`) |
+| `hexa_agenda_appointments` | `agenda:read` | — | Appointments and scheduled patients; defaults to today in `clinic.timeZone` |
+| `hexa_agenda_summary` | `agenda:read` | — | Totals by status/day/professional/reason, next appointments and professionals |
+| `hexa_agenda_create` | `agenda:create` | ✅ | Create an appointment — **confirm**; queues confirmation emails |
+| `hexa_agenda_update` | `agenda:update` | ✅ | Reschedule or edit — **confirm**; keeps the duration when only `startsAt` changes |
+| `hexa_agenda_cancel` | `agenda:cancel` | ✅ | Cancel — **confirm**; queues cancellation emails |
 | `hexa_quotes_list` | `quotes:read` | — | Patient, status, folio, dates, trash |
 | `hexa_quotes_get` | `quotes:read` | — | Lines, totals and patient snapshot |
 | `hexa_quotes_versions` | `quotes:read` | — | Version trail with snapshots |
@@ -83,6 +89,16 @@ role applies immediately.
 | `hexa_quotes_delete` | `quotes:delete` | ✅ | Trash (soft delete) — **confirm** |
 | `hexa_quotes_restore` | `quotes:delete` | ✅ | Restore from trash — **confirm** |
 | `hexa_activity_list` | `activity:read` or `activity:read-all` | — | Own actions unless the key has `read-all` |
+
+Agenda dates use `clinic.timeZone` (default `America/Santiago`). `from`/`to`
+accept `YYYY-MM-DD` or an ISO datetime and default to **today**; a date-only
+`to` includes the whole day, an explicit datetime is an exclusive upper bound,
+and ranges are capped at 90 days. The appointment
+list defaults to `scheduled` (the patients with an appointment); the summary
+includes every status and the active professionals directory, which is the
+source of the `professionalId` for writes. Creating, rescheduling and
+cancelling queue the same emails as the UI, so external clients should keep
+`mcp.requireConfirmation` on.
 
 ### Prompts
 

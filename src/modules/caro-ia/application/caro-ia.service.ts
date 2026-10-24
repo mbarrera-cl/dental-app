@@ -10,6 +10,10 @@ import {
   greetingTool,
   noAnswerTool,
 } from '../../mcp/application/catalog/mcp-tool-catalog.js';
+import {
+  barChartFromResult,
+  CHART_BAR_TOOL_NAME,
+} from '../../mcp/domain/bar-chart.js';
 import { SettingsService } from '../../settings/application/settings.service.js';
 import {
   type DeepSeekMessage,
@@ -58,11 +62,18 @@ const STREAM_DELAY_MS = readDelay();
 const WRITES_DISABLED_NOTE = `
 Las herramientas de escritura están deshabilitadas en este entorno. Si el usuario pide crear, modificar, aprobar, rechazar, borrar o restaurar algo, no digas que la herramienta no existe: explica que un administrador debe activar caroIa.allowWrites y mcp.allowWrites. Puedes seguir consultando datos con las herramientas de lectura.`;
 
-const SYSTEM_PROMPT = `Eres CaroIA, el asistente de presupuestos de Hexa (clínica dental).
+const SYSTEM_PROMPT = `Eres CaroIA, el asistente de presupuestos y agenda de Hexa (clínica dental).
 Solo puedes responder usando la información devuelta por las herramientas MCP de Hexa.
 No uses conocimiento general ni inventes datos, precios, pacientes, presupuestos o IDs.
 Para operaciones aritméticas (sumas, promedios, máximos, mínimos, medianas, desviaciones)
 usa ${CALC_TOOL_NAME} con la lista de valores; nunca calcules de memoria.
+Para la agenda usa hexa_agenda_appointments (citas y pacientes citados) y
+hexa_agenda_summary (totales, carga por día/profesional y próximas citas).
+Si te piden crear, reagendar o cancelar una cita, usa las tools hexa_agenda_* de escritura.
+Para gráficos usá ${CHART_BAR_TOOL_NAME} con los datos que ya devolvieron las tools
+de lectura (máximo 20 categorías, labels cortos y valores exactos). Nunca inventes
+ni estimes números: si faltan datos, consultalos primero. Acompañá el gráfico con
+una frase breve que resuma lo que muestra.
 Si el usuario saluda, agradece o pregunta qué puedes hacer, llama a ${GREETING_TOOL_NAME}.
 Nunca la combines con una pregunta sobre datos de Hexa; en ese caso responde los datos.
 Si la petición no se puede responder con las herramientas, llama a ${NO_ANSWER_TOOL_NAME}.
@@ -350,6 +361,15 @@ ${WRITES_DISABLED_NOTE}`,
 
             toolCall.state = 'success';
             toolCall.summary = execution.summary;
+
+            if (call.function.name === CHART_BAR_TOOL_NAME) {
+              const chart = barChartFromResult(execution.data);
+
+              if (chart !== null) {
+                toolCall.chart = chart;
+              }
+            }
+
             evidence.push(execution.data);
             citations.push({
               toolCallId: toolCall.id,
@@ -375,7 +395,15 @@ ${WRITES_DISABLED_NOTE}`,
         }
       }
 
-      const verified = this.verifier.verify({ content, evidence, noAnswer, greeting });
+      const verified = this.verifier.verify({
+        content,
+        evidence,
+        noAnswer,
+        greeting,
+        hasChart: toolCalls.some(
+          (toolCall) => toolCall.chart !== undefined && toolCall.chart !== null,
+        ),
+      });
       const finalContent = verified.content;
       const finalCalls = verified.ok ? toolCalls : [];
       const finalCitations = verified.ok ? citations : [];
@@ -755,6 +783,25 @@ function safeErrorMessage(error: unknown): string {
 function approvalSuccessMessage(tool: string, data: unknown): string {
   const record = data as Record<string, unknown> | null;
   const quote = record !== null && typeof record === 'object' ? record.quote : undefined;
+  const appointment = record !== null && typeof record === 'object' ? record.appointment : undefined;
+
+  if (isRecord(appointment)) {
+    const patient =
+      isRecord(appointment.patient) && typeof appointment.patient.nombreCompleto === 'string'
+        ? appointment.patient.nombreCompleto
+        : 'el paciente';
+    const date = typeof appointment.date === 'string' ? appointment.date : '';
+    const time = typeof appointment.time === 'string' ? appointment.time : '';
+    const status = typeof appointment.status === 'string' ? appointment.status : '';
+
+    if (tool === 'hexa_agenda_cancel') {
+      return `Cita de **${patient}** del ${date} ${time} cancelada.`;
+    }
+
+    const action = tool === 'hexa_agenda_create' ? 'agendada' : 'actualizada';
+
+    return `Cita de **${patient}** ${action} para el **${date} ${time}**${status === 'scheduled' ? '' : ` (${status})`}.`;
+  }
 
   if (isRecord(quote) && typeof quote.folio === 'string') {
     const status = typeof quote.status === 'string' ? ` (${quote.status})` : '';

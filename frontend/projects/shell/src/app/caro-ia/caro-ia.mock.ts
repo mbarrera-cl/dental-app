@@ -25,6 +25,7 @@ const TOOL_LABELS: Record<string, string> = {
   hexa_patients_get: 'Consultó un paciente',
   hexa_uco_search: 'Buscó en el arancel UCO',
   hexa_activity_list: 'Consultó la actividad',
+  hexa_chart_bar: 'Graficó datos',
 };
 
 const REFUSAL =
@@ -36,6 +37,7 @@ const GREETING = `¡Hola! Soy **CaroIA**, la asistente de presupuestos de Hexa. 
 - **Pacientes**: encontrar fichas y revisar sus datos.
 - **Arancel UCO**: consultar precios y códigos.
 - **Actividad**: ver las acciones recientes en Hexa.
+- **Gráficos**: barras responsivas con los datos de Hexa.
 
 ¿Sobre qué te ayudo hoy?`;
 
@@ -323,6 +325,44 @@ export class CaroIaMockGateway extends CaroIaGateway {
           'Encontré **1 paciente** con ese RUT:\n\n| Nombre | RUT | N° HC |\n| --- | --- | --- |\n| Camila Rojas Pérez | 12.345.678-5 | HC-000001 |\n\n¿Quieres que abra su ficha o revise sus presupuestos?';
         stream(answer, 700);
         citations.push({ toolCallId: tool.id, label: 'hexa_patients_search' });
+        schedule(finish, 700 + words(answer).length * 22 + 180);
+
+        return () => timers.forEach(clearTimeout);
+      }
+
+      if (/grafic|gr[aá]fico|chart|barras/.test(text)) {
+        const tool: CaroToolCall = {
+          id: crypto.randomUUID(),
+          name: 'hexa_chart_bar',
+          label: labelFor('hexa_chart_bar'),
+          state: 'running',
+          summary: null,
+        };
+        toolCalls.push(tool);
+        schedule(() => subscriber.next({ type: 'tool.start', toolCall: clone(tool) }), 200);
+        schedule(() => {
+          tool.state = 'success';
+          tool.summary = '4 barras · Citas por día';
+          tool.chart = {
+            type: 'bar',
+            title: 'Citas por día',
+            description: 'Semana actual',
+            valueFormat: 'number',
+            valueLabel: 'Citas',
+            currency: null,
+            data: [
+              { label: 'Lun', value: 6 },
+              { label: 'Mar', value: 9 },
+              { label: 'Mié', value: 4 },
+              { label: 'Jue', value: 7 },
+            ],
+          };
+          subscriber.next({ type: 'tool.result', toolCall: clone(tool) });
+        }, 520);
+        const answer =
+          'Estas son las **citas por día** de la semana. El martes es el día con más carga.';
+        stream(answer, 700);
+        citations.push({ toolCallId: tool.id, label: 'hexa_chart_bar' });
         schedule(finish, 700 + words(answer).length * 22 + 180);
 
         return () => timers.forEach(clearTimeout);

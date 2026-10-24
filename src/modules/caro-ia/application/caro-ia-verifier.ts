@@ -9,6 +9,7 @@ export const CARO_IA_GREETING = `¡Hola! Soy **CaroIA**, la asistente de presupu
 - **Pacientes**: encontrar fichas y revisar sus datos.
 - **Arancel UCO**: consultar precios y códigos.
 - **Actividad**: ver las acciones recientes en Hexa.
+- **Gráficos**: barras responsivas con los datos de Hexa.
 - **Cálculos**: sumar, promediar, o sacar máximo, mínimo y mediana de una lista de valores.
 
 ¿Sobre qué te ayudo hoy?`;
@@ -20,6 +21,8 @@ export interface VerificationInput {
   noAnswer: boolean;
   /** The turn was pure small talk (greeting, thanks, capabilities question). */
   greeting: boolean;
+  /** A successful hexa_chart_bar call produced a renderable chart. */
+  hasChart?: boolean;
 }
 
 export interface VerificationResult {
@@ -51,6 +54,10 @@ export class CaroIaAnswerVerifier {
     }
 
     if (input.content.trim() === '') {
+      if (input.hasChart === true) {
+        return { ok: true, content: 'Aquí está el gráfico.', reason: null };
+      }
+
       return { ok: false, content: CARO_IA_REFUSAL, reason: 'empty_answer' };
     }
 

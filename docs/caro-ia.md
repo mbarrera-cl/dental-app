@@ -75,6 +75,12 @@ respuesta.
   aprobación (`pk-approval`).
 - **Solo MCP**: el modelo debe usar tools; el verificador reemplaza por una
   negativa cualquier respuesta sin evidencia MCP.
+- **Agenda**: `hexa_agenda_appointments` muestra las citas y los pacientes
+  citados; `hexa_agenda_summary` entrega totales por estado, día, profesional y
+  motivo, las próximas citas y el directorio de profesionales.
+- **Gráficos de barras**: `hexa_chart_bar` recibe los datos ya obtenidos por
+  otras tools y CaroIA los renderiza inline con el mismo componente responsive
+  del dashboard (máximo 20 categorías, sin inventar valores).
 - **Escrituras con aprobación**: el modelo propone; el backend guarda los
   argumentos exactos y no ejecuta hasta que el usuario aprueba. La aprobación
   expira, es de un solo uso y se valida contra el usuario y la conversación.
@@ -179,6 +185,12 @@ Settings (`Administración → Configuración → CaroIA`):
 
 Una escritura requiere, además, `mcp.allowWrites`, el permiso MCP de la tool y
 la aprobación humana. El MCP sigue siendo la única fuente de datos.
+
+La agenda usa los permisos `agenda:read`, `agenda:create`, `agenda:update` y
+`agenda:cancel` del usuario. Crear, reagendar o cancelar una cita también
+encola los correos de confirmación configurados en `agenda.notifyPatient` y
+`agenda.notifyProfessional`; en pruebas se desactiva el worker con
+`AGENDA_EMAIL_WORKER=false`.
 
 ---
 

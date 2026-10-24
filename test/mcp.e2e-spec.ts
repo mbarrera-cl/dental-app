@@ -30,6 +30,7 @@ describe('MCP server (e2e)', () => {
   beforeAll(async () => {
     useE2eAdminCredentials();
     process.env.MCP_ENABLED = 'true';
+    process.env.AGENDA_EMAIL_WORKER = 'false';
 
     database = await createPostgresTestDatabase();
 
@@ -60,6 +61,10 @@ describe('MCP server (e2e)', () => {
           'quotes:update',
           'quotes:approve',
           'quotes:delete',
+          'agenda:read',
+          'agenda:create',
+          'agenda:update',
+          'agenda:cancel',
           'activity:read',
         ],
       })
@@ -73,6 +78,7 @@ describe('MCP server (e2e)', () => {
     await closePostgresTestDatabase(database);
     clearE2eAdminCredentials();
     delete process.env.MCP_ENABLED;
+    delete process.env.AGENDA_EMAIL_WORKER;
   });
 
   function mcp(method: string, params?: unknown, key: string | null = apiKey) {
@@ -108,6 +114,7 @@ describe('MCP server (e2e)', () => {
       expect.arrayContaining([
         'hexa_whoami',
         'hexa_calc',
+        'hexa_chart_bar',
         'hexa_patients_search',
         'hexa_uco_search',
         'hexa_quotes_list',
@@ -115,6 +122,11 @@ describe('MCP server (e2e)', () => {
         'hexa_quotes_create',
         'hexa_quotes_sanction',
         'hexa_quotes_set_status',
+        'hexa_agenda_appointments',
+        'hexa_agenda_summary',
+        'hexa_agenda_create',
+        'hexa_agenda_update',
+        'hexa_agenda_cancel',
         'hexa_activity_list',
       ]),
     );
@@ -131,6 +143,52 @@ describe('MCP server (e2e)', () => {
       values: [14900, 23900, 18990],
       result: 23900,
     });
+  });
+
+  it('builds a render-ready bar chart without any domain scope', async () => {
+    const call = await mcp('tools/call', {
+      name: 'hexa_chart_bar',
+      arguments: {
+        title: 'Citas por día',
+        description: 'Semana actual',
+        valueLabel: 'Citas',
+        data: [
+          { label: 'Lun', value: 8 },
+          { label: 'Mar', value: 5 },
+        ],
+      },
+    }).expect(200);
+
+    expect(JSON.parse(textOf(call))).toMatchObject({
+      chart: {
+        type: 'bar',
+        title: 'Citas por día',
+        description: 'Semana actual',
+        valueFormat: 'number',
+        valueLabel: 'Citas',
+        currency: null,
+        data: [
+          { label: 'Lun', value: 8 },
+          { label: 'Mar', value: 5 },
+        ],
+      },
+    });
+  });
+
+  it('rejects invalid chart data with a readable error', async () => {
+    const call = await mcp('tools/call', {
+      name: 'hexa_chart_bar',
+      arguments: {
+        title: 'Duplicados',
+        data: [
+          { label: 'Lun', value: 1 },
+          { label: ' Lun ', value: 2 },
+        ],
+      },
+    }).expect(200);
+
+    expect((call.body as McpResponse).result?.isError).toBe(true);
+    expect(textOf(call)).toContain('duplicate chart label');
   });
 
   it('reports the effective API key scopes', async () => {
@@ -241,6 +299,195 @@ describe('MCP server (e2e)', () => {
     );
   });
 
+  it('lists the agenda, summarizes it and writes appointments with confirmation', async () => {
+    const patient = await request(app.getHttpServer())
+      .post('/patients')
+      .set('Authorization', authorization)
+      .send({
+        rut: '11.111.111-1',
+        nombres: 'Agenda',
+        apellidoPaterno: 'MCP',
+        apellidoMaterno: 'Paciente',
+        fechaNacimiento: '1988-03-12',
+        sexo: 'otro',
+        email: 'agenda.mcp@example.com',
+      })
+      .expect(201);
+    const patientId = (patient.body as { id: string }).id;
+
+    const professionals = await request(app.getHttpServer())
+      .get('/agenda/professionals')
+      .set('Authorization', authorization)
+      .expect(200);
+    const professionalId = (professionals.body as Array<{ id: string }>)[0]?.id;
+
+    expect(professionalId).toBeDefined();
+
+    const start = new Date(Date.now() + 2 * 60 * 60 * 1000);
+    start.setSeconds(0, 0);
+    const end = new Date(start.getTime() + 30 * 60 * 1000);
+
+    const createdByRest = await request(app.getHttpServer())
+      .post('/agenda/appointments')
+      .set('Authorization', authorization)
+      .send({
+        patientId,
+        professionalId,
+        startsAt: start.toISOString(),
+        endsAt: end.toISOString(),
+        reason: 'Control MCP',
+      })
+      .expect(201);
+    const restAppointmentId = (createdByRest.body as { id: string }).id;
+
+    const list = await mcp('tools/call', {
+      name: 'hexa_agenda_appointments',
+      arguments: {
+        from: start.toISOString(),
+        to: end.toISOString(),
+        limit: 10,
+      },
+    }).expect(200);
+
+    expect((list.body as McpResponse).result?.isError).not.toBe(true);
+
+    const listed = JSON.parse(textOf(list)) as {
+      total: number;
+      appointments: Array<{
+        id: string;
+        status: string;
+        patient: { nombreCompleto: string; rut: string; email: string | null };
+      }>;
+      patients: Array<{ id: string; appointments: number }>;
+    };
+
+    expect(listed.total).toBeGreaterThanOrEqual(1);
+    expect(listed.appointments).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: restAppointmentId,
+          status: 'scheduled',
+          patient: expect.objectContaining({
+            nombreCompleto: 'Agenda MCP Paciente',
+            rut: '11111111-1',
+            email: 'agenda.mcp@example.com',
+          }),
+        }),
+      ]),
+    );
+    expect(listed.patients.some((item) => item.id === patientId)).toBe(true);
+
+    const summary = await mcp('tools/call', {
+      name: 'hexa_agenda_summary',
+      arguments: {
+        from: start.toISOString(),
+        to: end.toISOString(),
+      },
+    }).expect(200);
+
+    expect((summary.body as McpResponse).result?.isError).not.toBe(true);
+
+    const summarized = JSON.parse(textOf(summary)) as {
+      totals: { appointments: number; patients: number; byStatus: { scheduled: number } };
+      professionals: Array<{ id: string }>;
+    };
+
+    expect(summarized.totals.appointments).toBeGreaterThanOrEqual(1);
+    expect(summarized.totals.patients).toBeGreaterThanOrEqual(1);
+    expect(summarized.totals.byStatus.scheduled).toBeGreaterThanOrEqual(1);
+    expect(summarized.professionals.some((item) => item.id === professionalId)).toBe(true);
+
+    await request(app.getHttpServer())
+      .patch('/settings')
+      .set('Authorization', authorization)
+      .send({ values: { 'mcp.allowWrites': true } })
+      .expect(200);
+
+    const newStart = new Date(start.getTime() + 60 * 60 * 1000);
+    const newEnd = new Date(newStart.getTime() + 30 * 60 * 1000);
+
+    const withoutConfirm = await mcp('tools/call', {
+      name: 'hexa_agenda_create',
+      arguments: {
+        patientId,
+        professionalId,
+        startsAt: newStart.toISOString(),
+        endsAt: newEnd.toISOString(),
+        reason: 'Creada por MCP',
+      },
+    }).expect(200);
+
+    expect((withoutConfirm.body as McpResponse).result?.isError).toBe(true);
+    expect(textOf(withoutConfirm)).toContain('confirm: true');
+
+    const created = await mcp('tools/call', {
+      name: 'hexa_agenda_create',
+      arguments: {
+        patientId,
+        professionalId,
+        startsAt: newStart.toISOString(),
+        endsAt: newEnd.toISOString(),
+        reason: 'Creada por MCP',
+        confirm: true,
+      },
+    }).expect(200);
+
+    expect((created.body as McpResponse).result?.isError).not.toBe(true);
+
+    const createdAppointment = (JSON.parse(textOf(created)) as {
+      appointment: { id: string; status: string; startsAt: string; endsAt: string };
+    }).appointment;
+
+    expect(createdAppointment.status).toBe('scheduled');
+    expect(createdAppointment.startsAt).toBe(newStart.toISOString());
+
+    const rescheduledStart = new Date(newStart.getTime() + 30 * 60 * 1000);
+    const rescheduledEnd = new Date(rescheduledStart.getTime() + 30 * 60 * 1000);
+
+    const updated = await mcp('tools/call', {
+      name: 'hexa_agenda_update',
+      arguments: {
+        appointmentId: createdAppointment.id,
+        startsAt: rescheduledStart.toISOString(),
+        confirm: true,
+      },
+    }).expect(200);
+
+    expect((updated.body as McpResponse).result?.isError).not.toBe(true);
+
+    const rescheduled = (JSON.parse(textOf(updated)) as {
+      appointment: { startsAt: string; endsAt: string };
+    }).appointment;
+
+    expect(rescheduled.startsAt).toBe(rescheduledStart.toISOString());
+    expect(rescheduled.endsAt).toBe(rescheduledEnd.toISOString());
+
+    const cancelled = await mcp('tools/call', {
+      name: 'hexa_agenda_cancel',
+      arguments: { appointmentId: createdAppointment.id, confirm: true },
+    }).expect(200);
+
+    expect((cancelled.body as McpResponse).result?.isError).not.toBe(true);
+    expect(
+      (JSON.parse(textOf(cancelled)) as { appointment: { status: string } }).appointment.status,
+    ).toBe('cancelled');
+
+    const audit = await request(app.getHttpServer())
+      .get('/activity?module=mcp&limit=100')
+      .set('Authorization', authorization)
+      .expect(200);
+    const actions = (audit.body as { items: Array<{ action: string; outcome: string }> }).items;
+
+    expect(actions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ action: 'mcp.hexa_agenda_create', outcome: 'failure' }),
+        expect.objectContaining({ action: 'mcp.hexa_agenda_create', outcome: 'success' }),
+        expect.objectContaining({ action: 'mcp.hexa_agenda_update', outcome: 'success' }),
+        expect.objectContaining({ action: 'mcp.hexa_agenda_cancel', outcome: 'success' }),
+      ]),
+    );
+  });
+
   it('rejects a tool when the key lacks its scope', async () => {
     const readOnly = await request(app.getHttpServer())
       .post('/apikeys')
@@ -262,5 +509,14 @@ describe('MCP server (e2e)', () => {
 
     expect((response.body as McpResponse).result?.isError).toBe(true);
     expect(textOf(response)).toContain('Missing permission');
+
+    const agenda = await mcp(
+      'tools/call',
+      { name: 'hexa_agenda_appointments', arguments: {} },
+      (readOnly.body as { key: string }).key,
+    ).expect(200);
+
+    expect((agenda.body as McpResponse).result?.isError).toBe(true);
+    expect(textOf(agenda)).toContain('Missing permission');
   });
 });

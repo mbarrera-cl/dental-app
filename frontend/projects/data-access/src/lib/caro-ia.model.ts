@@ -35,6 +35,24 @@ export interface CaroAttachment {
   createdAt: string;
 }
 
+export type CaroChartValueFormat = 'number' | 'currency' | 'percent';
+
+export interface CaroBarChartDatum {
+  label: string;
+  value: number;
+}
+
+/** Chart spec produced by the hexa_chart_bar MCP tool. */
+export interface CaroBarChart {
+  type: 'bar';
+  title: string;
+  description: string | null;
+  valueFormat: CaroChartValueFormat;
+  valueLabel: string | null;
+  currency: string | null;
+  data: CaroBarChartDatum[];
+}
+
 export interface CaroToolCall {
   id: string;
   /** Nombre técnico de la tool MCP, e.g. `hexa_quotes_list`. */
@@ -43,6 +61,8 @@ export interface CaroToolCall {
   label: string;
   state: CaroToolState;
   summary: string | null;
+  /** Presente cuando la tool produjo un gráfico renderizable. */
+  chart?: CaroBarChart | null;
 }
 
 export interface CaroPendingApproval {

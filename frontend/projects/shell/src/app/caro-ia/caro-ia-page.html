@@ -198,6 +198,27 @@
                     </div>
                   }
 
+                  @for (tool of message.toolCalls; track tool.id) {
+                    @if (tool.chart; as chart) {
+                      <div class="bg-card mb-3 rounded-xl border p-4" data-testid="caro-chart">
+                        <div class="mb-3">
+                          <p class="text-sm font-semibold">{{ chart.title }}</p>
+                          @if (chart.description) {
+                            <p class="text-muted-foreground text-xs">{{ chart.description }}</p>
+                          }
+                        </div>
+                        <hexa-bar-chart
+                          [data]="chart.data"
+                          [ariaLabel]="chart.title"
+                          [valueLabel]="chart.valueLabel ?? ''"
+                          [valueFormat]="chart.valueFormat"
+                          [currency]="chart.currency ?? 'CLP'"
+                          [locale]="language() === 'en' ? 'en-US' : 'es-CL'"
+                        />
+                      </div>
+                    }
+                  }
+
                   <div
                     [class.pk-typing]="
                       store.isStreaming(message.id) && store.streamPhase() === 'writing'

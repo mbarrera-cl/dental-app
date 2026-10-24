@@ -62,5 +62,14 @@ import { AgendaReasonsController } from './infrastructure/http/agenda-reasons.co
     },
     { provide: EmailSenderPort, useClass: ResendEmailSender },
   ],
+  exports: [
+    CancelAppointmentUseCase,
+    CreateAppointmentUseCase,
+    GetAgendaConfigUseCase,
+    GetAppointmentUseCase,
+    ListAppointmentsUseCase,
+    ListProfessionalsUseCase,
+    UpdateAppointmentUseCase,
+  ],
 })
 export class AgendaModule {}

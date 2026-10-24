@@ -26,6 +26,7 @@ import {
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { HlmBadge } from '@ui/badge';
 import { HlmButton } from '@ui/button';
+import { BarChart } from '@ui/chart';
 import { HlmInput } from '@ui/input';
 import { HlmSpinner } from '@ui/spinner';
 import {
@@ -60,6 +61,7 @@ type CaroIaView = 'chat' | 'table';
     HlmButton,
     HlmInput,
     HlmSpinner,
+    BarChart,
     PkChatContainerRoot,
     PkChatContainerContent,
     PkChatContainerScrollAnchor,

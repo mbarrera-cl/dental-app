@@ -128,6 +128,9 @@ describe('DashboardPage', () => {
 
     // Patient totals block.
     expect(compiled.querySelector('[data-testid="dashboard-patients-total"]')?.textContent).toContain('12');
+
+    // Shared responsive bar charts.
+    expect(compiled.querySelectorAll('hexa-bar-chart')).toHaveLength(3);
   });
 
   it('shows the error banner but keeps the last summary when a refresh fails', async () => {

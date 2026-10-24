@@ -88,4 +88,16 @@ describe('CaroIaAnswerVerifier', () => {
       }).reason,
     ).toBe('empty_answer');
   });
+
+  it('keeps a chart-only turn with a short caption', () => {
+    expect(
+      verifier.verify({
+        content: '   ',
+        evidence: [{ chart: { type: 'bar' } }],
+        noAnswer: false,
+        greeting: false,
+        hasChart: true,
+      }),
+    ).toEqual({ ok: true, content: 'Aquí está el gráfico.', reason: null });
+  });
 });

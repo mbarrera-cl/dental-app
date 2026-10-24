@@ -40,7 +40,10 @@ class FakeDeepgram extends DeepgramClient {
 interface CaroEvent {
   type: string;
   approval?: { id: string; tool: string; status: string };
-  message?: { content: string; toolCalls: Array<{ name: string; state: string }> };
+  message?: {
+    content: string;
+    toolCalls: Array<{ name: string; state: string; chart?: unknown }>;
+  };
 }
 
 describe('CaroIA API (e2e)', () => {
@@ -49,10 +52,14 @@ describe('CaroIA API (e2e)', () => {
   let authorization: string;
   let deepseek: FakeDeepSeek;
   let patientId: string;
+  let professionalId: string;
+  let appointmentStart: Date;
+  let appointmentEnd: Date;
   let adminConversationId: string;
 
   beforeAll(async () => {
     useE2eAdminCredentials();
+    process.env.AGENDA_EMAIL_WORKER = 'false';
     database = await createPostgresTestDatabase();
     deepseek = new FakeDeepSeek();
 
@@ -86,12 +93,35 @@ describe('CaroIA API (e2e)', () => {
       .expect(201);
 
     patientId = (patient.body as { id: string }).id;
+
+    const professionals = await request(app.getHttpServer())
+      .get('/agenda/professionals')
+      .set('Authorization', authorization)
+      .expect(200);
+    professionalId = (professionals.body as Array<{ id: string }>)[0]?.id as string;
+
+    appointmentStart = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    appointmentStart.setSeconds(0, 0);
+    appointmentEnd = new Date(appointmentStart.getTime() + 30 * 60 * 1000);
+
+    await request(app.getHttpServer())
+      .post('/agenda/appointments')
+      .set('Authorization', authorization)
+      .send({
+        patientId,
+        professionalId,
+        startsAt: appointmentStart.toISOString(),
+        endsAt: appointmentEnd.toISOString(),
+        reason: 'Control CaroIA',
+      })
+      .expect(201);
   });
 
   afterAll(async () => {
     await app.close();
     await closePostgresTestDatabase(database);
     clearE2eAdminCredentials();
+    delete process.env.AGENDA_EMAIL_WORKER;
   });
 
   function parseEvents(text: string): CaroEvent[] {
@@ -169,6 +199,116 @@ describe('CaroIA API (e2e)', () => {
       id,
       preview: 'Encontré a Camila Rojas.',
     });
+  });
+
+  it('answers agenda questions with MCP evidence', async () => {
+    const id = await createConversation();
+
+    deepseek.queue = [
+      {
+        content: '',
+        toolCalls: [
+          {
+            id: 'call-agenda',
+            type: 'function',
+            function: {
+              name: 'hexa_agenda_appointments',
+              arguments: JSON.stringify({
+                from: appointmentStart.toISOString(),
+                to: appointmentEnd.toISOString(),
+              }),
+            },
+          },
+        ],
+      },
+      { content: 'Tienes una cita con **Camila Rojas**.', toolCalls: [] },
+    ];
+
+    const response = await request(app.getHttpServer())
+      .post(`/caro-ia/conversations/${id}/messages`)
+      .set('Authorization', authorization)
+      .send({ content: '¿Qué pacientes tengo citados?' })
+      .expect(200);
+
+    const events = parseEvents(response.text);
+    expect(events.map((event) => event.type)).toEqual(
+      expect.arrayContaining(['tool.start', 'tool.result', 'message.done']),
+    );
+    expect(events.at(-1)?.message?.toolCalls[0]).toMatchObject({
+      name: 'hexa_agenda_appointments',
+      state: 'success',
+    });
+
+    const detail = await request(app.getHttpServer())
+      .get(`/caro-ia/conversations/${id}`)
+      .set('Authorization', authorization)
+      .expect(200);
+
+    expect(
+      (detail.body as { messages: Array<{ citations: unknown[] }> }).messages[1]?.citations,
+    ).toHaveLength(1);
+  });
+
+  it('attaches a bar chart to the tool call and keeps it after reloading', async () => {
+    const id = await createConversation();
+
+    deepseek.queue = [
+      {
+        content: '',
+        toolCalls: [
+          {
+            id: 'call-chart',
+            type: 'function',
+            function: {
+              name: 'hexa_chart_bar',
+              arguments: JSON.stringify({
+                title: 'Citas por día',
+                description: 'Semana actual',
+                valueLabel: 'Citas',
+                data: [
+                  { label: 'Lun', value: 6 },
+                  { label: 'Mar', value: 9 },
+                ],
+              }),
+            },
+          },
+        ],
+      },
+      { content: '', toolCalls: [] },
+    ];
+
+    const response = await request(app.getHttpServer())
+      .post(`/caro-ia/conversations/${id}/messages`)
+      .set('Authorization', authorization)
+      .send({ content: 'Graficame las citas por día' })
+      .expect(200);
+
+    const events = parseEvents(response.text);
+    expect(events.map((event) => event.type)).toEqual(
+      expect.arrayContaining(['tool.result', 'message.done']),
+    );
+    expect(events.at(-1)?.message?.content).toBe('Aquí está el gráfico.');
+    expect(events.at(-1)?.message?.toolCalls[0]).toMatchObject({
+      name: 'hexa_chart_bar',
+      state: 'success',
+      chart: {
+        type: 'bar',
+        title: 'Citas por día',
+        data: [
+          { label: 'Lun', value: 6 },
+          { label: 'Mar', value: 9 },
+        ],
+      },
+    });
+
+    const detail = await request(app.getHttpServer())
+      .get(`/caro-ia/conversations/${id}`)
+      .set('Authorization', authorization)
+      .expect(200);
+
+    expect(
+      (detail.body as { messages: Array<{ toolCalls: unknown[] }> }).messages[1]?.toolCalls[0],
+    ).toMatchObject({ name: 'hexa_chart_bar', chart: { title: 'Citas por día' } });
   });
 
   it('rejects attachments and invalid messages before streaming', async () => {
@@ -257,6 +397,74 @@ describe('CaroIA API (e2e)', () => {
       .set('Authorization', authorization)
       .send({ decision: 'approve' })
       .expect(409);
+  });
+
+  it('proposes an agenda write and creates it after approval', async () => {
+    await request(app.getHttpServer())
+      .patch('/settings')
+      .set('Authorization', authorization)
+      .send({ values: { 'caroIa.allowWrites': true, 'mcp.allowWrites': true } })
+      .expect(200);
+
+    const id = await createConversation();
+    const start = new Date(appointmentStart.getTime() + 2 * 60 * 60 * 1000);
+    const end = new Date(start.getTime() + 30 * 60 * 1000);
+
+    deepseek.queue = [
+      {
+        content: 'Necesito tu aprobación para agendar la cita.',
+        toolCalls: [
+          {
+            id: 'call-agenda-create',
+            type: 'function',
+            function: {
+              name: 'hexa_agenda_create',
+              arguments: JSON.stringify({
+                patientId,
+                professionalId,
+                startsAt: start.toISOString(),
+                endsAt: end.toISOString(),
+                reason: 'Control CaroIA',
+              }),
+            },
+          },
+        ],
+      },
+    ];
+
+    const response = await request(app.getHttpServer())
+      .post(`/caro-ia/conversations/${id}/messages`)
+      .set('Authorization', authorization)
+      .send({ content: 'Agenda una cita para Camila' })
+      .expect(200);
+
+    const events = parseEvents(response.text);
+    const approval = events.find((event) => event.type === 'approval.required')?.approval;
+
+    expect(approval).toMatchObject({ tool: 'hexa_agenda_create', status: 'pending' });
+
+    const approved = await request(app.getHttpServer())
+      .post(`/caro-ia/conversations/${id}/approvals/${approval!.id}`)
+      .set('Authorization', authorization)
+      .send({ decision: 'approve' })
+      .expect(200);
+
+    const approvalEvents = parseEvents(approved.text);
+    expect(approvalEvents.some((event) => event.type === 'tool.result')).toBe(true);
+    expect(approvalEvents.at(-1)?.message?.content).toContain('Cita');
+
+    const appointments = await request(app.getHttpServer())
+      .get('/agenda/appointments')
+      .query({ from: start.toISOString(), to: end.toISOString() })
+      .set('Authorization', authorization)
+      .expect(200);
+
+    expect(
+      (appointments.body as Array<{ startsAt: string; status: string }>).some(
+        (appointment) =>
+          appointment.startsAt === start.toISOString() && appointment.status === 'scheduled',
+      ),
+    ).toBe(true);
   });
 
   it('keeps every conversation private, including from administrators', async () => {

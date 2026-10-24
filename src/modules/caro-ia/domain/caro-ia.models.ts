@@ -1,3 +1,5 @@
+import type { BarChartSpec } from '../../mcp/domain/bar-chart.js';
+
 export type CaroMessageRole = 'user' | 'assistant';
 export type CaroToolState = 'running' | 'success' | 'error';
 export type CaroApprovalStatus = 'pending' | 'approved' | 'rejected' | 'expired';
@@ -17,6 +19,8 @@ export interface CaroToolCall {
   label: string;
   state: CaroToolState;
   summary: string | null;
+  /** Present when the tool produced a renderable chart (hexa_chart_bar). */
+  chart?: BarChartSpec | null;
 }
 
 export interface CaroPendingApproval {

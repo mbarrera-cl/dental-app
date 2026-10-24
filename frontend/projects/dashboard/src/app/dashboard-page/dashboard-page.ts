@@ -18,14 +18,9 @@ import {
 import { interval } from 'rxjs';
 import { HlmButton } from '@ui/button';
 import { HlmCard, HlmCardContent, HlmCardDescription, HlmCardHeader, HlmCardTitle } from '@ui/card';
-import { HlmChartImports, HLM_CHART_THEME, hlmChartTooltip } from '@ui/chart';
+import { BarChart, type BarChartDatum } from '@ui/chart';
 import { HlmSkeleton } from '@ui/skeleton';
-import { barY, defineChart } from '@tanstack/charts';
-import { scaleBand } from '@tanstack/charts/scales/band';
-import { scaleLinear } from '@tanstack/charts/scales/linear';
 import { DashboardApi, type DashboardSummary, mapApiError, type PaymentMethod } from 'data-access';
-
-type ChartDatum = { label: string; value: number };
 
 const METHOD_KEYS: Record<PaymentMethod, string> = {
   efectivo: 'dashboard.method.efectivo',
@@ -69,7 +64,7 @@ const REFRESH_MS = 60_000;
     HlmCardDescription,
     HlmCardContent,
     HlmSkeleton,
-    ...HlmChartImports,
+    BarChart,
   ],
   providers: [
     provideIcons({
@@ -97,6 +92,8 @@ export class DashboardPage {
     initialValue: this.transloco.getActiveLang(),
   });
 
+  protected readonly locale = computed(() => (this.language() === 'en' ? 'en-US' : 'es-CL'));
+
   protected readonly summary = signal<DashboardSummary | null>(null);
   protected readonly loading = signal(true);
   protected readonly loadError = signal<string | null>(null);
@@ -117,7 +114,7 @@ export class DashboardPage {
     return rate === null ? '—' : `${Math.round(rate * 100)}%`;
   });
 
-  protected readonly cashChart = computed(() => {
+  protected readonly cashChart = computed<BarChartDatum[] | null>(() => {
     this.language();
 
     const summary = this.summary();
@@ -126,16 +123,13 @@ export class DashboardPage {
       return null;
     }
 
-    return this.barOptions(
-      summary.cash.collectionsMonth.map((entry) => ({
-        label: this.transloco.translate(METHOD_KEYS[entry.method]),
-        value: entry.total,
-      })),
-      'dashboard.charts.cashAria',
-    );
+    return summary.cash.collectionsMonth.map((entry) => ({
+      label: this.transloco.translate(METHOD_KEYS[entry.method]),
+      value: entry.total,
+    }));
   });
 
-  protected readonly funnelChart = computed(() => {
+  protected readonly funnelChart = computed<BarChartDatum[] | null>(() => {
     this.language();
 
     const summary = this.summary();
@@ -144,16 +138,13 @@ export class DashboardPage {
       return null;
     }
 
-    return this.barOptions(
-      QUOTE_STATUS_ORDER.map((status) => ({
-        label: this.transloco.translate(QUOTE_STATUS_KEYS[status]!),
-        value: summary.quotes.funnel[status] ?? 0,
-      })),
-      'dashboard.charts.funnelAria',
-    );
+    return QUOTE_STATUS_ORDER.map((status) => ({
+      label: this.transloco.translate(QUOTE_STATUS_KEYS[status]!),
+      value: summary.quotes.funnel[status] ?? 0,
+    }));
   });
 
-  protected readonly previsionChart = computed(() => {
+  protected readonly previsionChart = computed<BarChartDatum[] | null>(() => {
     this.language();
 
     const summary = this.summary();
@@ -162,13 +153,10 @@ export class DashboardPage {
       return null;
     }
 
-    return this.barOptions(
-      summary.patients.prevision.map((entry) => ({
-        label: entry.tipo,
-        value: entry.count,
-      })),
-      'dashboard.charts.previsionAria',
-    );
+    return summary.patients.prevision.map((entry) => ({
+      label: entry.tipo,
+      value: entry.count,
+    }));
   });
 
   constructor() {
@@ -230,53 +218,5 @@ export class DashboardPage {
       dateStyle: 'medium',
       timeStyle: 'short',
     }).format(new Date(value));
-  }
-
-  private barOptions(data: ChartDatum[], ariaLabelKey: string) {
-    const ariaLabel = this.transloco.translate(ariaLabelKey);
-
-    return {
-      definition: defineChart(
-        {
-          marks: [
-            barY(data, {
-              id: 'bars',
-              x: 'label',
-              y: 'value',
-              key: 'label',
-              fill: 'var(--chart-2)',
-            }),
-          ],
-          scales: {
-            x: {
-              scale: () => scaleBand<string>().paddingInner(0.25).paddingOuter(0.15),
-              axis: {
-                line: false,
-                ticks: { size: 0, padding: 8 },
-                tickLabels: { thin: { minGap: 24 } },
-              },
-            },
-            y: { scale: scaleLinear, grid: true, axis: false },
-          },
-          theme: HLM_CHART_THEME,
-        },
-        {
-          focus: 'group-x',
-          tooltip: hlmChartTooltip<ChartDatum, string, number>({
-            content: (points) => ({
-              title: points[0]?.xValue,
-              rows: points.map((point) => ({
-                label: ariaLabel,
-                value: point.yValue.toLocaleString(this.language() === 'en' ? 'en-US' : 'es-CL'),
-                color: point.color,
-              })),
-            }),
-          }),
-        },
-      ),
-      ariaLabel,
-      ariaDescription: ariaLabel,
-      height: 220,
-    };
   }
 }

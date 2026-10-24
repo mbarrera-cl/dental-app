@@ -83,6 +83,21 @@ describe('CaroIaStore', () => {
     expect(store.sending()).toBe(false);
   });
 
+  it('keeps the chart attached to the tool call', () => {
+    openFirst();
+
+    store.send('Graficame las citas por día');
+    vi.runAllTimers();
+
+    const chart = store
+      .messages()
+      .at(-1)
+      ?.toolCalls.find((tool) => tool.name === 'hexa_chart_bar')?.chart;
+
+    expect(chart).toMatchObject({ type: 'bar', title: 'Citas por día' });
+    expect(chart?.data).toHaveLength(4);
+  });
+
   it('derives the stream phase from real events', () => {
     openFirst();
 

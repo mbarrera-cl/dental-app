@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { MCP_STRATEGY } from '@rekog/mcp-nest';
 import { ActivityModule } from '../activity/activity.module.js';
+import { AgendaModule } from '../agenda/agenda.module.js';
 import { ApiKeysModule } from '../apikeys/apikeys.module.js';
 import { PatientsModule } from '../patients/patients.module.js';
 import { QuotesModule } from '../quotes/quotes.module.js';
@@ -9,11 +10,14 @@ import { UcoModule } from '../uco/uco.module.js';
 import { McpToolRunner } from './application/base/mcp-tool-runner.js';
 import { McpToolCatalog } from './application/catalog/mcp-tool-catalog.js';
 import { ActivityFacade } from './application/facades/activity.facade.js';
+import { AgendaFacade } from './application/facades/agenda.facade.js';
 import { PatientsFacade } from './application/facades/patients.facade.js';
 import { QuotesFacade } from './application/facades/quotes.facade.js';
 import { UcoFacade } from './application/facades/uco.facade.js';
 import { ActivityTools } from './application/tools/activity.tools.js';
+import { AgendaTools } from './application/tools/agenda.tools.js';
 import { CalcTools } from './application/tools/calc.tools.js';
+import { ChartTools } from './application/tools/chart.tools.js';
 import { IdentityTools } from './application/tools/identity.tools.js';
 import { PatientsTools } from './application/tools/patients.tools.js';
 import { QuotesPrompts } from './application/prompts/quotes.prompts.js';
@@ -32,7 +36,15 @@ import { mcpStrategy } from './mcp.strategy.js';
  * register both here. The transport and security layers stay untouched.
  */
 @Module({
-  imports: [SettingsModule, ActivityModule, ApiKeysModule, PatientsModule, UcoModule, QuotesModule],
+  imports: [
+    SettingsModule,
+    ActivityModule,
+    ApiKeysModule,
+    PatientsModule,
+    UcoModule,
+    QuotesModule,
+    AgendaModule,
+  ],
   controllers: [
     McpHttpController,
     IdentityTools,
@@ -40,8 +52,10 @@ import { mcpStrategy } from './mcp.strategy.js';
     UcoTools,
     QuotesTools,
     QuotesPrompts,
+    AgendaTools,
     ActivityTools,
     CalcTools,
+    ChartTools,
   ],
   providers: [
     McpEnabledGuard,
@@ -50,11 +64,14 @@ import { mcpStrategy } from './mcp.strategy.js';
     QuotesTools,
     PatientsTools,
     UcoTools,
+    AgendaTools,
     ActivityTools,
     CalcTools,
+    ChartTools,
     PatientsFacade,
     UcoFacade,
     QuotesFacade,
+    AgendaFacade,
     ActivityFacade,
     { provide: MCP_STRATEGY, useValue: mcpStrategy },
   ],
