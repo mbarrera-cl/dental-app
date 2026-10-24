@@ -268,14 +268,9 @@
           <pk-chat-container-scroll-anchor />
         </pk-chat-container-content>
         </pk-chat-container-root>
-      </div>
 
-      @if (store.transcribing()) {
-        <div class="text-muted-foreground mt-2 flex items-center gap-2 text-xs">
-          <hlm-spinner class="text-[length:--spacing(3)]" />
-          {{ 'caroIa.audio.transcribing' | transloco }}
-        </div>
-      }
+        <app-caro-voice-waveform [transcribing]="store.transcribing()" />
+      </div>
 
       @if (audioError(); as error) {
         <p class="text-destructive mt-2 text-xs" role="alert">{{ error }}</p>
@@ -297,7 +292,7 @@
           [placeholder]="'caroIa.placeholder' | transloco"
           [label]="'caroIa.placeholder' | transloco"
           [busy]="store.sending()"
-          [sendBlocked]="store.transcribing()"
+          [sendBlocked]="store.transcribing() || voice.active()"
           [attachable]="false"
           [maxHeight]="180"
           (submitted)="onSubmit($event)"
@@ -305,13 +300,10 @@
         >
           <div pkComposerStart class="flex items-center">
             <app-caro-audio-recorder
-              [disabled]="store.sending()"
+              [disabled]="store.sending() || store.transcribing()"
               [startLabel]="'caroIa.audio.record' | transloco"
               [stopLabel]="'caroIa.audio.stop' | transloco"
-              [unsupportedMessage]="'caroIa.audio.unsupported' | transloco"
-              [permissionMessage]="'caroIa.audio.permission' | transloco"
-              (recorded)="onAudio($event)"
-              (failed)="audioError.set($event)"
+              (started)="audioError.set(null)"
             />
           </div>
         </pk-composer>

@@ -2,12 +2,13 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  DestroyRef,
   inject,
   OnInit,
   signal,
   viewChild,
 } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
   lucideArrowLeft,
@@ -24,6 +25,7 @@ import {
   lucideX,
 } from '@ng-icons/lucide';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
+import { finalize } from 'rxjs';
 import { HlmBadge } from '@ui/badge';
 import { HlmButton } from '@ui/button';
 import { BarChart } from '@ui/chart';
@@ -43,6 +45,8 @@ import { PkThinking } from '@ui/prompt-kit/thinking';
 import { formatRelativeTime } from 'ui';
 import type { CaroConversation, CaroPendingApproval } from 'data-access';
 import { CaroAudioRecorder } from './caro-audio-recorder';
+import { CaroVoiceRecorderService, type CaroVoiceError } from './caro-voice-recorder.service';
+import { CaroVoiceWaveform } from './caro-voice-waveform';
 import { CaroIaStore } from './caro-ia.store';
 
 type CaroIaView = 'chat' | 'table';
@@ -73,8 +77,10 @@ type CaroIaView = 'chat' | 'table';
     PkApproval,
     PkThinking,
     CaroAudioRecorder,
+    CaroVoiceWaveform,
   ],
   providers: [
+    CaroVoiceRecorderService,
     provideIcons({
       lucideArrowLeft,
       lucideCheck,
@@ -95,7 +101,15 @@ type CaroIaView = 'chat' | 'table';
 })
 export class CaroIaPage implements OnInit {
   private readonly transloco = inject(TranslocoService);
+  private readonly destroyRef = inject(DestroyRef);
+  protected readonly voice = inject(CaroVoiceRecorderService);
   protected readonly store = inject(CaroIaStore);
+
+  private readonly voiceErrorKeys: Record<CaroVoiceError, string> = {
+    unsupported: 'caroIa.audio.unsupported',
+    permission: 'caroIa.audio.permission',
+    start: 'caroIa.audio.recordingError',
+  };
 
   protected readonly view = signal<CaroIaView>('table');
   protected readonly composerValue = signal('');
@@ -128,6 +142,16 @@ export class CaroIaPage implements OnInit {
       this.t('caroIa.suggestions.uco'),
     ];
   });
+
+  constructor() {
+    this.voice.recorded$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((blob) => this.onAudio(blob));
+
+    this.voice.failed$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((error) => {
+      this.audioError.set(this.t(this.voiceErrorKeys[error]));
+    });
+  }
 
   ngOnInit(): void {
     this.store.loadConversations();
@@ -162,14 +186,20 @@ export class CaroIaPage implements OnInit {
   protected onAudio(blob: Blob): void {
     this.audioError.set(null);
 
-    this.store.transcribe(blob).subscribe({
-      next: (transcription) => {
-        this.composerValue.update((value) =>
-          value.trim() === '' ? transcription.text : `${value} ${transcription.text}`,
-        );
-      },
-      error: () => this.audioError.set(this.t('caroIa.audio.error')),
-    });
+    this.store
+      .transcribe(blob)
+      .pipe(
+        finalize(() => this.voice.reset()),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: (transcription) => {
+          this.composerValue.update((value) =>
+            value.trim() === '' ? transcription.text : `${value} ${transcription.text}`,
+          );
+        },
+        error: () => this.audioError.set(this.t('caroIa.audio.error')),
+      });
   }
 
   protected setSearch(event: Event): void {
