@@ -1722,6 +1722,8 @@ export const ES = {
   caroIa: {
     title: 'CaroIA',
     subtitle: 'Asistente de presupuestos conectado al MCP',
+    thinking: 'CaroIA está pensando…',
+    consultingData: 'Consultando tus datos…',
     preview: 'Vista previa · datos simulados',
     chat: 'Chat',
     conversations: 'Conversaciones',

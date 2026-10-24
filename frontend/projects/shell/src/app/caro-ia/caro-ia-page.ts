@@ -38,6 +38,7 @@ import { PkComposer } from '@ui/prompt-kit/composer';
 import { PkMarkdown } from '@ui/prompt-kit/markdown';
 import { PkApproval } from '@ui/prompt-kit/approval';
 import { PkPromptSuggestion } from '@ui/prompt-kit/prompt-suggestion';
+import { PkThinking } from '@ui/prompt-kit/thinking';
 import { formatRelativeTime } from 'ui';
 import type { CaroConversation, CaroPendingApproval } from 'data-access';
 import { CaroAudioRecorder } from './caro-audio-recorder';
@@ -68,6 +69,7 @@ type CaroIaView = 'chat' | 'table';
     PkMarkdown,
     PkPromptSuggestion,
     PkApproval,
+    PkThinking,
     CaroAudioRecorder,
   ],
   providers: [
@@ -107,9 +109,11 @@ export class CaroIaPage implements OnInit {
 
     return query === ''
       ? this.store.conversations()
-      : this.store.conversations().filter((conversation) =>
-          `${conversation.title} ${conversation.preview ?? ''}`.toLowerCase().includes(query),
-        );
+      : this.store
+          .conversations()
+          .filter((conversation) =>
+            `${conversation.title} ${conversation.preview ?? ''}`.toLowerCase().includes(query),
+          );
   });
 
   protected readonly suggestions = computed(() => {
