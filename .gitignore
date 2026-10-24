@@ -34,4 +34,10 @@ pnpm-debug.log*
 # Angular build cache
 .angular/
 
+# Impeccable design-process artifacts
+.impeccable/mocks/
+.impeccable/review/
+.impeccable/questions/
+.impeccable/decision-payload.json
+
 backups/

@@ -1,12 +1,25 @@
-import { ChangeDetectionStrategy, Component, ElementRef, HostListener, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  HostListener,
+  inject,
+  signal,
+} from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { lucideChevronDown, lucideKeyRound, lucideLogOut, lucideLockKeyhole } from '@ng-icons/lucide';
+import {
+  lucideChevronDown,
+  lucideKeyRound,
+  lucideLogOut,
+  lucideLockKeyhole,
+} from '@ng-icons/lucide';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { HlmBadge } from '@ui/badge';
 import { HlmButton } from '@ui/button';
 import { HasPermissionDirective, PERMISSION_KEYS, SessionStore } from 'auth';
 import { ChangePasswordDialog } from './change-password-dialog';
+import { LanguageSwitcher } from './language-switcher';
 
 /**
  * Header menu of the authenticated user: identity, role badges, shortcut to
@@ -22,6 +35,7 @@ import { ChangePasswordDialog } from './change-password-dialog';
     HlmButton,
     HasPermissionDirective,
     ChangePasswordDialog,
+    LanguageSwitcher,
   ],
   providers: [provideIcons({ lucideChevronDown, lucideKeyRound, lucideLogOut, lucideLockKeyhole })],
   templateUrl: './user-menu.html',

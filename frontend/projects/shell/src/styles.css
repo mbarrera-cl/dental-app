@@ -4,7 +4,73 @@
  * `ui` library so the shell and every remote render with exactly the same
  * tokens. `@source` registers the shared library with Tailwind's class
  * detection. */
+@import '@fontsource-variable/onest/index.css';
 @import '../../ui/src/styles/theme.css';
+
+/* Shell staging: warm porcelain, ink, pale oak and the clinic's own primary.
+ * The remotes keep the shared `ui` tokens; these values are scoped to the
+ * shell root so the chrome can carry the clinic's warmth without rewriting
+ * every remote. */
+:root {
+  --shell-ground: #f6f4ef;
+  --shell-surface: #fffdf9;
+  --shell-rail: #f1eee7;
+  --shell-ink: #1c2422;
+  --shell-ink-soft: #3d4642;
+  --shell-muted: #6e7772;
+  --shell-line: #e2ddd2;
+  --shell-oak: #a9825f;
+  --shell-radius-control: 8px;
+  --shell-radius-panel: 14px;
+}
+
+:root.dark {
+  --shell-ground: #121816;
+  --shell-surface: #18201d;
+  --shell-rail: #151c19;
+  --shell-ink: #eef1ec;
+  --shell-ink-soft: #c7d0c9;
+  --shell-muted: #93a09a;
+  --shell-line: rgb(255 255 255 / 12%);
+  --shell-oak: #c6a27f;
+}
+
+app-root {
+  --font-sans: 'Onest Variable', ui-sans-serif, system-ui, sans-serif;
+  --background: var(--shell-ground);
+  --foreground: var(--shell-ink);
+  --card: var(--shell-surface);
+  --card-foreground: var(--shell-ink);
+  --popover: var(--shell-surface);
+  --popover-foreground: var(--shell-ink);
+  --muted: color-mix(in oklab, var(--shell-ground) 84%, var(--shell-ink) 16%);
+  --muted-foreground: var(--shell-muted);
+  --border: var(--shell-line);
+  --input: var(--shell-line);
+  display: block;
+  min-height: 100dvh;
+  font-family: var(--font-sans);
+}
+
+body {
+  background: var(--shell-ground);
+}
+
+/* The approved login keeps its Roboto voice; only the shell adopts Onest. */
+app-login-page {
+  --font-sans: 'Roboto Variable', ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-sans);
+}
+
+@media (max-width: 640px) {
+  .user-menu-name {
+    display: none;
+  }
+
+  .header-actions app-language-switcher {
+    display: none;
+  }
+}
 
 @source '../../ui/src';
 

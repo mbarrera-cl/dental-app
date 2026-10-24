@@ -131,6 +131,11 @@ export const EN = {
     closeMenu: 'Close menu',
     collapseMenu: 'Collapse menu',
     expandMenu: 'Expand menu',
+    menu: 'Menu',
+    skipToContent: 'Skip to content',
+    routeError: 'We could not load this section.',
+    routeErrorHint: 'Check that the service is available and try again.',
+    retry: 'Try again',
     externalLink: 'Opens in a new tab',
     signIn: 'Sign in',
     userMenu: {

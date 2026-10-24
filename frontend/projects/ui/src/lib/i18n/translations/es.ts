@@ -141,6 +141,11 @@ export const ES = {
     closeMenu: 'Cerrar menú',
     collapseMenu: 'Contraer menú',
     expandMenu: 'Expandir menú',
+    menu: 'Menú',
+    skipToContent: 'Saltar al contenido',
+    routeError: 'No pudimos cargar esta sección.',
+    routeErrorHint: 'Revisa que el servicio esté disponible y vuelve a intentarlo.',
+    retry: 'Reintentar',
     externalLink: 'Se abre en una pestaña nueva',
     signIn: 'Iniciar sesión',
     userMenu: {

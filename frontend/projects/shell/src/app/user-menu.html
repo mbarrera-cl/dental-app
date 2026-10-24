@@ -13,7 +13,7 @@
     >
       {{ (store.user()?.name ?? '?').charAt(0) }}
     </span>
-    <span class="max-w-32 truncate">{{ store.user()?.name }}</span>
+    <span class="user-menu-name max-w-32 truncate">{{ store.user()?.name }}</span>
     <ng-icon name="lucideChevronDown" class="text-muted-foreground text-sm" />
   </button>
 
@@ -54,6 +54,13 @@
         {{ 'shell.userMenu.changePassword' | transloco }}
       </button>
 
+      <div class="border-t px-3 py-2">
+        <div class="flex items-center justify-between gap-2">
+          <span class="text-muted-foreground text-xs">{{ 'common.language' | transloco }}</span>
+          <app-language-switcher />
+        </div>
+      </div>
+
       <button
         type="button"
         data-testid="user-menu-signout"
@@ -67,4 +74,7 @@
   }
 </div>
 
-<app-change-password-dialog [open]="changePasswordOpen()" (closed)="changePasswordOpen.set(false)" />
+<app-change-password-dialog
+  [open]="changePasswordOpen()"
+  (closed)="changePasswordOpen.set(false)"
+/>

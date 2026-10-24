@@ -1,5 +1,13 @@
 import { NgTemplateOutlet } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  computed,
+  effect,
+  inject,
+  signal,
+} from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
@@ -43,15 +51,22 @@ interface SidebarNode {
   imports: [NgTemplateOutlet, RouterLink, RouterLinkActive, NgIcon, TranslocoPipe],
   providers: [
     provideIcons(MENU_ICONS),
-    provideIcons({ lucideChevronRight, lucideExternalLink, lucidePanelLeftClose, lucidePanelLeftOpen }),
+    provideIcons({
+      lucideChevronRight,
+      lucideExternalLink,
+      lucidePanelLeftClose,
+      lucidePanelLeftOpen,
+    }),
   ],
   templateUrl: './sidebar.html',
+  styleUrl: './sidebar.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Sidebar {
   protected readonly store = inject(NavigationStore);
 
   private readonly transloco = inject(TranslocoService);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly collapsedGroups = signal<ReadonlySet<string>>(new Set());
 
   protected readonly collapsed = signal(readCollapsedState());
@@ -111,6 +126,66 @@ export class Sidebar {
       }
 
       return next;
+    });
+  }
+
+  protected closeMobile(): void {
+    this.store.closeMobile();
+  }
+
+  /** Keeps Tab inside the drawer while it is open. */
+  protected trapFocus(event: KeyboardEvent): void {
+    if (!this.store.mobileOpen() || event.key !== 'Tab') {
+      return;
+    }
+
+    const focusable = Array.from(
+      this.host.nativeElement.querySelectorAll<HTMLElement>(
+        '.sidebar a, .sidebar button, .sidebar [tabindex]:not([tabindex="-1"])',
+      ),
+    ).filter((element) => element.offsetParent !== null);
+
+    if (focusable.length === 0) {
+      return;
+    }
+
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  }
+
+  /**
+   * Mobile drawer behaviour: lock the page scroll, move focus into the drawer
+   * and give it back to the trigger when it closes.
+   */
+  constructor() {
+    effect((onCleanup) => {
+      if (!this.store.mobileOpen()) {
+        return;
+      }
+
+      const previousOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      queueMicrotask(() => {
+        const drawer = this.host.nativeElement.querySelector<HTMLElement>('.sidebar');
+        const target =
+          drawer?.querySelector<HTMLElement>('.rail-link--active') ??
+          drawer?.querySelector<HTMLElement>('.rail-link, .rail-group, .rail-collapse');
+
+        (target ?? drawer)?.focus();
+      });
+
+      onCleanup(() => {
+        document.body.style.overflow = previousOverflow;
+        document.querySelector<HTMLElement>('.menu-button')?.focus();
+      });
     });
   }
 
