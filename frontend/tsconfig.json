@@ -27,6 +27,9 @@
       "@ui/utils": [
         "./projects/ui/src/lib/utils/src/index.ts"
       ],
+      "@ui/paginator": [
+        "./projects/ui/src/lib/paginator/src/index.ts"
+      ],
       "@ui/input": [
         "./projects/ui/src/lib/input/src/index.ts"
       ],

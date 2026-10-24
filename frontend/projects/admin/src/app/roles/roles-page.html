@@ -95,7 +95,7 @@
             </td>
           </tr>
         } @else {
-          @for (role of filtered(); track role.id) {
+          @for (role of paged().items; track role.id) {
             <tr hlmTr data-testid="role-row">
               <td hlmTd>
                 <div class="flex items-center gap-2 font-medium">
@@ -177,6 +177,16 @@
       </tbody>
     </table>
   </div>
+
+  @if (!loading() && filtered().length > 0) {
+    <hexa-paginator
+      [total]="filtered().length"
+      [page]="page()"
+      [pageSize]="pageSize()"
+      (pageChange)="page.set($event)"
+      (pageSizeChange)="pageSize.set($event)"
+    />
+  }
 </section>
 
 <!-- Create / edit dialog (single instance driven by signals) -->

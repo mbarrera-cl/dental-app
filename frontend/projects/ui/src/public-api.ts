@@ -7,6 +7,7 @@
  */
 
 export * from './lib/i18n';
+export * from './lib/paginator/src';
 export * from './lib/print/print-header.component';
 export * from './lib/theme/theme-palette';
 export * from './lib/theme/theme.service';

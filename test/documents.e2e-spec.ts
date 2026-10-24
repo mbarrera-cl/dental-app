@@ -102,8 +102,9 @@ describe('Prescriptions and consents API (e2e)', () => {
         .get(`/patients/${patientId}/prescriptions`)
         .expect(200);
 
-      expect(list.body).toHaveLength(1);
-      expect(list.body[0].id).toBe(created.body.id);
+      expect(list.body.items).toHaveLength(1);
+      expect(list.body.total).toBe(1);
+      expect(list.body.items[0].id).toBe(created.body.id);
 
       const one = await api()
         .get(`/prescriptions/${created.body.id}`)
@@ -159,8 +160,9 @@ describe('Prescriptions and consents API (e2e)', () => {
         .get(`/patients/${patientId}/consents`)
         .expect(200);
 
-      expect(list.body).toHaveLength(1);
-      expect(list.body[0].id).toBe(created.body.id);
+      expect(list.body.items).toHaveLength(1);
+      expect(list.body.total).toBe(1);
+      expect(list.body.items[0].id).toBe(created.body.id);
 
       const one = await api().get(`/consents/${created.body.id}`).expect(200);
       expect(one.body.id).toBe(created.body.id);

@@ -25,6 +25,15 @@ export const ES = {
     close: 'Cerrar',
     actions: 'Acciones',
     required: 'Campo obligatorio.',
+    pagination: {
+      label: 'Paginación',
+      previous: 'Página anterior',
+      next: 'Página siguiente',
+      page: 'Página {{page}} de {{pages}}',
+      rowsPerPage: 'Filas por página',
+      range: '{{from}}–{{to}} de {{total}}',
+      empty: 'Sin resultados',
+    },
     richText: {
       bold: 'Negrita',
       italic: 'Cursiva',
@@ -1220,6 +1229,7 @@ export const ES = {
       mcp: 'MCP',
       caroIa: 'CaroIA',
       quotes: 'Arancel UCO',
+      ui: 'Interfaz',
     },
     items: {
       passwordPolicy: {
@@ -1287,6 +1297,9 @@ export const ES = {
         ucoRate: 'Valor de la UCO (CLP)',
         folioPrefix: 'Prefijo del folio (p. ej. COT)',
         defaultValidityDays: 'Vigencia por defecto (días)',
+      },
+      ui: {
+        defaultPageSize: 'Filas por página en los listados (5–100)',
       },
     },
     toasts: {

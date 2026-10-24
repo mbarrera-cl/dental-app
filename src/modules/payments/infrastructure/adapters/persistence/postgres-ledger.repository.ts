@@ -74,6 +74,19 @@ export class PostgresLedgerRepository extends LedgerRepositoryPort {
     return rows.map((row) => this.toDomain(row));
   }
 
+  async countByPatient(patientId: string): Promise<number> {
+    if (!isUuid(patientId)) {
+      return 0;
+    }
+
+    const [row] = await this.db.query<{ count: string }>(
+      'SELECT COUNT(*)::text AS count FROM ledger_entries WHERE patient_id = $1',
+      [patientId],
+    );
+
+    return Number(row?.count ?? 0);
+  }
+
   async listByQuoteId(quoteId: string): Promise<Movement[]> {
     if (!isUuid(quoteId)) {
       return [];

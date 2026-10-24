@@ -118,7 +118,7 @@ export class PaymentsController {
     @Query('limit') limit?: string,
     @Query('offset') offset?: string,
   ): Promise<LedgerResponseDto> {
-    const [movements, balance] = await Promise.all([
+    const [page, balance] = await Promise.all([
       this.listMovements.execute({
         patientId,
         limit: parseInteger(limit, ListMovementsUseCase.DEFAULT_LIMIT),
@@ -127,10 +127,7 @@ export class PaymentsController {
       this.patientBalance.execute({ patientId }),
     ]);
 
-    return LedgerResponseDto.fromDomain(
-      balance,
-      movements.map((movement) => MovementResponseDto.fromDomain(movement)),
-    );
+    return LedgerResponseDto.fromDomain(balance, page);
   }
 
   @Post('ledger/:id/void')

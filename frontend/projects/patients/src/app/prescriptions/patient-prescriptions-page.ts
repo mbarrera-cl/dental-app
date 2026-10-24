@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import {
   FormArray,
   FormControl,
@@ -32,7 +32,8 @@ import {
   HlmTHead,
   HlmTr,
 } from '@ui/table';
-import { PrescriptionsApi, mapApiError, type Prescription } from 'data-access';
+import { PrescriptionsApi, UiSettingsService, mapApiError, type Prescription } from 'data-access';
+import { PaginatorComponent } from 'ui';
 import { ClinicalRecordStore } from '../clinical-record.store';
 
 type PrescriptionItemForm = FormGroup<{
@@ -65,6 +66,7 @@ type PrescriptionItemForm = FormGroup<{
     HlmTh,
     HlmTd,
     HasPermissionDirective,
+    PaginatorComponent,
   ],
   providers: provideIcons({
     lucideFilePlus2,
@@ -281,6 +283,16 @@ type PrescriptionItemForm = FormGroup<{
           </tbody>
         </table>
       </div>
+
+      @if (!loading() && total() > 0) {
+        <hexa-paginator
+          [total]="total()"
+          [page]="page()"
+          [pageSize]="pageSize()"
+          (pageChange)="page.set($event)"
+          (pageSizeChange)="onPageSizeChange($event)"
+        />
+      }
     </section>
   `,
 })
@@ -288,6 +300,7 @@ export class PatientPrescriptionsPage {
   private readonly api = inject(PrescriptionsApi);
   private readonly store = inject(ClinicalRecordStore);
   private readonly transloco = inject(TranslocoService);
+  private readonly uiSettings = inject(UiSettingsService);
 
   protected readonly permissionKeys = PERMISSION_KEYS;
   protected readonly prescriptions = signal<Prescription[]>([]);
@@ -296,6 +309,12 @@ export class PatientPrescriptionsPage {
   protected readonly saving = signal(false);
   protected readonly formOpen = signal(false);
   protected readonly skeletonRows = [0, 1, 2];
+
+  // Server-side pagination (the endpoint already supports limit/offset).
+  protected readonly page = signal(1);
+  protected readonly total = signal(0);
+  protected readonly sizeOverride = signal<number | null>(null);
+  protected readonly pageSize = computed(() => this.sizeOverride() ?? this.uiSettings.defaultPageSize());
 
   protected readonly form = new FormGroup({
     indicaciones: new FormControl('', {
@@ -306,7 +325,14 @@ export class PatientPrescriptionsPage {
   });
 
   constructor() {
-    this.load();
+    this.uiSettings.load();
+    effect(() => {
+      // Re-fetch when the page or size changes (including the configured
+      // default arriving after the first render).
+      this.page();
+      this.pageSize();
+      untracked(() => this.load());
+    });
   }
 
   protected get items(): FormArray<PrescriptionItemForm> {
@@ -323,11 +349,24 @@ export class PatientPrescriptionsPage {
     this.loading.set(true);
     this.loadError.set(null);
 
-    this.api.listByPatient(patientId).subscribe({
-      next: (prescriptions) => this.prescriptions.set(prescriptions),
-      error: (error: unknown) => this.loadError.set(mapApiError(error)),
-      complete: () => this.loading.set(false),
-    });
+    this.api
+      .listByPatient(patientId, {
+        limit: this.pageSize(),
+        offset: (this.page() - 1) * this.pageSize(),
+      })
+      .subscribe({
+        next: (page) => {
+          this.prescriptions.set(page.items);
+          this.total.set(page.total);
+        },
+        error: (error: unknown) => this.loadError.set(mapApiError(error)),
+        complete: () => this.loading.set(false),
+      });
+  }
+
+  protected onPageSizeChange(size: number): void {
+    this.sizeOverride.set(size);
+    this.page.set(1);
   }
 
   protected openForm(): void {
@@ -378,7 +417,11 @@ export class PatientPrescriptionsPage {
           toast.success(this.transloco.translate('prescriptions.toasts.created'));
           this.formOpen.set(false);
           this.saving.set(false);
-          this.load();
+          if (this.page() !== 1) {
+            this.page.set(1);
+          } else {
+            this.load();
+          }
         },
         error: (error: unknown) => {
           toast.error(this.transloco.translate(mapApiError(error)));

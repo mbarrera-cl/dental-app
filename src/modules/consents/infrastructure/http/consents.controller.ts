@@ -18,6 +18,7 @@ import { ListPatientConsentsUseCase } from '../../application/use-cases/list-pat
 import { RecordConsentUseCase } from '../../application/use-cases/record-consent.use-case.js';
 import { UpsertConsentTemplateUseCase } from '../../application/use-cases/upsert-consent-template.use-case.js';
 import { consentsPermissions } from '../../permissions.js';
+import { ConsentPageResponseDto } from './dtos/consent-page.response.dto.js';
 import { ConsentRecordResponseDto } from './dtos/consent-record.response.dto.js';
 import { ConsentTemplateResponseDto } from './dtos/consent-template.response.dto.js';
 import { RecordConsentRequestDto } from './dtos/record-consent.request.dto.js';
@@ -118,19 +119,19 @@ export class ConsentsController {
   @ApiOperation({ summary: 'List the consents accepted by a patient' })
   @ApiQuery({ name: 'limit', required: false })
   @ApiQuery({ name: 'offset', required: false })
-  @ApiOkResponse({ type: [ConsentRecordResponseDto] })
+  @ApiOkResponse({ type: ConsentPageResponseDto })
   async findAllForPatient(
     @Param('patientId') patientId: string,
     @Query('limit') limit?: string,
     @Query('offset') offset?: string,
-  ): Promise<ConsentRecordResponseDto[]> {
-    const records = await this.listConsents.execute({
+  ): Promise<ConsentPageResponseDto> {
+    const page = await this.listConsents.execute({
       patientId,
       limit: parseInteger(limit, 50),
       offset: parseInteger(offset, 0),
     });
 
-    return records.map((record) => ConsentRecordResponseDto.fromDomain(record));
+    return ConsentPageResponseDto.fromPage(page);
   }
 
   @Get('consents/:id')

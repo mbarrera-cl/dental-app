@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, linkedSignal, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import {
   FormControl,
@@ -51,6 +51,7 @@ import { HlmLabel } from '@ui/label';
 import { HlmSkeleton } from '@ui/skeleton';
 import { HlmSpinner } from '@ui/spinner';
 import { HlmTBody, HlmTable, HlmTableContainer, HlmTd, HlmTh, HlmTHead, HlmTr } from '@ui/table';
+import { PaginatorComponent } from 'ui';
 import {
   formatRut,
   isValidRut,
@@ -59,6 +60,8 @@ import {
   normalizeRut,
   PatientsApi,
   REGIONS,
+  slicePage,
+  UiSettingsService,
   type CreatePatientPayload,
   type FonasaTramo,
   type Patient,
@@ -133,6 +136,7 @@ function fechaNacimientoValidator(control: AbstractControl): ValidationErrors | 
     HlmTr,
     HlmTh,
     HlmTd,
+    PaginatorComponent,
     HlmDialog,
     HlmDialogContent,
     HlmDialogPortal,
@@ -169,6 +173,7 @@ function fechaNacimientoValidator(control: AbstractControl): ValidationErrors | 
 export class PatientsPage {
   private readonly api = inject(PatientsApi);
   private readonly transloco = inject(TranslocoService);
+  private readonly uiSettings = inject(UiSettingsService);
 
   protected readonly permissionKeys = PERMISSION_KEYS;
 
@@ -185,6 +190,14 @@ export class PatientsPage {
   protected readonly loading = signal(true);
   protected readonly loadError = signal<string | null>(null);
   protected readonly query = signal('');
+
+  // Pagination: the list is already loaded and filtered in memory, so the page
+  // is a view over `filtered()`. The size starts from the configured default.
+  protected readonly page = signal(1);
+  protected readonly pageSize = linkedSignal(() => this.uiSettings.defaultPageSize());
+  protected readonly paged = computed(() =>
+    slicePage(this.filtered(), this.page(), this.pageSize()),
+  );
 
   protected readonly filtered = computed(() => {
     const query = this.query().trim().toLowerCase();
@@ -277,6 +290,7 @@ export class PatientsPage {
   protected readonly deleting = signal(false);
 
   constructor() {
+    this.uiSettings.load();
     this.load();
   }
 
@@ -293,6 +307,7 @@ export class PatientsPage {
 
   protected onQueryInput(event: Event): void {
     this.query.set((event.target as HTMLInputElement).value);
+    this.page.set(1);
   }
 
   protected formatRut(rut: string): string {

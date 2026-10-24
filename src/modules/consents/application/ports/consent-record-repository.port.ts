@@ -13,4 +13,7 @@ export abstract class ConsentRecordRepositoryPort {
     limit: number,
     offset: number,
   ): Promise<ConsentRecord[]>;
+
+  /** Total consents accepted by the patient, across pages. */
+  abstract countByPatient(patientId: string): Promise<number>;
 }

@@ -129,6 +129,35 @@ describe('PatientsPage', () => {
     expect(compiled.textContent).toContain('1 de 2 pacientes');
   });
 
+  it('paginates long lists ten at a time', async () => {
+    const fixture = TestBed.createComponent(PatientsPage);
+    fixture.detectChanges();
+
+    const many = Array.from({ length: 12 }, (_, index) => ({
+      ...PATIENTS[0]!,
+      id: `patient-${index}`,
+      nombres: `Paciente ${index}`,
+      numeroHistoria: `HC-${String(index).padStart(6, '0')}`,
+    }));
+
+    http.expectOne('http://localhost:3000/patients').flush(many);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.querySelectorAll('tbody tr')).toHaveLength(10);
+    expect(compiled.textContent).not.toContain('Paciente 10');
+
+    const next = compiled.querySelector<HTMLButtonElement>(
+      'button[aria-label="Página siguiente"]',
+    );
+    next!.click();
+    fixture.detectChanges();
+
+    expect(compiled.textContent).toContain('Paciente 10');
+    expect(compiled.textContent).toContain('Página 2 de 2');
+  });
+
   it('shows an error banner when the API fails and retries', async () => {
     const fixture = TestBed.createComponent(PatientsPage);
     fixture.detectChanges();

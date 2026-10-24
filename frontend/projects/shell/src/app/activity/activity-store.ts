@@ -96,7 +96,7 @@ export class ActivityStore {
   }
 
   /** Appends the next page, de-duplicating entries already shown. */
-  loadMore(): void {
+  loadMore(limit?: number): void {
     const cursor = this.cursorSignal();
 
     if (cursor === null || this.loadingMoreSignal() || this.loadingSignal()) {
@@ -105,7 +105,7 @@ export class ActivityStore {
 
     this.loadingMoreSignal.set(true);
 
-    this.api.list({ ...this.query(), cursor }).subscribe({
+    this.api.list({ ...this.query(limit), cursor }).subscribe({
       next: (page) => {
         const known = new Set(this.itemsSignal().map((entry) => entry.id));
         const fresh = page.items.filter((entry) => !known.has(entry.id));

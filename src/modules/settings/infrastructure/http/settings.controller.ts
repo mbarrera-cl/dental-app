@@ -12,12 +12,14 @@ import { ActivityAction } from '../../../activity/infrastructure/http/activity-a
 import { SettingsAuditService } from '../../application/settings-audit.service.js';
 import { ExportSettingsUseCase } from '../../application/use-cases/export-settings.use-case.js';
 import { GetSettingsUseCase } from '../../application/use-cases/get-settings.use-case.js';
+import { GetUiSettingsUseCase } from '../../application/use-cases/get-ui-settings.use-case.js';
 import { ImportSettingsUseCase } from '../../application/use-cases/import-settings.use-case.js';
 import { UpdateSettingsUseCase } from '../../application/use-cases/update-settings.use-case.js';
 import type { SettingsAuditActor, SettingsAuditEntry } from '../../domain/settings-audit.js';
 import type { SettingsExportEnvelope } from '../../domain/settings-export.js';
 import { settingsPermissions } from '../../permissions.js';
 import { SettingResponseDto } from './dtos/setting-response.dto.js';
+import { UiSettingsResponseDto } from './dtos/ui-settings-response.dto.js';
 import { UpdateSettingsRequestDto } from './dtos/update-settings.request.dto.js';
 
 @ApiTags('settings')
@@ -25,6 +27,7 @@ import { UpdateSettingsRequestDto } from './dtos/update-settings.request.dto.js'
 export class SettingsController {
   constructor(
     private readonly getSettings: GetSettingsUseCase,
+    private readonly getUiSettings: GetUiSettingsUseCase,
     private readonly updateSettings: UpdateSettingsUseCase,
     private readonly exportSettings: ExportSettingsUseCase,
     private readonly importSettings: ImportSettingsUseCase,
@@ -39,6 +42,17 @@ export class SettingsController {
     const overview = await this.getSettings.execute();
 
     return overview.map((setting) => SettingResponseDto.fromOverview(setting));
+  }
+
+  // Whitelisted UI defaults every authenticated user needs to render lists.
+  // No `settings:read` on purpose: hiding the panel must not break pagination.
+  @Get('ui')
+  @ApiOperation({ summary: 'UI defaults (page size) available to every authenticated user' })
+  @ApiOkResponse({ type: UiSettingsResponseDto })
+  async ui(): Promise<UiSettingsResponseDto> {
+    const settings = await this.getUiSettings.execute();
+
+    return UiSettingsResponseDto.fromDomain(settings);
   }
 
   @Patch()

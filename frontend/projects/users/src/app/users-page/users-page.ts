@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, linkedSignal, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
@@ -65,6 +65,8 @@ import {
   RolesApi,
   UsersApi,
   mapApiError,
+  slicePage,
+  UiSettingsService,
   type CreateUserPayload,
   type PermissionCatalog,
   type Role,
@@ -72,7 +74,7 @@ import {
   type UpdateUserPayload,
   type User,
 } from 'data-access';
-import { formatDateTime } from 'ui';
+import { formatDateTime, PaginatorComponent } from 'ui';
 
 type UserStatus = 'active' | 'disabled';
 type ResetMode = 'typed' | 'generate';
@@ -117,6 +119,7 @@ const STATUS_VARIANT: Record<UserStatus, 'secondary' | 'outline'> = {
     HlmTr,
     HlmTh,
     HlmTd,
+    PaginatorComponent,
     HlmDialog,
     HlmDialogContent,
     HlmDialogPortal,
@@ -162,6 +165,7 @@ export class UsersPage {
   private readonly rolesApi = inject(RolesApi);
   private readonly permissionsApi = inject(PermissionsApi);
   private readonly transloco = inject(TranslocoService);
+  private readonly uiSettings = inject(UiSettingsService);
 
   /** Typed permission keys, so the template never hard-codes strings. */
   protected readonly permissionKeys = PERMISSION_KEYS;
@@ -176,6 +180,13 @@ export class UsersPage {
   protected readonly loadError = signal<string | null>(null);
   protected readonly query = signal('');
   protected readonly skeletonRows = [0, 1, 2, 3, 4];
+
+  // Pagination over the filtered list.
+  protected readonly page = signal(1);
+  protected readonly pageSize = linkedSignal(() => this.uiSettings.defaultPageSize());
+  protected readonly paged = computed(() =>
+    slicePage(this.filtered(), this.page(), this.pageSize()),
+  );
 
   protected readonly filtered = computed(() => {
     const query = this.query().trim().toLowerCase();
@@ -249,6 +260,7 @@ export class UsersPage {
   });
 
   constructor() {
+    this.uiSettings.load();
     this.load();
   }
 
@@ -265,6 +277,7 @@ export class UsersPage {
 
   protected onQueryInput(event: Event): void {
     this.query.set((event.target as HTMLInputElement).value);
+    this.page.set(1);
   }
 
   protected formatDate(createdAt: string): string {

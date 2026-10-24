@@ -15,4 +15,7 @@ export abstract class PrescriptionRepositoryPort {
     limit: number,
     offset: number,
   ): Promise<Prescription[]>;
+
+  /** Total prescriptions of the patient, so the list can page without the full set. */
+  abstract countByPatient(patientId: string): Promise<number>;
 }

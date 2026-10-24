@@ -30,6 +30,10 @@ export class InMemoryLedgerRepository extends LedgerRepositoryPort {
       .slice(offset, offset + limit);
   }
 
+  async countByPatient(patientId: string): Promise<number> {
+    return this.entries.filter((entry) => entry.patientId === patientId).length;
+  }
+
   /** Every movement linked to one quote (voided or not), newest first. */
   async listByQuoteId(quoteId: string): Promise<Movement[]> {
     return this.entries

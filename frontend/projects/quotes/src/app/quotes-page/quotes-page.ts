@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, linkedSignal, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
@@ -20,9 +20,17 @@ import { HlmSkeleton } from '@ui/skeleton';
 import { HlmBadge } from '@ui/badge';
 import { HlmTBody, HlmTable, HlmTableContainer, HlmTd, HlmTh, HlmTHead, HlmTr } from '@ui/table';
 import { HasPermissionDirective, PERMISSION_KEYS } from 'auth';
-import { PatientsApi, QuotesApi, mapApiError, type Quote, type QuoteStatus } from 'data-access';
+import {
+  PatientsApi,
+  QuotesApi,
+  mapApiError,
+  slicePage,
+  UiSettingsService,
+  type Quote,
+  type QuoteStatus,
+} from 'data-access';
 import { distinctUntilChanged, map } from 'rxjs';
-import { formatDateTime } from 'ui';
+import { formatDateTime, PaginatorComponent } from 'ui';
 
 const STATUS_VARIANT: Record<QuoteStatus, 'secondary' | 'outline' | 'default' | 'destructive'> = {
   borrador: 'outline',
@@ -49,6 +57,7 @@ const STATUS_VARIANT: Record<QuoteStatus, 'secondary' | 'outline' | 'default' | 
     HlmTh,
     HlmTd,
     HasPermissionDirective,
+    PaginatorComponent,
   ],
   providers: provideIcons({
     lucideFileText,
@@ -145,13 +154,13 @@ const STATUS_VARIANT: Record<QuoteStatus, 'secondary' | 'outline' | 'default' | 
             hlmInput
             class="ps-9"
             [value]="query()"
-            (input)="query.set($any($event.target).value)"
+            (input)="onQueryInput($event)"
             placeholder="{{ 'quotes.searchPlaceholder' | transloco }}"
             data-testid="quotes-search"
           />
         </div>
         <label class="text-muted-foreground text-sm">{{ 'quotes.filterStatus' | transloco }}</label>
-        <select hlmInput class="w-auto" [value]="statusFilter()" (change)="statusFilter.set($any($event.target).value)" data-testid="quotes-status-filter">
+        <select hlmInput class="w-auto" [value]="statusFilter()" (change)="onStatusChange($event)" data-testid="quotes-status-filter">
           <option value="">{{ 'quotes.allStatuses' | transloco }}</option>
           <option value="borrador">{{ 'quotes.status.borrador' | transloco }}</option>
           <option value="sin_respuesta">{{ 'quotes.status.sin_respuesta' | transloco }}</option>
@@ -212,7 +221,7 @@ const STATUS_VARIANT: Record<QuoteStatus, 'secondary' | 'outline' | 'default' | 
                 </td>
               </tr>
             } @else {
-              @for (quote of filtered(); track quote.id) {
+              @for (quote of paged().items; track quote.id) {
                 <tr hlmTr data-testid="quotes-row">
                   <td hlmTd>
                     @if (view() === 'trash') {
@@ -302,6 +311,16 @@ const STATUS_VARIANT: Record<QuoteStatus, 'secondary' | 'outline' | 'default' | 
           </tbody>
         </table>
       </div>
+
+      @if (!loading() && filtered().length > 0) {
+        <hexa-paginator
+          [total]="filtered().length"
+          [page]="page()"
+          [pageSize]="pageSize()"
+          (pageChange)="page.set($event)"
+          (pageSizeChange)="pageSize.set($event)"
+        />
+      }
     </section>
   `,
 })
@@ -311,6 +330,7 @@ export class QuotesPage {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly transloco = inject(TranslocoService);
+  private readonly uiSettings = inject(UiSettingsService);
 
   protected readonly permissionKeys = PERMISSION_KEYS;
 
@@ -330,6 +350,13 @@ export class QuotesPage {
   protected readonly statusFilter = signal('');
   protected readonly skeletonRows = [0, 1, 2, 3, 4];
 
+  // Pagination over the filtered list (filters run in memory today).
+  protected readonly page = signal(1);
+  protected readonly pageSize = linkedSignal(() => this.uiSettings.defaultPageSize());
+  protected readonly paged = computed(() =>
+    slicePage(this.filtered(), this.page(), this.pageSize()),
+  );
+
   protected readonly filtered = computed(() => {
     const needle = this.query().toLowerCase();
     const status = this.statusFilter();
@@ -342,6 +369,7 @@ export class QuotesPage {
   });
 
   constructor() {
+    this.uiSettings.load();
     this.route.queryParamMap
       .pipe(
         map((params) => ({ patientId: params.get('patientId'), deleted: params.get('deleted') })),
@@ -351,6 +379,7 @@ export class QuotesPage {
         const normalized = patientId === null || patientId === '' ? null : patientId;
         this.patientId.set(normalized);
         this.view.set(deleted === 'only' ? 'trash' : 'active');
+        this.page.set(1);
         this.loadPatientLabel(normalized);
         this.load();
       });
@@ -389,8 +418,17 @@ export class QuotesPage {
     });
   }
 
-  protected statusOf(quote: Quote): QuoteStatus {
-    return quote.status;
+  protected onQueryInput(event: Event): void {
+    this.query.set((event.target as HTMLInputElement).value);
+    this.page.set(1);
+  }
+
+  protected onStatusChange(event: Event): void {
+    this.statusFilter.set((event.target as HTMLSelectElement).value);
+    this.page.set(1);
+  }
+
+  protected statusOf(quote: Quote): QuoteStatus {    return quote.status;
   }
 
   protected statusVariant(quote: Quote): (typeof STATUS_VARIANT)[QuoteStatus] {

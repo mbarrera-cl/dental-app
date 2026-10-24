@@ -18,6 +18,9 @@ export abstract class LedgerRepositoryPort {
   /** History of the patient, `created_at DESC, id DESC`. */
   abstract listByPatient(patientId: string, limit: number, offset: number): Promise<Movement[]>;
 
+  /** Total movements of the patient, so the ledger can page without the full book. */
+  abstract countByPatient(patientId: string): Promise<number>;
+
   /**
    * Every movement linked to one quote (voided or not), `created_at DESC`.
    * The quote-charge guard reads this to guarantee *one live charge per quote*.

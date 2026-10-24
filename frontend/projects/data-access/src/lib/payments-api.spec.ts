@@ -26,7 +26,13 @@ const MOVEMENT: Movement = {
   voidReason: null,
 };
 
-const LEDGER: Ledger = { balance: 10000, movements: [MOVEMENT] };
+const LEDGER: Ledger = {
+  balance: 10000,
+  movements: [MOVEMENT],
+  total: 1,
+  limit: 50,
+  offset: 10,
+};
 
 describe('PaymentsApi', () => {
   let api: PaymentsApi;

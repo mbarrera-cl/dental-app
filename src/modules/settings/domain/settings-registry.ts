@@ -8,6 +8,7 @@ import { CLINIC_SETTING_DEFINITIONS, CLINIC_SETTING_GROUPS } from '../../clinic/
 import { MCP_SETTING_DEFINITIONS, MCP_SETTING_GROUPS } from '../../mcp/domain/mcp-settings.js';
 import { QUOTES_SETTING_DEFINITIONS, QUOTES_SETTING_GROUPS } from '../../quotes/domain/quotes-settings.js';
 import type { SettingDefinition, SettingGroup, SettingValue } from './setting-definition.js';
+import { UI_SETTING_DEFINITIONS, UI_SETTING_GROUPS } from './ui-settings.js';
 
 /**
  * The source of truth for every configurable value in the system, composed
@@ -24,6 +25,7 @@ export const SETTING_GROUPS: readonly SettingGroup[] = [
   ...MCP_SETTING_GROUPS,
   ...CARO_IA_SETTING_GROUPS,
   ...AGENDA_SETTING_GROUPS,
+  ...UI_SETTING_GROUPS,
 ];
 
 export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
@@ -34,6 +36,7 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
   ...MCP_SETTING_DEFINITIONS,
   ...CARO_IA_SETTING_DEFINITIONS,
   ...AGENDA_SETTING_DEFINITIONS,
+  ...UI_SETTING_DEFINITIONS,
 ];
 
 const DEFINITIONS_BY_KEY = new Map(SETTING_DEFINITIONS.map((definition) => [definition.key, definition]));

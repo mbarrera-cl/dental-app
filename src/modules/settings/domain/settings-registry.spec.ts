@@ -192,6 +192,7 @@ describe('settings registry', () => {
       'mcp',
       'caroIa',
       'agenda',
+      'ui',
     ]);
   });
 

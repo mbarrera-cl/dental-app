@@ -36,6 +36,10 @@ export interface Movement {
 export interface Ledger {
   balance: number;
   movements: Movement[];
+  /** Every movement of the book, across pages. */
+  total: number;
+  limit: number;
+  offset: number;
 }
 
 /** Payload accepted by `POST /patients/:patientId/ledger/charges`. */

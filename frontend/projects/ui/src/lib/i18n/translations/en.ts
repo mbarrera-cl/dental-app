@@ -17,6 +17,15 @@ export const EN = {
     close: 'Close',
     actions: 'Actions',
     required: 'This field is required.',
+    pagination: {
+      label: 'Pagination',
+      previous: 'Previous page',
+      next: 'Next page',
+      page: 'Page {{page}} of {{pages}}',
+      rowsPerPage: 'Rows per page',
+      range: '{{from}}–{{to}} of {{total}}',
+      empty: 'No results',
+    },
     richText: {
       bold: 'Bold',
       italic: 'Italic',
@@ -1210,6 +1219,7 @@ export const EN = {
       mcp: 'MCP',
       caroIa: 'CaroIA',
       quotes: 'UCO rate scale',
+      ui: 'Interface',
     },
     items: {
       passwordPolicy: {
@@ -1277,6 +1287,9 @@ export const EN = {
         ucoRate: 'CLP value of one UCO unit',
         folioPrefix: 'Folio prefix (e.g. COT)',
         defaultValidityDays: 'Default validity (days)',
+      },
+      ui: {
+        defaultPageSize: 'Rows per page in lists (5–100)',
       },
     },
     toasts: {

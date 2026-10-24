@@ -17,6 +17,7 @@ import { GetPrescriptionUseCase } from '../../application/use-cases/get-prescrip
 import { ListPrescriptionsUseCase } from '../../application/use-cases/list-prescriptions.use-case.js';
 import { prescriptionsPermissions } from '../../permissions.js';
 import { CreatePrescriptionRequestDto } from './dtos/create-prescription.request.dto.js';
+import { PrescriptionPageResponseDto } from './dtos/prescription-page.response.dto.js';
 import { PrescriptionResponseDto } from './dtos/prescription.response.dto.js';
 
 /**
@@ -64,21 +65,19 @@ export class PrescriptionsController {
   @ApiOperation({ summary: 'List the latest prescriptions of a patient' })
   @ApiQuery({ name: 'limit', required: false })
   @ApiQuery({ name: 'offset', required: false })
-  @ApiOkResponse({ type: [PrescriptionResponseDto] })
+  @ApiOkResponse({ type: PrescriptionPageResponseDto })
   async findAllForPatient(
     @Param('patientId') patientId: string,
     @Query('limit') limit?: string,
     @Query('offset') offset?: string,
-  ): Promise<PrescriptionResponseDto[]> {
-    const prescriptions = await this.list.execute({
+  ): Promise<PrescriptionPageResponseDto> {
+    const page = await this.list.execute({
       patientId,
       limit: parseInteger(limit, 50),
       offset: parseInteger(offset, 0),
     });
 
-    return prescriptions.map((prescription) =>
-      PrescriptionResponseDto.fromDomain(prescription),
-    );
+    return PrescriptionPageResponseDto.fromPage(page);
   }
 
   @Get('prescriptions/:id')

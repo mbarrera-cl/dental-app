@@ -86,7 +86,7 @@
             </td>
           </tr>
         } @else {
-          @for (patient of filtered(); track patient.id) {
+          @for (patient of paged().items; track patient.id) {
             <tr hlmTr>
               <td hlmTd class="font-mono text-sm">{{ formatRut(patient.rut) }}</td>
               <td hlmTd>
@@ -142,6 +142,16 @@
       </tbody>
     </table>
   </div>
+
+  @if (!loading() && filtered().length > 0) {
+    <hexa-paginator
+      [total]="filtered().length"
+      [page]="page()"
+      [pageSize]="pageSize()"
+      (pageChange)="page.set($event)"
+      (pageSizeChange)="pageSize.set($event)"
+    />
+  }
 </section>
 
 <!-- Create / edit dialog (single instance driven by signals) -->

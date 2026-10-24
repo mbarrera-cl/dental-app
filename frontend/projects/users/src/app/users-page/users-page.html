@@ -93,7 +93,7 @@
             </td>
           </tr>
         } @else {
-          @for (user of filtered(); track user.id) {
+          @for (user of paged().items; track user.id) {
             <tr hlmTr data-testid="user-row">
               <td hlmTd class="font-medium">{{ user.name }}</td>
               <td hlmTd class="text-muted-foreground">{{ user.email }}</td>
@@ -200,6 +200,16 @@
       </tbody>
     </table>
   </div>
+
+  @if (!loading() && filtered().length > 0) {
+    <hexa-paginator
+      [total]="filtered().length"
+      [page]="page()"
+      [pageSize]="pageSize()"
+      (pageChange)="page.set($event)"
+      (pageSizeChange)="pageSize.set($event)"
+    />
+  }
 </section>
 
 <!-- Create / edit dialog (single instance driven by signals) -->

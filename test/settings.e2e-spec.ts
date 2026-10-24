@@ -194,6 +194,35 @@ describe('Settings export, import and audit (e2e)', () => {
     await patchSettings({ 'clinic.name': 'No' }, outsider).expect(403);
   });
 
+  it('exposes the interface defaults to any authenticated user', async () => {
+    const outsider = await createUserWithPermissions('settings-ui@e2e.local', ['patients:read']);
+
+    const defaults = await request(app.getHttpServer())
+      .get('/settings/ui')
+      .set('Authorization', outsider)
+      .expect(200);
+
+    expect((defaults.body as { defaultPageSize: number }).defaultPageSize).toBe(10);
+
+    await request(app.getHttpServer()).get('/settings/ui').expect(401);
+
+    // The key is editable configuration, but not a security-sensitive one.
+    const overview = (await getSettings().expect(200)).body as Array<
+      SettingBody & { sensitivity?: string }
+    >;
+    const pageSizeSetting = overview.find((setting) => setting.key === 'ui.defaultPageSize');
+    expect(pageSizeSetting?.value).toBe(10);
+    expect(pageSizeSetting?.sensitivity ?? 'standard').toBe('standard');
+
+    await patchSettings({ 'ui.defaultPageSize': 25 }).expect(200);
+
+    const updated = await request(app.getHttpServer())
+      .get('/settings/ui')
+      .set('Authorization', outsider)
+      .expect(200);
+    expect((updated.body as { defaultPageSize: number }).defaultPageSize).toBe(25);
+  });
+
   it('gates security-sensitive keys behind settings:update-security', async () => {
     const operator = await createUserWithPermissions('settings-operator@e2e.local', [
       'settings:read',

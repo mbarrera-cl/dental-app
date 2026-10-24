@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, linkedSignal, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { NgIcon, provideIcons } from '@ng-icons/core';
@@ -24,7 +24,8 @@ import {
   HlmTHead,
   HlmTr,
 } from '@ui/table';
-import { ConsentsApi, mapApiError, type ConsentTemplate } from 'data-access';
+import { ConsentsApi, mapApiError, slicePage, UiSettingsService, type ConsentTemplate } from 'data-access';
+import { PaginatorComponent } from 'ui';
 
 /**
  * Informed-consent template library: edit the wording of the seeded templates
@@ -48,6 +49,7 @@ import { ConsentsApi, mapApiError, type ConsentTemplate } from 'data-access';
     HlmTr,
     HlmTh,
     HlmTd,
+    PaginatorComponent,
   ],
   providers: provideIcons({
     lucidePencil,
@@ -120,7 +122,7 @@ import { ConsentsApi, mapApiError, type ConsentTemplate } from 'data-access';
                 </td>
               </tr>
             } @else {
-              @for (template of templates(); track template.id) {
+              @for (template of paged().items; track template.id) {
                 <tr hlmTr data-testid="consent-template-row">
                   <td hlmTd class="font-mono text-xs">{{ template.key }}</td>
                   <td hlmTd class="font-medium">{{ template.title }}</td>
@@ -151,6 +153,16 @@ import { ConsentsApi, mapApiError, type ConsentTemplate } from 'data-access';
           </tbody>
         </table>
       </div>
+
+      @if (!loading() && templates().length > 0) {
+        <hexa-paginator
+          [total]="templates().length"
+          [page]="page()"
+          [pageSize]="pageSize()"
+          (pageChange)="page.set($event)"
+          (pageSizeChange)="pageSize.set($event)"
+        />
+      }
 
       <form
         [formGroup]="form"
@@ -212,6 +224,7 @@ import { ConsentsApi, mapApiError, type ConsentTemplate } from 'data-access';
 export class ConsentsAdminPage {
   private readonly api = inject(ConsentsApi);
   private readonly transloco = inject(TranslocoService);
+  private readonly uiSettings = inject(UiSettingsService);
 
   protected readonly templates = signal<ConsentTemplate[]>([]);
   protected readonly loading = signal(true);
@@ -219,6 +232,12 @@ export class ConsentsAdminPage {
   protected readonly saving = signal(false);
   protected readonly editingKey = signal<string | null>(null);
   protected readonly skeletonRows = [0, 1, 2];
+
+  protected readonly page = signal(1);
+  protected readonly pageSize = linkedSignal(() => this.uiSettings.defaultPageSize());
+  protected readonly paged = computed(() =>
+    slicePage(this.templates(), this.page(), this.pageSize()),
+  );
 
   protected readonly form = new FormGroup({
     key: new FormControl('', {
@@ -237,6 +256,7 @@ export class ConsentsAdminPage {
   });
 
   constructor() {
+    this.uiSettings.load();
     this.load();
   }
 

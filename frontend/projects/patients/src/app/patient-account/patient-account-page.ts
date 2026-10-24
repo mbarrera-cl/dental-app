@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { NgIcon, provideIcons } from '@ng-icons/core';
@@ -19,7 +19,8 @@ import { HlmInput } from '@ui/input';
 import { HlmLabel } from '@ui/label';
 import { HlmSkeleton } from '@ui/skeleton';
 import { HlmTable, HlmTableContainer, HlmTBody, HlmTd, HlmTh, HlmTHead, HlmTr } from '@ui/table';
-import { mapApiError, PaymentsApi, type Ledger, type Movement, type PaymentMethod } from 'data-access';
+import { mapApiError, PaymentsApi, UiSettingsService, type Ledger, type Movement, type PaymentMethod } from 'data-access';
+import { PaginatorComponent } from 'ui';
 import { ClinicalRecordStore } from '../clinical-record.store';
 
 const PAYMENT_METHOD_KEYS: Record<PaymentMethod, string> = {
@@ -53,6 +54,7 @@ const PAYMENT_METHOD_KEYS: Record<PaymentMethod, string> = {
     HlmTh,
     HlmTd,
     HasPermissionDirective,
+    PaginatorComponent,
   ],
   providers: provideIcons({
     lucideBadgeDollarSign,
@@ -376,6 +378,16 @@ const PAYMENT_METHOD_KEYS: Record<PaymentMethod, string> = {
           </tbody>
         </table>
       </div>
+
+      @if (!loading() && total() > 0) {
+        <hexa-paginator
+          [total]="total()"
+          [page]="page()"
+          [pageSize]="pageSize()"
+          (pageChange)="page.set($event)"
+          (pageSizeChange)="onPageSizeChange($event)"
+        />
+      }
     </section>
   `,
 })
@@ -383,6 +395,7 @@ export class PatientAccountPage {
   private readonly api = inject(PaymentsApi);
   private readonly store = inject(ClinicalRecordStore);
   private readonly transloco = inject(TranslocoService);
+  private readonly uiSettings = inject(UiSettingsService);
 
   protected readonly permissionKeys = PERMISSION_KEYS;
   protected readonly methods: PaymentMethod[] = ['efectivo', 'tarjeta', 'transferencia'];
@@ -407,9 +420,35 @@ export class PatientAccountPage {
   protected readonly movements = computed(() => this.ledger()?.movements ?? []);
   protected readonly isPaid = computed(() => (this.ledger()?.balance ?? 0) === 0);
 
+  // Server-side pagination of the ledger (limit/offset already supported).
+  protected readonly page = signal(1);
+  protected readonly total = signal(0);
+  protected readonly sizeOverride = signal<number | null>(null);
+  protected readonly pageSize = computed(() => this.sizeOverride() ?? this.uiSettings.defaultPageSize());
+
   protected readonly canCreate = computed(() => this.store.patientId() !== '');
 
   constructor() {
+    this.uiSettings.load();
+    effect(() => {
+      this.page();
+      this.pageSize();
+      untracked(() => this.load());
+    });
+  }
+
+  protected onPageSizeChange(size: number): void {
+    this.sizeOverride.set(size);
+    this.page.set(1);
+  }
+
+  /** After a mutation the new movement is on page 1 (newest first). */
+  private refreshFromFirstPage(): void {
+    if (this.page() !== 1) {
+      this.page.set(1);
+      return;
+    }
+
     this.load();
   }
 
@@ -423,14 +462,22 @@ export class PatientAccountPage {
     this.loading.set(true);
     this.loadError.set(null);
 
-    this.api.ledger(patientId, { limit: 50 }).subscribe({
-      next: (ledger) => this.ledger.set(ledger),
-      error: (error: unknown) => {
-        this.loadError.set(mapApiError(error));
-        this.ledger.set(null);
-      },
-      complete: () => this.loading.set(false),
-    });
+    this.api
+      .ledger(patientId, {
+        limit: this.pageSize(),
+        offset: (this.page() - 1) * this.pageSize(),
+      })
+      .subscribe({
+        next: (ledger) => {
+          this.ledger.set(ledger);
+          this.total.set(ledger.total);
+        },
+        error: (error: unknown) => {
+          this.loadError.set(mapApiError(error));
+          this.ledger.set(null);
+        },
+        complete: () => this.loading.set(false),
+      });
   }
 
   private parseAmount(raw: string): number {
@@ -471,7 +518,7 @@ export class PatientAccountPage {
           this.chargeConcept.set('');
           this.chargeAmount.set('');
           this.saving.set(false);
-          this.load();
+          this.refreshFromFirstPage();
         },
         error: (error: unknown) => {
           toast.error(this.transloco.translate(mapApiError(error)));
@@ -507,7 +554,7 @@ export class PatientAccountPage {
           this.paymentAmount.set('');
           this.paymentReference.set('');
           this.saving.set(false);
-          this.load();
+          this.refreshFromFirstPage();
         },
         error: (error: unknown) => {
           toast.error(this.transloco.translate(mapApiError(error)));
@@ -542,7 +589,7 @@ export class PatientAccountPage {
         this.voidingTarget.set(null);
         this.voidReason.set('');
         this.saving.set(false);
-        this.load();
+        this.refreshFromFirstPage();
       },
       error: (error: unknown) => {
         toast.error(this.transloco.translate(mapApiError(error)));

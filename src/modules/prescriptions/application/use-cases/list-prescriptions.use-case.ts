@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import type { Page } from '../../../../shared/application/pagination.js';
 import type { UseCase } from '../../../../shared/application/use-case.js';
 import { Prescription } from '../../domain/prescription.entity.js';
 import { InvalidPrescriptionError } from '../../domain/prescription.errors.js';
@@ -16,7 +17,7 @@ const MAX_LIMIT = 100;
 @Injectable()
 export class ListPrescriptionsUseCase implements UseCase<
   ListPrescriptionsCommand,
-  Prescription[]
+  Page<Prescription>
 > {
   constructor(private readonly prescriptions: PrescriptionRepositoryPort) {}
 
@@ -24,7 +25,7 @@ export class ListPrescriptionsUseCase implements UseCase<
     patientId,
     limit = DEFAULT_LIMIT,
     offset = 0,
-  }: ListPrescriptionsCommand): Promise<Prescription[]> {
+  }: ListPrescriptionsCommand): Promise<Page<Prescription>> {
     if (!Number.isInteger(limit) || limit < 1 || limit > MAX_LIMIT) {
       throw new InvalidPrescriptionError(
         `limit must be an integer between 1 and ${MAX_LIMIT}`,
@@ -35,6 +36,11 @@ export class ListPrescriptionsUseCase implements UseCase<
       throw new InvalidPrescriptionError('offset must be a non-negative integer');
     }
 
-    return this.prescriptions.listByPatient(patientId, limit, offset);
+    const [items, total] = await Promise.all([
+      this.prescriptions.listByPatient(patientId, limit, offset),
+      this.prescriptions.countByPatient(patientId),
+    ]);
+
+    return { items, total, limit, offset };
   }
 }

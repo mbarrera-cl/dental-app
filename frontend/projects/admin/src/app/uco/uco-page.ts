@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, linkedSignal, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
@@ -41,7 +41,15 @@ import { HlmLabel } from '@ui/label';
 import { HlmSkeleton } from '@ui/skeleton';
 import { HlmTBody, HlmTable, HlmTableContainer, HlmTd, HlmTh, HlmTHead, HlmTr } from '@ui/table';
 import { HasPermissionDirective, PERMISSION_KEYS, SessionStore } from 'auth';
-import { SettingsApi, UcoApi, mapApiError, type UcoProcedure } from 'data-access';
+import {
+  SettingsApi,
+  UcoApi,
+  mapApiError,
+  slicePage,
+  UiSettingsService,
+  type UcoProcedure,
+} from 'data-access';
+import { PaginatorComponent } from 'ui';
 
 /**
  * UCO fee catalog administration: table, search, create/edit dialog and
@@ -82,6 +90,7 @@ import { SettingsApi, UcoApi, mapApiError, type UcoProcedure } from 'data-access
     HlmAlertDialogCancel,
     HlmAlertDialogAction,
     HasPermissionDirective,
+    PaginatorComponent,
   ],
   providers: provideIcons({
     lucideBadgeDollarSign,
@@ -129,7 +138,7 @@ import { SettingsApi, UcoApi, mapApiError, type UcoProcedure } from 'data-access
             hlmInput
             class="ps-9"
             [value]="query()"
-            (input)="query.set($any($event.target).value)"
+            (input)="onQueryInput($event)"
             placeholder="{{ 'admin.uco.searchPlaceholder' | transloco }}"
             data-testid="uco-search"
           />
@@ -138,7 +147,7 @@ import { SettingsApi, UcoApi, mapApiError, type UcoProcedure } from 'data-access
           <input
             type="checkbox"
             [checked]="includeInactive()"
-            (change)="includeInactive.set($any($event.target).checked)"
+            (change)="onIncludeInactiveChange($event)"
           />
           {{ 'admin.uco.includeInactive' | transloco }}
         </label>
@@ -188,7 +197,7 @@ import { SettingsApi, UcoApi, mapApiError, type UcoProcedure } from 'data-access
                 </td>
               </tr>
             } @else {
-              @for (procedure of filtered(); track procedure.id) {
+              @for (procedure of paged().items; track procedure.id) {
                 <tr hlmTr data-testid="uco-row">
                   <td hlmTd class="font-mono text-xs">{{ procedure.code }}</td>
                   <td hlmTd class="hidden sm:table-cell">{{ procedure.chapter }}</td>
@@ -236,6 +245,16 @@ import { SettingsApi, UcoApi, mapApiError, type UcoProcedure } from 'data-access
           </tbody>
         </table>
       </div>
+
+      @if (!loading() && filtered().length > 0) {
+        <hexa-paginator
+          [total]="filtered().length"
+          [page]="page()"
+          [pageSize]="pageSize()"
+          (pageChange)="page.set($event)"
+          (pageSizeChange)="pageSize.set($event)"
+        />
+      }
     </section>
 
     <!-- Create / edit dialog -->
@@ -308,6 +327,7 @@ export class UcoPage {
   private readonly settingsApi = inject(SettingsApi);
   private readonly session = inject(SessionStore);
   private readonly transloco = inject(TranslocoService);
+  private readonly uiSettings = inject(UiSettingsService);
 
   protected readonly permissionKeys = PERMISSION_KEYS;
 
@@ -321,6 +341,13 @@ export class UcoPage {
   protected readonly query = signal('');
   protected readonly includeInactive = signal(true);
   protected readonly skeletonRows = [0, 1, 2, 3, 4];
+
+  // Pagination over the filtered catalog (the catalog is loaded once).
+  protected readonly page = signal(1);
+  protected readonly pageSize = linkedSignal(() => this.uiSettings.defaultPageSize());
+  protected readonly paged = computed(() =>
+    slicePage(this.filtered(), this.page(), this.pageSize()),
+  );
 
   /** Reference CLP rate of one UCO unit (mirrors `quotes.ucoRate` default). */
   protected readonly ucoRate = signal(3000);
@@ -353,6 +380,7 @@ export class UcoPage {
   });
 
   constructor() {
+    this.uiSettings.load();
     this.load();
     this.loadUcoRate();
   }
@@ -387,8 +415,17 @@ export class UcoPage {
     });
   }
 
-  protected openCreate(): void {
-    this.editing.set(null);
+  protected onQueryInput(event: Event): void {
+    this.query.set((event.target as HTMLInputElement).value);
+    this.page.set(1);
+  }
+
+  protected onIncludeInactiveChange(event: Event): void {
+    this.includeInactive.set((event.target as HTMLInputElement).checked);
+    this.page.set(1);
+  }
+
+  protected openCreate(): void {    this.editing.set(null);
     this.form.reset({ code: '', chapter: '', name: '', units: 1, active: true });
     this.form.controls.code.enable();
     this.formOpen.set(true);

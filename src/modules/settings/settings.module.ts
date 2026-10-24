@@ -6,6 +6,7 @@ import { SettingsAuditService } from './application/settings-audit.service.js';
 import { SettingsService } from './application/settings.service.js';
 import { ExportSettingsUseCase } from './application/use-cases/export-settings.use-case.js';
 import { GetSettingsUseCase } from './application/use-cases/get-settings.use-case.js';
+import { GetUiSettingsUseCase } from './application/use-cases/get-ui-settings.use-case.js';
 import { ImportSettingsUseCase } from './application/use-cases/import-settings.use-case.js';
 import { UpdateSettingsUseCase } from './application/use-cases/update-settings.use-case.js';
 import { PostgresSettingsAuditRepository } from './infrastructure/adapters/persistence/postgres-settings-audit.repository.js';
@@ -24,6 +25,7 @@ import { SettingsController } from './infrastructure/http/settings.controller.js
     SettingsService,
     SettingsAuditService,
     GetSettingsUseCase,
+    GetUiSettingsUseCase,
     UpdateSettingsUseCase,
     ExportSettingsUseCase,
     ImportSettingsUseCase,

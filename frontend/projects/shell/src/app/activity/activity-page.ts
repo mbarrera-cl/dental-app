@@ -15,6 +15,7 @@ import { HlmLabel } from '@ui/label';
 import { PERMISSION_KEYS, SessionStore } from 'auth';
 import {
   ACTIVITY_MODULES,
+  UiSettingsService,
   type ActivityEntry,
   type ActivityOutcome,
 } from 'data-access';
@@ -46,6 +47,7 @@ import { ActivityStore } from './activity-store';
 export class ActivityPage implements OnInit {
   private readonly transloco = inject(TranslocoService);
   private readonly session = inject(SessionStore);
+  private readonly uiSettings = inject(UiSettingsService);
 
   protected readonly store = inject(ActivityStore);
   protected readonly modules = ACTIVITY_MODULES;
@@ -58,17 +60,19 @@ export class ActivityPage implements OnInit {
   protected readonly purgeOpen = signal(false);
 
   ngOnInit(): void {
+    this.uiSettings.load();
+
     if (this.store.items().length === 0) {
-      this.store.load();
+      this.store.load(this.uiSettings.defaultPageSize());
     }
   }
 
   protected refresh(): void {
-    this.store.load();
+    this.store.load(this.uiSettings.defaultPageSize());
   }
 
   protected loadMore(): void {
-    this.store.loadMore();
+    this.store.loadMore(this.uiSettings.defaultPageSize());
   }
 
   protected onModule(event: Event): void {

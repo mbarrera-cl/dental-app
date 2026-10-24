@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import type { Page } from '../../../../shared/application/pagination.js';
 import type { UseCase } from '../../../../shared/application/use-case.js';
 import { PatientRepositoryPort } from '../../../patients/application/ports/patient-repository.port.js';
 import { PatientNotFoundError } from '../../../patients/domain/patient.errors.js';
@@ -18,7 +19,7 @@ export interface ListMovementsCommand {
  * dump the whole ledger.
  */
 @Injectable()
-export class ListMovementsUseCase implements UseCase<ListMovementsCommand, Movement[]> {
+export class ListMovementsUseCase implements UseCase<ListMovementsCommand, Page<Movement>> {
   static readonly DEFAULT_LIMIT = 50;
   static readonly MAX_LIMIT = 100;
 
@@ -27,7 +28,7 @@ export class ListMovementsUseCase implements UseCase<ListMovementsCommand, Movem
     private readonly patients: PatientRepositoryPort,
   ) {}
 
-  async execute(command: ListMovementsCommand): Promise<Movement[]> {
+  async execute(command: ListMovementsCommand): Promise<Page<Movement>> {
     const patient = await this.patients.findById(command.patientId);
 
     if (patient === null) {
@@ -40,6 +41,11 @@ export class ListMovementsUseCase implements UseCase<ListMovementsCommand, Movem
         : Math.min(command.limit, ListMovementsUseCase.MAX_LIMIT);
     const offset = command.offset === undefined || command.offset < 0 ? 0 : Math.floor(command.offset);
 
-    return this.ledger.listByPatient(patient.id, limit, offset);
+    const [items, total] = await Promise.all([
+      this.ledger.listByPatient(patient.id, limit, offset),
+      this.ledger.countByPatient(patient.id),
+    ]);
+
+    return { items, total, limit, offset };
   }
 }

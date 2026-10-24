@@ -83,6 +83,19 @@ export class PostgresPrescriptionRepository extends PrescriptionRepositoryPort {
     return rows.map((row) => this.toDomain(row));
   }
 
+  async countByPatient(patientId: string): Promise<number> {
+    if (!isUuid(patientId)) {
+      return 0;
+    }
+
+    const [row] = await this.db.query<{ count: string }>(
+      'SELECT COUNT(*)::text AS count FROM prescriptions WHERE patient_id = $1',
+      [patientId],
+    );
+
+    return Number(row?.count ?? 0);
+  }
+
   private toDomain(row: PrescriptionRow): Prescription {
     return Prescription.reconstitute(
       {

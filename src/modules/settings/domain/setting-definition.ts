@@ -28,7 +28,8 @@ export type SettingGroupId =
   | 'activity'
   | 'mcp'
   | 'caroIa'
-  | 'agenda';
+  | 'agenda'
+  | 'ui';
 
 /** Who may change the setting: everyone with `settings:update`, or only `settings:update-security`. */
 export type SettingSensitivity = 'security' | 'standard';

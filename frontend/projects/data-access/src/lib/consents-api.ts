@@ -8,6 +8,7 @@ import type {
   RecordConsentPayload,
   UpsertConsentTemplatePayload,
 } from './consent.model';
+import type { Page, PageQuery } from './pagination';
 
 /** Typed HTTP client for the informed-consents REST API. */
 @Injectable({ providedIn: 'root' })
@@ -42,9 +43,10 @@ export class ConsentsApi {
     );
   }
 
-  listByPatient(patientId: string): Observable<ConsentRecord[]> {
-    return this.http.get<ConsentRecord[]>(
+  listByPatient(patientId: string, query: PageQuery = {}): Observable<Page<ConsentRecord>> {
+    return this.http.get<Page<ConsentRecord>>(
       `${this.baseUrl}/patients/${encodeURIComponent(patientId)}/consents`,
+      { params: { ...query } },
     );
   }
 
